@@ -231,28 +231,30 @@ reset_panel() {
     case $yn in
       [Yy]*)
         set -e
-
         if [ ! -d "/var/www/pterodactyl" ]; then
             print_error "🚨 ERROR: Direktori instalasi Pterodactyl tidak ditemukan."
             return 1
         fi
-        
         cd /var/www/pterodactyl || { print_error "Gagal masuk ke direktori Pterodactyl."; return 1; }
 
         echo -e "${BOLD}⚙️  Memulai proses reset total...${NC}"
 
-        # 1. Backup file penting (.env dan folder storage) ke lokasi sementara
+        # 1. Backup file penting (.env dan folder storage)
         echo -e "${BOLD}   - Mem-backup .env dan storage/...${NC}"
         TEMP_BACKUP=$(mktemp -d)
-        # Pastikan .env ada sebelum memindahkannya
         if [ -f ".env" ]; then
             sudo mv .env "$TEMP_BACKUP/"
         fi
-        sudo mv storage "$TEMP_BACKUP/"
+        # Hanya backup jika folder storage ada
+        if [ -d "storage" ]; then
+            sudo mv storage "$TEMP_BACKUP/"
+        fi
         
         # 2. HAPUS TOTAL semua file panel lama
         echo -e "${BOLD}   - Menghapus semua file panel lama...${NC}"
-        sudo rm -rf /var/www/pterodactyl/*
+        # Menambahkan '.*' untuk memastikan file tersembunyi juga terhapus
+        sudo rm -rf ./*
+        sudo rm -rf ./.??*
         
         # 3. Unduh & ekstrak panel original yang bersih
         echo -e "${BOLD}   - Mengunduh panel original terbaru...${NC}"
@@ -260,9 +262,18 @@ reset_panel() {
     
         # 4. Kembalikan file penting dari backup
         echo -e "${BOLD}   - Mengembalikan .env dan storage/...${NC}"
-        sudo mv "$TEMP_BACKUP"/.env .
-        sudo mv "$TEMP_BACKUP"/storage .
-        rm -rf "$TEMP_BACKUP" # Hapus folder backup sementara
+        
+        # <-- DIPERBAIKI: Hapus folder 'storage' baru sebelum mengembalikan backup
+        sudo rm -rf ./storage
+
+        # Sekarang pindahkan backup .env dan storage lama Anda
+        if [ -f "$TEMP_BACKUP/.env" ]; then
+            sudo mv "$TEMP_BACKUP"/.env .
+        fi
+        if [ -d "$TEMP_BACKUP/storage" ]; then
+            sudo mv "$TEMP_BACKUP"/storage .
+        fi
+        rm -rf "$TEMP_BACKUP"
 
         # 5. Jalankan perintah instalasi standar
         echo -e "${BOLD}   - Menginstal dependensi Composer...${NC}"
@@ -273,11 +284,11 @@ reset_panel() {
         php artisan view:clear > /dev/null 2>&1
         php artisan config:clear > /dev/null 2>&1
         
-        # 6. Hapus shortcut Blueprint dari sistem (jika ada)
+        # 6. Hapus shortcut Blueprint
         echo -e "${BOLD}   - Membersihkan shortcut Blueprint (jika ada)...${NC}"
         sudo rm -f /usr/local/bin/blueprint
 
-        # 7. Atur kepemilikan file kembali ke www-data
+        # 7. Atur kepemilikan file
         echo -e "${BOLD}   - Mengatur ulang kepemilikan file...${NC}"
         sudo chown -R www-data:www-data /var/www/pterodactyl/*
         
@@ -293,6 +304,7 @@ reset_panel() {
     esac
   done
 
+  # ... (Pesan sukses tidak berubah) ...
   echo " "
   print_success "[+] =============================================== [+]"
   print_success "[+]          PANEL BERHASIL DI-RESET TOTAL          [+]"
