@@ -472,7 +472,7 @@ install_depend() {
     chmod +x blueprint.sh
     
     echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
-    yes | sudo bash blueprint.sh > /dev/null 2>&1
+    yes | sudo bash blueprint.sh
 
     # ... (Pesan sukses tidak berubah) ...
     echo -e "                                                       "
