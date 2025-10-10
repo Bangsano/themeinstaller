@@ -47,7 +47,7 @@ install_jq() {
   echo -e "${BOLD}${BLUE}[+]             UPDATE & INSTALL JQ                 [+]${NC}"
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
-  sudo apt update && sudo apt install -y jq
+  sudo apt update && sudo apt install -y jq > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
@@ -568,7 +568,7 @@ while true; do
     3)
       configure_wings
       ;;
-    4.
+    4)
       create_node
       ;;
     5)
