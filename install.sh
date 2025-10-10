@@ -24,6 +24,7 @@ print_error() {
 
 # Display welcome message
 display_welcome() {
+  clear
   echo -e ""
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${BLUE}[+]                                                 [+]${NC}"
@@ -37,17 +38,17 @@ display_welcome() {
   echo -e ""
   echo -e "𝗧𝗘𝗟𝗘𝗚𝗥𝗔𝗠: @batuofc"
   sleep 4
-  clear
 }
 
 #Update and install jq
 install_jq() {
+  clear
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${BLUE}[+]             UPDATE & INSTALL JQ                 [+]${NC}"
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
-  sudo apt update && sudo apt install -y jq > /dev/null 2>&1
+  (sudo apt update && sudo apt install -y jq) > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
@@ -62,10 +63,11 @@ install_jq() {
   fi
   echo -e "                                                       "
   sleep 1
-  clear
 }
+
 #Check user token
 check_token() {
+  clear
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${BLUE}[+]              SANO OFFICIAL LICENSE            [+]${NC}"
@@ -80,22 +82,23 @@ check_token() {
     echo -e "${BOLD}${GREEN}Token yang anda masukkan salah.${NC}"
     exit 1
   fi
-  clear
 }
 
 # Install theme
 install_theme() {
+  clear
   local SELECT_THEME
   local THEME_NAME
   local THEME_URL
 
+  # ... (Blok menu 'while true' Anda tidak perlu diubah, sudah benar) ...
   while true; do
     echo " "
     print_info "[+] =============================================== [+]"
     print_info "[+]                   SELECT THEME                  [+]"
     print_info "[+] =============================================== [+]"
     echo " "
-    echo -e "${BOLD}--- MANUAL THEME ---${NC}"
+    echo -e "${BOLD}--- THEME MANUAL ---${NC}"
     echo -e "${BOLD}1. Stellar${NC}"
     echo -e "${BOLD}2. Billing${NC}"
     echo -e "${BOLD}3. Enigma${NC}"
@@ -106,15 +109,13 @@ install_theme() {
     echo " "
     print_info "[+] =============================================== [+]"
     echo " "
-    echo -e "${BOLD}--- BLUEPRINT THEME (wajib install dependensi blueprint) ---${NC}"
+    echo -e "${BOLD}--- THEME BLUEPRINT (Wajib install Opsi #8 dari menu utama) ---${NC}"
     echo -e "${BOLD}8. Nebula${NC}"
     echo -e "${BOLD}9. Recolor${NC}"
     echo " "
     echo -e "${BOLD}x. Kembali${NC}"
-    
     echo -n -e "${BOLD}Masukkan pilihan (1-9 atau x): ${NC}"
     read SELECT_THEME
-
     case "$SELECT_THEME" in
       1) THEME_NAME="Stellar"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/stellar.zip"; break;;
       2) THEME_NAME="Billing"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/billing.zip"; break;;
@@ -130,6 +131,7 @@ install_theme() {
     esac
   done
 
+  # ... (Blok konfirmasi dan setup awal tidak berubah) ...
   echo " "
   echo -n -e "${BOLD}Anda memilih untuk menginstal tema '$THEME_NAME'. Lanjutkan? (y/n): ${NC}"
   read confirmation
@@ -141,7 +143,7 @@ install_theme() {
   trap 'rm -rf -- "$TEMP_DIR"' EXIT
   cd "$TEMP_DIR"
   print_info "Memulai instalasi tema $THEME_NAME..."
-  if [ "$SELECT_THEME" -eq 3 ]; then # Khusus untuk Enigma
+  if [ "$SELECT_THEME" -eq 3 ]; then # Khusus Enigma
       YELLOW='\033[1;33m';
       echo -n -e "${BOLD}${YELLOW}Masukkan link whatsapp (https://wa.me/...): ${NC}"; read LINK_WA
       echo -n -e "${BOLD}${YELLOW}Masukkan link channel whatsapp (https://whatsapp.com/channel/...): ${NC}"; read LINK_CHANNEL
@@ -151,21 +153,21 @@ install_theme() {
   wget -q "$THEME_URL"
   local THEME_ZIP_FILE=$(basename "$THEME_URL")
   print_info "[2/4] Mengekstrak file tema..."
-  unzip -o "$THEME_ZIP_FILE"
+  unzip -oq "$THEME_ZIP_FILE" # <-- DITAMBAHKAN: -q untuk mode senyap (quiet)
 
   if [ "$SELECT_THEME" -eq 8 ] || [ "$SELECT_THEME" -eq 9 ]; then
-    # --- JALUR INSTALASI GENERIK UNTUK SEMUA TEMA BLUEPRINT ---
+    # --- JALUR INSTALASI BLUEPRINT ---
     print_info "[3/4] Mempersiapkan instalasi Blueprint..."
-    if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "❌ ERROR: Blueprint belum terinstall, silahkan install dependensi blueprint terlebih dahulu dengan memilih opsi 8 di menu awal."; return 1; fi
+    if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "❌ ERROR: Blueprint belum terinstall."; return 1; fi
     THEME_NAME_LOWER=$(echo "$THEME_NAME" | tr '[:upper:]' '[:lower:]')
     BLUEPRINT_FILE="${THEME_NAME_LOWER}.blueprint"
     sudo mv "$BLUEPRINT_FILE" /var/www/pterodactyl/
     print_info "[4/4] Menjalankan instalasi tema via Blueprint..."
     cd /var/www/pterodactyl
-    sudo bash blueprint.sh -install "$THEME_NAME_LOWER"
+    sudo bash blueprint.sh -install "$THEME_NAME_LOWER" > /dev/null 2>&1 # <-- DITAMBAHKAN: Sembunyikan output
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
   else
-    # --- JALUR INSTALASI TEMA MANUAL ---
+    # --- JALUR INSTALASI MANUAL ---
     if [ "$SELECT_THEME" -eq 3 ]; then # Khusus Enigma
       print_info "Mengkonfigurasi link untuk tema Enigma..."
       sed -i "s|LINK_WA|$LINK_WA|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
@@ -178,33 +180,34 @@ install_theme() {
     sudo apt-get update > /dev/null 2>&1
     sudo apt-get install -y nodejs > /dev/null 2>&1
     sudo npm i -g yarn > /dev/null 2>&1
-    cd /var/w ww/pterodactyl
+    cd /var/www/pterodactyl
     print_info "Menginstal dependensi Node.js..."
     yarn > /dev/null 2>&1
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
-      php artisan billing:install stable
+      php artisan billing:install stable > /dev/null 2>&1 # <-- DITAMBAHKAN: Sembunyikan output
     fi
     print_info "Menjalankan migrasi, build, dan optimisasi..."
-    php artisan migrate --force
+    php artisan migrate --force > /dev/null 2>&1 # <-- DITAMBAHKAN: Sembunyikan output
     yarn build:production > /dev/null 2>&1
-    php artisan view:clear
-    php artisan optimize:clear
+    php artisan view:clear > /dev/null 2>&1 # <-- DITAMBAHKAN: Sembunyikan output
+    php artisan optimize:clear > /dev/null 2>&1 # <-- DITAMBAHKAN: Sembunyikan output
     print_info "[4/4] Membersihkan file sisa..."
   fi
   
+  # ... (Pesan sukses tidak berubah) ...
   echo " "
   print_success "[+] =============================================== [+]"
   print_success "[+]           INSTALASI BERHASIL SELESAI            [+]"
   print_success "[+] =============================================== [+]"
   echo " "
   sleep 3
-  clear
   return 0
 }
 
 # Uninstall theme
 uninstall_theme() {
+  clear
   echo " "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${BLUE}[+]              UNINSTALL CUSTOM THEME             [+]${NC}"
@@ -231,29 +234,32 @@ uninstall_theme() {
 
         echo -e "${BOLD}⚙️  Memulai proses reset Panel Pterodactyl...${NC}"
 
-        php artisan down
+        php artisan down > /dev/null 2>&1
         echo -e "${BOLD}   - Mode maintenance diaktifkan.${NC}"
         
         echo -e "${BOLD}   - Menghapus direktori 'resources' (lokasi tema kustom)...${NC}"
         sudo rm -rf /var/www/pterodactyl/resources
         
         echo -e "${BOLD}   - Mengunduh file Panel Pterodactyl original terbaru...${NC}"
-        curl -L https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz | sudo tar -xzv
+        # <-- DIUBAH: 'v' (verbose) pada tar dihapus agar senyap
+        curl -L https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz | sudo tar -xzf -
     
         echo -e "${BOLD}   - Menginstal dependensi Composer...${NC}"
-        composer install --no-dev --optimize-autoloader
+        # <-- DIPERBAIKI: Jalankan sebagai www-data & dibuat senyap agar tidak ada prompt
+        sudo -u www-data composer install --no-dev --optimize-autoloader > /dev/null 2>&1
         
         echo -e "${BOLD}   - Membersihkan cache dan menjalankan migrasi database...${NC}"
-        php artisan view:clear
-        php artisan config:clear
-        php artisan migrate --seed --force
+        # <-- DITAMBAHKAN: Output disembunyikan agar senyap
+        php artisan view:clear > /dev/null 2>&1
+        php artisan config:clear > /dev/null 2>&1
+        php artisan migrate --seed --force > /dev/null 2>&1
         
         echo -e "${BOLD}   - Mengatur kepemilikan file ke 'www-data'...${NC}"
         sudo chown -R www-data:www-data /var/www/pterodactyl/*
         
         echo -e "${BOLD}   - Me-restart queue worker...${NC}"
-        php artisan queue:restart
-        php artisan up
+        php artisan queue:restart > /dev/null 2>&1
+        php artisan up > /dev/null 2>&1
         echo -e "${BOLD}   - Mode maintenance dimatikan.${NC}"
         
         break
@@ -268,18 +274,19 @@ uninstall_theme() {
     esac
   done
 
+  # ... (Pesan sukses tidak berubah) ...
   echo " "
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${GREEN}[+]             RESET PANEL TELAH BERHASIL            [+]${NC}"
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo " "
   sleep 3
-  clear
   return 0
 }
 
 # Cretae
 create_node() {
+  clear
   echo " "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${BLUE}[+]             MEMULAI CREATE NODE SCRIPT            [+]${NC}"
@@ -300,11 +307,11 @@ create_node() {
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo " "
   sleep 3
-  clear
   return 0
 }
 
 uninstall_panel() {
+  clear
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${BLUE}[+]                    UNINSTALL PANEL                 [+]${NC}"
@@ -324,49 +331,39 @@ EOF
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   sleep 3
-  clear
   return 0
 }
 
 configure_wings() {
+  clear
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${BLUE}[+]                    CONFIGURE WINGS                    [+]${NC}"
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
-  #!/bin/bash
-
-# Minta input token dari pengguna
-read -p "Masukkan token Configure menjalankan wings: " wings
-
-eval "$wings"
-# Menjalankan perintah systemctl start wings
-sudo systemctl start wings
-
+  read -p "Masukkan token Configure menjalankan wings: " wings
+  eval "$wings"
+  sudo systemctl start wings
   echo -e "                                                       "
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${GREEN}[+]               CONFIGURE WINGS SUKSES               [+]${NC}"
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   sleep 3
-  clear
   return 0
 }
 
 hackback_panel() {
+  clear
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${BLUE}[+]                    HACK BACK PANEL                 [+]${NC}"
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
-  # Minta input dari pengguna
-read -p "Masukkan Username Panel: " user
-read -p "password login: " psswdhb
-  #!/bin/bash
-cd /var/www/pterodactyl || { echo "Direktori tidak ditemukan"; return 1; }
-
-# Membuat user baru
-php artisan p:user:make <<EOF
+  read -p "Masukkan Username Panel: " user
+  read -p "password login: " psswdhb
+  cd /var/www/pterodactyl || { echo "Direktori tidak ditemukan"; return 1; }
+  php artisan p:user:make <<EOF
 yes
 $user@admin.com
 $user
@@ -380,20 +377,19 @@ EOF
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   sleep 3
-  clear
   return 0
 }
 
 ubahpw_vps() {
+  clear
   echo -e "                                                       "
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${GREEN}[+]                  UBAH PASSWORD VPS                    [+]${NC}"
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
-read -p "Masukkan Pw Baru: " pw
-read -p "Masukkan Ulang Pw Baru " pw
-
-passwd <<EOF
+  read -p "Masukkan Pw Baru: " pw
+  read -p "Masukkan Ulang Pw Baru " pw
+  passwd <<EOF
 $pw
 $pw
 
@@ -406,15 +402,20 @@ EOF
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   sleep 3
-  clear
   return 0
 }
 
-# Install Dependencies Untuk Nebula Dan Elysium
+# Install Dependencies Blueprint
 install_depend() {
     # Hentikan skrip seketika jika ada perintah yang gagal
     set -e
+    
+    # Mencegah dialog interaktif dari 'apt' dan 'needrestart'
+    export DEBIAN_FRONTEND=noninteractive
+    export NEEDRESTART_MODE=a
 
+    clear
+    # ... (Banner Anda di sini, tidak berubah) ...
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "${BOLD}${GREEN}[+]           INSTALL NODE.JS & BLUEPRINT           [+]${NC}"
@@ -422,47 +423,46 @@ install_depend() {
     echo -e "                                                       "
 
     # 1. Menginstal semua dependensi dasar
-    echo "⚙️  Menginstal dependensi dasar (curl, gnupg, git, dll)..."
-    sudo apt-get update
-    sudo apt-get install -y ca-certificates curl gnupg zip unzip git wget
+    echo -e "${BOLD}⚙️  Menginstal dependensi dasar (curl, gnupg, git, dll)...${NC}"
+    sudo apt-get update > /dev/null 2>&1
+    sudo apt-get install -y ca-certificates curl gnupg zip unzip git wget > /dev/null 2>&1
 
     # 2. Menyiapkan repositori Node.js v20.x
-    echo "⚙️  Menyiapkan repositori Node.js v20.x..."
+    echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v20.x...${NC}"
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
 
     # 3. Menginstal Node.js dan Yarn
-    echo "⚙️  Menginstal Node.js dan Yarn..."
-    sudo apt-get update
-    sudo apt-get install -y nodejs
-    sudo npm i -g yarn
+    echo -e "${BOLD}⚙️  Menginstal Node.js dan Yarn...${NC}"
+    sudo apt-get update > /dev/null 2>&1
+    sudo apt-get install -y nodejs > /dev/null 2>&1
+    sudo npm i -g yarn > /dev/null 2>&1
 
     # 4. Menginstal dependensi Pterodactyl
-    echo "⚙️  Menginstal dependensi Pterodactyl di /var/www/pterodactyl..."
+    echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl di /var/www/pterodactyl...${NC}"
     cd /var/www/pterodactyl
-    yarn
-    yarn add cross-env
+    yarn > /dev/null 2>&1
+    yarn add cross-env > /dev/null 2>&1
 
     # 5. Mengunduh dan menginstal Blueprint Framework
-    echo "⚙️  Mengunduh dan menginstal Blueprint Framework..."
-    # Menggunakan /tmp untuk file sementara agar lebih bersih
-    wget "$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | cut -d '"' -f 4)" -O /tmp/release.zip
-    unzip -o /tmp/release.zip -d /var/www/pterodactyl # Ekstrak langsung ke tujuan dengan overwrite
-    rm /tmp/release.zip # Hapus file zip sementara
+    echo -e "${BOLD}⚙️  Mengunduh dan menginstal Blueprint Framework...${NC}"
+    wget -q "$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | cut -d '"' -f 4)" -O /tmp/release.zip
+    unzip -oq /tmp/release.zip -d /var/www/pterodactyl
+    rm /tmp/release.zip
 
     # 6. Menjalankan Blueprint
     cd /var/www/pterodactyl
-    
     sed -i -E -e "s|WEBUSER=\"www-data\" #;|WEBUSER=\"www-data\" #;|g" \
                -e "s|USERSHELL=\"/bin/bash\" #;|USERSHELL=\"/bin/bash\" #;|g" \
                -e "s|OWNERSHIP=\"www-data:www-data\" #;|OWNERSHIP=\"www-data:www-data\" #;|g" blueprint.sh
-    
     chmod +x blueprint.sh
     
-    echo "⚙️  Menjalankan blueprint.sh..."
-    bash blueprint.sh
+    echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
+    # <-- DIPERBAIKI: Menambahkan 'yes |' untuk otomatisasi penuh
+    yes | sudo bash blueprint.sh > /dev/null 2>&1
 
+    # ... (Pesan sukses tidak berubah) ...
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "${BOLD}${GREEN}[+]        INSTALLASI NODE.JS & BLUEPRINT SELESAI   [+]${NC}"
@@ -470,12 +470,12 @@ install_depend() {
     echo -e "                                                       "
 
     sleep 3
-    clear
     return 0
 }
 
 # install auto suspend
 install_auto_suspend() {
+  clear
   echo " "
   print_info "[+] =============================================== [+]"
   print_info "[+]            INSTALL FITUR AUTO SUSPEND           [+]"
@@ -496,13 +496,19 @@ install_auto_suspend() {
 
   print_info "Mengunduh file autosuspend.zip..."
   wget -q https://github.com/Bangsano/themeinstaller/raw/main/autosuspend.zip
+  
   print_info "Mengekstrak file..."
-  unzip -o autosuspend.zip
+  # <-- DIPERBAIKI: Ditambahkan flag -q (quiet) agar senyap
+  unzip -oq autosuspend.zip
+  
   print_info "Menyalin file migrasi dan installer..."
   sudo cp -rfT pterodactyl /var/www/pterodactyl
+  
   cd /var/www/pterodactyl
+  
   print_info "Menjalankan skrip autosuspend (installer.sh)..."
-  sudo bash installer.sh <<EOF
+  # <-- DIPERBAIKI: Ditambahkan pengalihan output agar senyap
+  sudo bash installer.sh <<EOF > /dev/null 2>&1
 y
 EOF
 
@@ -512,7 +518,6 @@ EOF
   print_success "[+] =============================================== [+]"
   echo " "
   sleep 3
-  clear
   return 0
 }
 
@@ -529,7 +534,7 @@ while true; do
   echo -e "${BOLD}${CYAN}  ,ggggg        gggggggg.${NC}"
   echo -e "${BOLD}${CYAN} ,ggg'               'ggg.${NC}"
   echo -e "${BOLD}${CYAN}',gg       ,ggg.      'ggg:${NC}"
-  echo -e "${BOLD}${CYAN}'ggg      ,gg'''  .      ggg${NC}     ${BOLD}${BLUE}Auto Installer Theme Pterodactyl${NC}"
+  echo -e "${BOLD}${CYAN}'ggg      ,gg'''  .    ggg${NC}     ${BOLD}${BLUE}Auto Installer Theme Pterodactyl${NC}"
   echo -e "${BOLD}${CYAN}gggg      gg     ,    ggg${NC}     ${BOLD}${BLUE}By Sano Official${NC}"
   echo -e "${BOLD}${CYAN}ggg:     gg.     -   ,ggg${NC}       ${BOLD}${GREEN}----------------------------------${NC}"
   echo -e "${BOLD}${CYAN} ggg:     ggg._    _,ggg${NC}       ${BOLD}${BLUE}Telegram : @batuofc${NC}"
@@ -541,17 +546,17 @@ while true; do
   echo -e "${BOLD}${CYAN}          ggg.${NC}"
   echo -e "${BOLD}${CYAN}             b.${NC}"
   echo -e "  "
-  echo -e "${BOLD}BERIKUT ADALAH LIST FITUR:${NC}"
-  echo -e "${BOLD}1. Install Themes (Stellar, Elysium, Nebula, dll)${NC}"
-  echo -e "${BOLD}2. Reset Panel (menghapus semua modifikasi panel seperti tema kustom atau tools lainnya)${NC}"
-  echo -e "${BOLD}3. Configure Wings${NC}"
-  echo -e "${BOLD}4. Create Node & Location${NC}"
-  echo -e "${BOLD}5. Uninstall Panel${NC}"
-  echo -e "${BOLD}6. Hack Back Panel${NC}"
-  echo -e "${BOLD}7. Ubah Password VPS${NC}"
-  echo -e "${BOLD}8. Install Dependencies (Blueprint)${NC}"
-  echo -e "${BOLD}9. Install Fitur Auto Suspend${NC}" # <-- DITAMBAHKAN
-  echo -e "${BOLD}x. Exit${NC}"
+  echo -e "${BOLD} BERIKUT ADALAH LIST FITUR:${NC}"
+  echo -e "${BOLD} 1. Install Themes (Stellar, Elysium, Nebula, dll)${NC}"
+  echo -e "${BOLD} 2. Reset Panel (menghapus semua modifikasi panel seperti tema kustom atau tools lainnya)${NC}"
+  echo -e "${BOLD} 3. Configure Wings${NC}"
+  echo -e "${BOLD} 4. Create Node & Location${NC}"
+  echo -e "${BOLD} 5. Uninstall Panel${NC}"
+  echo -e "${BOLD} 6. Hack Back Panel${NC}"
+  echo -e "${BOLD} 7. Ubah Password VPS${NC}"
+  echo -e "${BOLD} 8. Install Dependencies (Blueprint)${NC}"
+  echo -e "${BOLD} 9. Install Fitur Auto Suspend${NC}" # <-- DITAMBAHKAN
+  echo -e "${BOLD} x. Exit${NC}"
   echo " "
   
   echo -n -e "${BOLD}Masukkan pilihan (1-9 atau x): ${NC}" # <-- DIUBAH
