@@ -477,7 +477,7 @@ install_depend() {
     
     echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
     # Jalankan installer dari lokasinya saat ini, biarkan ia menyalin file sendiri
-    yes | sudo bash blueprint.sh > /dev/null 2>&1
+    yes | sudo bash blueprint.sh
     
     # Membersihkan direktori sementara blueprint
     rm -rf "$TEMP_DIR_BLUEPRINT"
