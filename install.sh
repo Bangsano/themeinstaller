@@ -418,14 +418,14 @@ install_depend() {
     set -e
     
     # Mencegah dialog interaktif dari 'apt' dan 'needrestart'
-    export DEBIBIAN_FRONTEND=noninteractive
+    export DEBIAN_FRONTEND=noninteractive
     export NEEDRESTART_MODE=a
 
     clear
     # ... (Banner dan konfirmasi tidak berubah) ...
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-    echo -e "${BOLD}${GREEN}[+]           INSTALL NODE.JS & BLUEPRINT           [+${NC}"
+    echo -e "${BOLD}${GREEN}[+]           INSTALL NODE.JS & BLUEPRINT           [+]${NC}"
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "                                                       "
     echo -n -e "${BOLD}Apakah anda yakin ingin melanjutkannya? (y/n): ${NC}"
@@ -464,24 +464,24 @@ install_depend() {
     #            PERUBAHAN KUNCI ADA DI BLOK BERIKUT INI
     # =========================================================================
 
-    # 5. Mengunduh dan MENGEKSTRAK di direktori sementara
-    echo -e "${BOLD}⚙️  Mengunduh dan mengekstrak Blueprint Framework...${NC}"
-    TEMP_DIR_BLUEPRINT=$(mktemp -d) # Buat direktori sementara baru yang bersih
+    # 5. Mengunduh dan mengekstrak Blueprint di lokasi sementara
+    echo -e "${BOLD}⚙️  Mengunduh dan mempersiapkan Blueprint Framework...${NC}"
+    TEMP_DIR_BLUEPRINT=$(mktemp -d)
     wget -q "$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | cut -d '"' -f 4)" -O "$TEMP_DIR_BLUEPRINT/release.zip"
     unzip -oq "$TEMP_DIR_BLUEPRINT/release.zip" -d "$TEMP_DIR_BLUEPRINT"
-    
-    # 6. Menjalankan Blueprint dari direktori sementara
-    cd "$TEMP_DIR_BLUEPRINT"
-    # 'sed' dan 'chmod' tidak lagi diperlukan karena installer akan menanganinya
+
+    # 6. Pindahkan HANYA skrip installer, lalu jalankan dari direktori panel
+    sudo mv "$TEMP_DIR_BLUEPRINT/blueprint.sh" /var/www/pterodactyl/
+    cd /var/www/pterodactyl
     chmod +x blueprint.sh
     
     echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
-    # Jalankan installer dari lokasinya saat ini, biarkan ia menyalin file sendiri
+    # Jalankan installer dari direktori yang benar (/var/www/pterodactyl)
     yes | sudo bash blueprint.sh
     
     # Membersihkan direktori sementara blueprint
     rm -rf "$TEMP_DIR_BLUEPRINT"
-
+    
     # ... (Pesan sukses tidak berubah) ...
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
