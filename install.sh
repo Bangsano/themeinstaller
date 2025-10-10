@@ -458,11 +458,11 @@ install_depend() {
         return
     fi
     
-    # ... (Langkah 1-4 tidak berubah) ...
+    # ... (Langkah 1-4 tidak berubah dan sudah benar) ...
     # 1. Menginstal semua dependensi dasar
     echo -e "${BOLD}⚙️  Menginstal dependensi dasar (curl, gnupg, git, dll)...${NC}"
     sudo apt-get update > /dev/null 2>&1
-    sudo apt-get install -y ca-certificates curl gnupg zip unzip git wget > /dev/null 2>&1
+    sudo apt-get install -y ca-certificates curl gnupg zip unzip git wget rsync > /dev/null 2>&1 # Ditambahkan rsync
     # 2. Menyiapkan repositori Node.js v20.x
     echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v20.x...${NC}"
     sudo mkdir -p /etc/apt/keyrings
@@ -484,27 +484,28 @@ install_depend() {
     sudo rm -rf /var/www/pterodactyl/blueprint /var/www/pterodactyl/blueprint.sh /usr/local/bin/blueprint
 
     # =========================================================================
-    #            PERUBAHAN KUNCI ADA DI BLOK BERIKUT INI
+    #            BLOK LOGIKA BARU YANG SUDAH DISEMPURNAKAN
     # =========================================================================
 
     # 5. Mengunduh dan mengekstrak Blueprint di lokasi sementara
-    echo -e "${BOLD}⚙️  Mengunduh dan mempersiapkan Blueprint Framework...${NC}"
+    echo -e "${BOLD}⚙️  Mempersiapkan file installer Blueprint...${NC}"
     TEMP_DIR_BLUEPRINT=$(mktemp -d)
     wget -q "$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | cut -d '"' -f 4)" -O "$TEMP_DIR_BLUEPRINT/release.zip"
     unzip -oq "$TEMP_DIR_BLUEPRINT/release.zip" -d "$TEMP_DIR_BLUEPRINT"
 
-    # 6. Pindahkan HANYA skrip installer, lalu jalankan dari direktori panel
-    sudo mv "$TEMP_DIR_BLUEPRINT/blueprint.sh" /var/www/pterodactyl/
+    # 6. Salin file installer (kecuali folder 'blueprint') ke direktori panel
+    # rsync adalah alat yang sempurna untuk ini.
+    sudo rsync -a --exclude 'blueprint' "$TEMP_DIR_BLUEPRINT/" /var/www/pterodactyl/
+    
+    # 7. Jalankan installer dari direktori panel
     cd /var/www/pterodactyl
     chmod +x blueprint.sh
-    
     echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
-    # Jalankan installer dari direktori yang benar (/var/www/pterodactyl)
-    yes | sudo bash blueprint.sh
+    yes | sudo bash blueprint.sh > /dev/null 2>&1
     
-    # Membersihkan direktori sementara blueprint
+    # 8. Membersihkan file sementara
     rm -rf "$TEMP_DIR_BLUEPRINT"
-    
+
     # ... (Pesan sukses tidak berubah) ...
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
