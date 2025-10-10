@@ -112,7 +112,7 @@ install_theme() {
     echo -e "${BOLD} 8. Nebula${NC}"
     echo -e "${BOLD} 9. Recolor${NC}"
     echo " "
-    echo -e "${BOLD}x. Kembali${NC}"
+    echo -e "${BOLD} x. Kembali${NC}"
     echo -n -e "${BOLD}Masukkan pilihan (1-9 atau x): ${NC}"
     read SELECT_THEME
     case "$SELECT_THEME" in
@@ -164,9 +164,8 @@ install_theme() {
     print_info "[4/4] Menjalankan instalasi tema via Blueprint..."
     cd /var/www/pterodactyl
     
-    # <-- DIPERBAIKI: Gunakan perintah 'blueprint' yang sudah terinstal, 
-    # bukan 'blueprint.sh', dan jalankan sebagai user www-data untuk izin yang benar.
-    sudo -u www-data blueprint -install "$THEME_NAME_LOWER"
+    # <-- DIPERBAIKI: Menggunakan 'su' untuk menjalankan sebagai www-data tanpa password
+    su -s /bin/bash -c "blueprint -install $THEME_NAME_LOWER" www-data
     
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
   else
@@ -540,7 +539,7 @@ while true; do
   echo -e "${BOLD}${CYAN} ,ggg'               'ggg.${NC}"
   echo -e "${BOLD}${CYAN}',gg       ,ggg.      'ggg:${NC}"
   echo -e "${BOLD}${CYAN}'ggg      ,gg'''  .    ggg${NC}     ${BOLD}${BLUE}Auto Installer Theme Pterodactyl${NC}"
-  echo -e "${BOLD}${CYAN}gggg      gg     ,    ggg${NC}     ${BOLD}${BLUE}By Sano Official${NC}"
+  echo -e "${BOLD}${CYAN}gggg      gg     ,    ggg${NC}      ${BOLD}${BLUE}By Sano Official${NC}"
   echo -e "${BOLD}${CYAN}ggg:     gg.     -   ,ggg${NC}       ${BOLD}${GREEN}----------------------------------${NC}"
   echo -e "${BOLD}${CYAN} ggg:     ggg._    _,ggg${NC}       ${BOLD}${BLUE}Telegram : @batuofc${NC}"
   echo -e "${BOLD}${CYAN} ggg.    '.'''ggggggp${NC}"
