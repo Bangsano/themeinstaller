@@ -165,7 +165,7 @@ install_theme() {
     cd /var/www/pterodactyl
 
     # Jalankan sebagai root (via sudo) untuk memastikan izin penuh
-    sudo blueprint -install "$THEME_NAME_LOWER"
+    sudo blueprint -install "$THEME_NAME_LOWER" > /dev/null 2>&1
 
     # SEGERA setelah itu, perbaiki kepemilikan file kembali ke www-data
     sudo chown -R www-data:www-data /var/www/pterodactyl/*
