@@ -163,10 +163,13 @@ install_theme() {
     sudo mv "$BLUEPRINT_FILE" /var/www/pterodactyl/
     print_info "[4/4] Menjalankan instalasi tema via Blueprint..."
     cd /var/www/pterodactyl
-    
-    # <-- DIPERBAIKI: Menggunakan 'su' untuk menjalankan sebagai www-data tanpa password
-    su -s /bin/bash -c "blueprint -install $THEME_NAME_LOWER" www-data
-    
+
+    # Jalankan sebagai root (via sudo) untuk memastikan izin penuh
+    sudo blueprint -install "$THEME_NAME_LOWER"
+
+    # SEGERA setelah itu, perbaiki kepemilikan file kembali ke www-data
+    sudo chown -R www-data:www-data /var/www/pterodactyl/*
+
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
   else
     # --- JALUR INSTALASI MANUAL ---
