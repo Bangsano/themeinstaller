@@ -501,7 +501,7 @@ install_depend() {
     cd /var/www/pterodactyl
     chmod +x blueprint.sh
     echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
-    yes | sudo bash blueprint.sh > /dev/null 2>&1
+    yes | sudo bash blueprint.sh
     
     # 8. Membersihkan file sementara
     rm -rf "$TEMP_DIR_BLUEPRINT"
