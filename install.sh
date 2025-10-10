@@ -434,29 +434,32 @@ install_depend() {
         echo -e "${BOLD}Instalasi dibatalkan.${NC}"
         return
     fi
+    
+    # ... (Langkah 1-4 tidak berubah) ...
     # 1. Menginstal semua dependensi dasar
     echo -e "${BOLD}⚙️  Menginstal dependensi dasar (curl, gnupg, git, dll)...${NC}"
     sudo apt-get update > /dev/null 2>&1
     sudo apt-get install -y ca-certificates curl gnupg zip unzip git wget > /dev/null 2>&1
-
     # 2. Menyiapkan repositori Node.js v20.x
     echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v20.x...${NC}"
     sudo mkdir -p /etc/apt/keyrings
-    # <-- DIPERBAIKI: Menggunakan 'tee' untuk menimpa file GPG tanpa bertanya
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-
     # 3. Menginstal Node.js dan Yarn
     echo -e "${BOLD}⚙️  Menginstal Node.js dan Yarn...${NC}"
     sudo apt-get update > /dev/null 2>&1
     sudo apt-get install -y nodejs > /dev/null 2>&1
     sudo npm i -g yarn > /dev/null 2>&1
-
     # 4. Menginstal dependensi Pterodactyl
     echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl di /var/www/pterodactyl...${NC}"
     cd /var/www/pterodactyl
     yarn > /dev/null 2>&1
     yarn add cross-env > /dev/null 2>&1
+
+    # <-- BLOK PEMBERSIHAN DITAMBAHKAN DI SINI
+    # Ini akan menghapus instalasi Blueprint yang gagal atau sudah ada sebelumnya.
+    echo -e "${BOLD}⚙️  Membersihkan instalasi Blueprint lama (jika ada)...${NC}"
+    sudo rm -rf /var/www/pterodactyl/blueprint /var/www/pterodactyl/blueprint.sh /usr/local/bin/blueprint
 
     # 5. Mengunduh dan menginstal Blueprint Framework
     echo -e "${BOLD}⚙️  Mengunduh dan menginstal Blueprint Framework...${NC}"
@@ -472,7 +475,8 @@ install_depend() {
     chmod +x blueprint.sh
     
     echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
-    yes | sudo bash blueprint.sh
+    # Menjalankan installer dan menyembunyikan outputnya
+    yes | sudo bash blueprint.sh > /dev/null 2>&1
 
     # ... (Pesan sukses tidak berubah) ...
     echo -e "                                                       "
