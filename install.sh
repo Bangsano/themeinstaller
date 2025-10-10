@@ -213,89 +213,66 @@ install_theme() {
 }
 
 # Uninstall theme
-reset_panel() {
+uninstall_theme() {
   clear
   echo " "
-  print_info "[+] =============================================== [+]"
-  print_info "[+]            RESET PANEL PTERODACTYL          [+]"
-  print_info "[+] =============================================== [+]"
+  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
+  echo -e "${BOLD}${BLUE}[+]              UNINSTALL CUSTOM THEME             [+]${NC}"
+  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo " "
-  echo -e "${BOLD}${YELLOW}PERINGATAN:${NC} ${BOLD}Proses ini akan MENGHAPUS TOTAL semua file panel dan${NC}"
-  echo -e "${BOLD}mengembalikannya ke kondisi original. Semua tema dan modifikasi akan hilang.${NC}"
+  echo -e "${BOLD}Proses ini akan mereset panel Pterodactyl Anda ke kondisi standar (original).${NC}"
+  echo -e "${BOLD}Semua kustomisasi tema akan terhapus secara permanen.${NC}"
   echo " "
 
   while true; do
-    echo -n -e "${BOLD}Apakah Anda benar-benar yakin ingin melanjutkan? (y/n): ${NC}"
+    echo -n -e "${BOLD}Apakah Anda yakin ingin melanjutkan? [y/n] ${NC}"
     read yn
     
     case $yn in
       [Yy]*)
         set -e
+
         if [ ! -d "/var/www/pterodactyl" ]; then
-            print_error "🚨 ERROR: Direktori instalasi Pterodactyl tidak ditemukan."
+            echo -e "${BOLD}🚨 ERROR: Direktori instalasi Pterodactyl (/var/www/pterodactyl) tidak ditemukan. Batalkan operasi.${NC}"
             return 1
         fi
-        cd /var/www/pterodactyl || { print_error "Gagal masuk ke direktori Pterodactyl."; return 1; }
-
-        echo -e "${BOLD}⚙️  Memulai proses reset total...${NC}"
-
-        # 1. Backup file penting (.env dan folder storage)
-        echo -e "${BOLD}   - Mem-backup .env dan storage/...${NC}"
-        TEMP_BACKUP=$(mktemp -d)
-        if [ -f ".env" ]; then
-            sudo mv .env "$TEMP_BACKUP/"
-        fi
-        # Hanya backup jika folder storage ada
-        if [ -d "storage" ]; then
-            sudo mv storage "$TEMP_BACKUP/"
-        fi
         
-        # 2. HAPUS TOTAL semua file panel lama
-        echo -e "${BOLD}   - Menghapus semua file panel lama...${NC}"
-        # Menambahkan '.*' untuk memastikan file tersembunyi juga terhapus
-        sudo rm -rf ./*
-        sudo rm -rf ./.??*
+        cd /var/www/pterodactyl || { echo -e "${BOLD}Gagal masuk ke direktori Pterodactyl.${NC}"; return 1; }
+
+        echo -e "${BOLD}⚙️  Memulai proses reset Panel Pterodactyl...${NC}"
+
+        php artisan down > /dev/null 2>&1
+        echo -e "${BOLD}   - Mode maintenance diaktifkan.${NC}"
         
-        # 3. Unduh & ekstrak panel original yang bersih
-        echo -e "${BOLD}   - Mengunduh panel original terbaru...${NC}"
-        curl -L https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz | sudo tar -xzf - -C /var/www/pterodactyl
+        echo -e "${BOLD}   - Menghapus direktori 'resources' (lokasi tema kustom)...${NC}"
+        sudo rm -rf /var/www/pterodactyl/resources
+        
+        echo -e "${BOLD}   - Mengunduh file Panel Pterodactyl original terbaru...${NC}"
+        # <-- DIUBAH: 'v' (verbose) pada tar dihapus agar senyap
+        curl -L https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz | sudo tar -xzf -
     
-        # 4. Kembalikan file penting dari backup
-        echo -e "${BOLD}   - Mengembalikan .env dan storage/...${NC}"
-        
-        # <-- DIPERBAIKI: Hapus folder 'storage' baru sebelum mengembalikan backup
-        sudo rm -rf ./storage
-
-        # Sekarang pindahkan backup .env dan storage lama Anda
-        if [ -f "$TEMP_BACKUP/.env" ]; then
-            sudo mv "$TEMP_BACKUP"/.env .
-        fi
-        if [ -d "$TEMP_BACKUP/storage" ]; then
-            sudo mv "$TEMP_BACKUP"/storage .
-        fi
-        rm -rf "$TEMP_BACKUP"
-
-        # 5. Jalankan perintah instalasi standar
         echo -e "${BOLD}   - Menginstal dependensi Composer...${NC}"
+        # <-- DIPERBAIKI: Jalankan sebagai www-data & dibuat senyap agar tidak ada prompt
         sudo -u www-data composer install --no-dev --optimize-autoloader > /dev/null 2>&1
         
         echo -e "${BOLD}   - Membersihkan cache dan menjalankan migrasi database...${NC}"
-        php artisan migrate --seed --force > /dev/null 2>&1
+        # <-- DITAMBAHKAN: Output disembunyikan agar senyap
         php artisan view:clear > /dev/null 2>&1
         php artisan config:clear > /dev/null 2>&1
+        php artisan migrate --seed --force > /dev/null 2>&1
         
-        # 6. Hapus shortcut Blueprint
-        echo -e "${BOLD}   - Membersihkan shortcut Blueprint (jika ada)...${NC}"
-        sudo rm -f /usr/local/bin/blueprint
-
-        # 7. Atur kepemilikan file
-        echo -e "${BOLD}   - Mengatur ulang kepemilikan file...${NC}"
+        echo -e "${BOLD}   - Mengatur kepemilikan file ke 'www-data'...${NC}"
         sudo chown -R www-data:www-data /var/www/pterodactyl/*
+        
+        echo -e "${BOLD}   - Me-restart queue worker...${NC}"
+        php artisan queue:restart > /dev/null 2>&1
+        php artisan up > /dev/null 2>&1
+        echo -e "${BOLD}   - Mode maintenance dimatikan.${NC}"
         
         break
         ;;
       [Nn]*)
-        echo -e "\n${BOLD}❌ Pembatalan oleh pengguna.${NC}"
+        echo -e "\n${BOLD}❌ Pembatalan oleh pengguna. Tidak ada perubahan yang dilakukan.${NC}"
         return
         ;;
       *)
@@ -306,9 +283,9 @@ reset_panel() {
 
   # ... (Pesan sukses tidak berubah) ...
   echo " "
-  print_success "[+] =============================================== [+]"
-  print_success "[+]          PANEL BERHASIL DI-RESET TOTAL          [+]"
-  print_success "[+] =============================================== [+]"
+  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
+  echo -e "${BOLD}${GREEN}[+]             RESET PANEL TELAH BERHASIL            [+]${NC}"
+  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo " "
   sleep 3
   return 0
@@ -349,10 +326,12 @@ uninstall_panel() {
   echo -e "                                                       "
 
 bash <(curl -s https://pterodactyl-installer.se) <<EOF
+6
 y
 y
 y
-y
+
+
 EOF
 
   echo -e "                                                       "
@@ -445,7 +424,7 @@ install_depend() {
     export NEEDRESTART_MODE=a
 
     clear
-    # ... (Banner dan konfirmasi tidak berubah) ...
+    # ... (Banner Anda di sini, tidak berubah) ...
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "${BOLD}${GREEN}[+]           INSTALL NODE.JS & BLUEPRINT           [+]${NC}"
@@ -457,54 +436,45 @@ install_depend() {
         echo -e "${BOLD}Instalasi dibatalkan.${NC}"
         return
     fi
-    
-    # ... (Langkah 1-4 tidak berubah dan sudah benar) ...
     # 1. Menginstal semua dependensi dasar
     echo -e "${BOLD}⚙️  Menginstal dependensi dasar (curl, gnupg, git, dll)...${NC}"
     sudo apt-get update > /dev/null 2>&1
-    sudo apt-get install -y ca-certificates curl gnupg zip unzip git wget rsync > /dev/null 2>&1 # Ditambahkan rsync
+    sudo apt-get install -y ca-certificates curl gnupg zip unzip git wget > /dev/null 2>&1
+
     # 2. Menyiapkan repositori Node.js v20.x
     echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v20.x...${NC}"
     sudo mkdir -p /etc/apt/keyrings
+    # <-- DIPERBAIKI: Menggunakan 'tee' untuk menimpa file GPG tanpa bertanya
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
+
     # 3. Menginstal Node.js dan Yarn
     echo -e "${BOLD}⚙️  Menginstal Node.js dan Yarn...${NC}"
     sudo apt-get update > /dev/null 2>&1
     sudo apt-get install -y nodejs > /dev/null 2>&1
     sudo npm i -g yarn > /dev/null 2>&1
+
     # 4. Menginstal dependensi Pterodactyl
     echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl di /var/www/pterodactyl...${NC}"
     cd /var/www/pterodactyl
     yarn > /dev/null 2>&1
     yarn add cross-env > /dev/null 2>&1
 
-    # Langkah Pembersihan (tidak berubah, tetap penting)
-    echo -e "${BOLD}⚙️  Membersihkan instalasi Blueprint lama (jika ada)...${NC}"
-    sudo rm -rf /var/www/pterodactyl/blueprint /var/www/pterodactyl/blueprint.sh /usr/local/bin/blueprint
+    # 5. Mengunduh dan menginstal Blueprint Framework
+    echo -e "${BOLD}⚙️  Mengunduh dan menginstal Blueprint Framework...${NC}"
+    wget -q "$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | cut -d '"' -f 4)" -O /tmp/release.zip
+    unzip -oq /tmp/release.zip -d /var/www/pterodactyl
+    rm /tmp/release.zip
 
-    # =========================================================================
-    #            BLOK LOGIKA BARU YANG SUDAH DISEMPURNAKAN
-    # =========================================================================
-
-    # 5. Mengunduh dan mengekstrak Blueprint di lokasi sementara
-    echo -e "${BOLD}⚙️  Mempersiapkan file installer Blueprint...${NC}"
-    TEMP_DIR_BLUEPRINT=$(mktemp -d)
-    wget -q "$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | cut -d '"' -f 4)" -O "$TEMP_DIR_BLUEPRINT/release.zip"
-    unzip -oq "$TEMP_DIR_BLUEPRINT/release.zip" -d "$TEMP_DIR_BLUEPRINT"
-
-    # 6. Salin file installer (kecuali folder 'blueprint') ke direktori panel
-    # rsync adalah alat yang sempurna untuk ini.
-    sudo rsync -a --exclude 'blueprint' "$TEMP_DIR_BLUEPRINT/" /var/www/pterodactyl/
-    
-    # 7. Jalankan installer dari direktori panel
+    # 6. Menjalankan Blueprint
     cd /var/www/pterodactyl
+    sed -i -E -e "s|WEBUSER=\"www-data\" #;|WEBUSER=\"www-data\" #;|g" \
+               -e "s|USERSHELL=\"/bin/bash\" #;|USERSHELL=\"/bin/bash\" #;|g" \
+               -e "s|OWNERSHIP=\"www-data:www-data\" #;|OWNERSHIP=\"www-data:www-data\" #;|g" blueprint.sh
     chmod +x blueprint.sh
+    
     echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
     yes | sudo bash blueprint.sh
-    
-    # 8. Membersihkan file sementara
-    rm -rf "$TEMP_DIR_BLUEPRINT"
 
     # ... (Pesan sukses tidak berubah) ...
     echo -e "                                                       "
@@ -612,7 +582,7 @@ while true; do
       install_theme
       ;;
     2)
-      reset_panel
+      uninstall_theme
       ;;
     3)
       configure_wings
