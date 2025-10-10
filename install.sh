@@ -88,8 +88,7 @@ check_token() {
 install_theme() {
   clear
   local SELECT_THEME
-  local THEME_NAME
-  local THEME_URL
+  # ... (sisa deklarasi variabel tidak berubah) ...
 
   # ... (Blok menu 'while true' Anda tidak perlu diubah, sudah benar) ...
   while true; do
@@ -99,19 +98,19 @@ install_theme() {
     print_info "[+] =============================================== [+]"
     echo " "
     echo -e "${BOLD}--- THEME MANUAL ---${NC}"
-    echo -e "${BOLD}1. Stellar${NC}"
-    echo -e "${BOLD}2. Billing${NC}"
-    echo -e "${BOLD}3. Enigma${NC}"
-    echo -e "${BOLD}4. Elysium${NC}"
-    echo -e "${BOLD}5. Nightcore${NC}"
-    echo -e "${BOLD}6. Ice${NC}"
-    echo -e "${BOLD}7. Noobe${NC}"
+    echo -e "${BOLD} 1. Stellar${NC}"
+    echo -e "${BOLD} 2. Billing${NC}"
+    echo -e "${BOLD} 3. Enigma${NC}"
+    echo -e "${BOLD} 4. Elysium${NC}"
+    echo -e "${BOLD} 5. Nightcore${NC}"
+    echo -e "${BOLD} 6. Ice${NC}"
+    echo -e "${BOLD} 7. Noobe${NC}"
     echo " "
     print_info "[+] =============================================== [+]"
     echo " "
     echo -e "${BOLD}--- THEME BLUEPRINT (Wajib install Opsi #8 dari menu utama) ---${NC}"
-    echo -e "${BOLD}8. Nebula${NC}"
-    echo -e "${BOLD}9. Recolor${NC}"
+    echo -e "${BOLD} 8. Nebula${NC}"
+    echo -e "${BOLD} 9. Recolor${NC}"
     echo " "
     echo -e "${BOLD}x. Kembali${NC}"
     echo -n -e "${BOLD}Masukkan pilihan (1-9 atau x): ${NC}"
@@ -131,7 +130,7 @@ install_theme() {
     esac
   done
 
-  # ... (Blok konfirmasi dan setup awal tidak berubah) ...
+  # ... (Blok konfirmasi, setup, dan unduh tidak berubah) ...
   echo " "
   echo -n -e "${BOLD}Anda memilih untuk menginstal tema '$THEME_NAME'. Lanjutkan? (y/n): ${NC}"
   read confirmation
@@ -153,7 +152,7 @@ install_theme() {
   wget -q "$THEME_URL"
   local THEME_ZIP_FILE=$(basename "$THEME_URL")
   print_info "[2/4] Mengekstrak file tema..."
-  unzip -oq "$THEME_ZIP_FILE" # <-- DITAMBAHKAN: -q untuk mode senyap (quiet)
+  unzip -oq "$THEME_ZIP_FILE"
 
   if [ "$SELECT_THEME" -eq 8 ] || [ "$SELECT_THEME" -eq 9 ]; then
     # --- JALUR INSTALASI BLUEPRINT ---
@@ -164,10 +163,15 @@ install_theme() {
     sudo mv "$BLUEPRINT_FILE" /var/www/pterodactyl/
     print_info "[4/4] Menjalankan instalasi tema via Blueprint..."
     cd /var/www/pterodactyl
-    sudo bash blueprint.sh -install "$THEME_NAME_LOWER" > /dev/null 2>&1 # <-- DITAMBAHKAN: Sembunyikan output
+    
+    # <-- DIPERBAIKI: Gunakan perintah 'blueprint' yang sudah terinstal, 
+    # bukan 'blueprint.sh', dan jalankan sebagai user www-data untuk izin yang benar.
+    sudo -u www-data blueprint -install "$THEME_NAME_LOWER"
+    
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
   else
     # --- JALUR INSTALASI MANUAL ---
+    # ... (Blok ini tidak perlu diubah, sudah benar) ...
     if [ "$SELECT_THEME" -eq 3 ]; then # Khusus Enigma
       print_info "Mengkonfigurasi link untuk tema Enigma..."
       sed -i "s|LINK_WA|$LINK_WA|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
@@ -185,13 +189,13 @@ install_theme() {
     yarn > /dev/null 2>&1
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
-      php artisan billing:install stable > /dev/null 2>&1 # <-- DITAMBAHKAN: Sembunyikan output
+      php artisan billing:install stable > /dev/null 2>&1
     fi
     print_info "Menjalankan migrasi, build, dan optimisasi..."
-    php artisan migrate --force > /dev/null 2>&1 # <-- DITAMBAHKAN: Sembunyikan output
+    php artisan migrate --force > /dev/null 2>&1
     yarn build:production > /dev/null 2>&1
-    php artisan view:clear > /dev/null 2>&1 # <-- DITAMBAHKAN: Sembunyikan output
-    php artisan optimize:clear > /dev/null 2>&1 # <-- DITAMBAHKAN: Sembunyikan output
+    php artisan view:clear > /dev/null 2>&1
+    php artisan optimize:clear > /dev/null 2>&1
     print_info "[4/4] Membersihkan file sisa..."
   fi
   
@@ -202,6 +206,7 @@ install_theme() {
   print_success "[+] =============================================== [+]"
   echo " "
   sleep 3
+  clear
   return 0
 }
 
