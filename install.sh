@@ -418,14 +418,14 @@ install_depend() {
     set -e
     
     # Mencegah dialog interaktif dari 'apt' dan 'needrestart'
-    export DEBIAN_FRONTEND=noninteractive
+    export DEBIBIAN_FRONTEND=noninteractive
     export NEEDRESTART_MODE=a
 
     clear
-    # ... (Banner Anda di sini, tidak berubah) ...
+    # ... (Banner dan konfirmasi tidak berubah) ...
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-    echo -e "${BOLD}${GREEN}[+]           INSTALL NODE.JS & BLUEPRINT           [+]${NC}"
+    echo -e "${BOLD}${GREEN}[+]           INSTALL NODE.JS & BLUEPRINT           [+${NC}"
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "                                                       "
     echo -n -e "${BOLD}Apakah anda yakin ingin melanjutkannya? (y/n): ${NC}"
@@ -456,27 +456,31 @@ install_depend() {
     yarn > /dev/null 2>&1
     yarn add cross-env > /dev/null 2>&1
 
-    # <-- BLOK PEMBERSIHAN DITAMBAHKAN DI SINI
-    # Ini akan menghapus instalasi Blueprint yang gagal atau sudah ada sebelumnya.
+    # Langkah Pembersihan (tidak berubah, tetap penting)
     echo -e "${BOLD}⚙️  Membersihkan instalasi Blueprint lama (jika ada)...${NC}"
     sudo rm -rf /var/www/pterodactyl/blueprint /var/www/pterodactyl/blueprint.sh /usr/local/bin/blueprint
 
-    # 5. Mengunduh dan menginstal Blueprint Framework
-    echo -e "${BOLD}⚙️  Mengunduh dan menginstal Blueprint Framework...${NC}"
-    wget -q "$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | cut -d '"' -f 4)" -O /tmp/release.zip
-    unzip -oq /tmp/release.zip -d /var/www/pterodactyl
-    rm /tmp/release.zip
+    # =========================================================================
+    #            PERUBAHAN KUNCI ADA DI BLOK BERIKUT INI
+    # =========================================================================
 
-    # 6. Menjalankan Blueprint
-    cd /var/www/pterodactyl
-    sed -i -E -e "s|WEBUSER=\"www-data\" #;|WEBUSER=\"www-data\" #;|g" \
-               -e "s|USERSHELL=\"/bin/bash\" #;|USERSHELL=\"/bin/bash\" #;|g" \
-               -e "s|OWNERSHIP=\"www-data:www-data\" #;|OWNERSHIP=\"www-data:www-data\" #;|g" blueprint.sh
+    # 5. Mengunduh dan MENGEKSTRAK di direktori sementara
+    echo -e "${BOLD}⚙️  Mengunduh dan mengekstrak Blueprint Framework...${NC}"
+    TEMP_DIR_BLUEPRINT=$(mktemp -d) # Buat direktori sementara baru yang bersih
+    wget -q "$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | cut -d '"' -f 4)" -O "$TEMP_DIR_BLUEPRINT/release.zip"
+    unzip -oq "$TEMP_DIR_BLUEPRINT/release.zip" -d "$TEMP_DIR_BLUEPRINT"
+    
+    # 6. Menjalankan Blueprint dari direktori sementara
+    cd "$TEMP_DIR_BLUEPRINT"
+    # 'sed' dan 'chmod' tidak lagi diperlukan karena installer akan menanganinya
     chmod +x blueprint.sh
     
     echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
-    # Menjalankan installer dan menyembunyikan outputnya
-    yes | sudo bash blueprint.sh
+    # Jalankan installer dari lokasinya saat ini, biarkan ia menyalin file sendiri
+    yes | sudo bash blueprint.sh > /dev/null 2>&1
+    
+    # Membersihkan direktori sementara blueprint
+    rm -rf "$TEMP_DIR_BLUEPRINT"
 
     # ... (Pesan sukses tidak berubah) ...
     echo -e "                                                       "
