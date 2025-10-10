@@ -428,7 +428,12 @@ install_depend() {
     echo -e "${BOLD}${GREEN}[+]           INSTALL NODE.JS & BLUEPRINT           [+]${NC}"
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "                                                       "
-
+    echo -n -e "${BOLD}Apakah anda yakin ingin melanjutkannya? (y/n): ${NC}"
+    read confirmation
+    if [[ "$confirmation" != [yY] ]]; then
+        echo -e "${BOLD}Instalasi dibatalkan.${NC}"
+        return
+    fi
     # 1. Menginstal semua dependensi dasar
     echo -e "${BOLD}⚙️  Menginstal dependensi dasar (curl, gnupg, git, dll)...${NC}"
     sudo apt-get update > /dev/null 2>&1
@@ -449,7 +454,7 @@ install_depend() {
 
     # 4. Menginstal dependensi Pterodactyl
     echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl di /var/www/pterodactyl...${NC}"
-    cd /var/w ww/pterodactyl
+    cd /var/www/pterodactyl
     yarn > /dev/null 2>&1
     yarn add cross-env > /dev/null 2>&1
 
