@@ -476,7 +476,7 @@ install_depend() {
     
     echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
     # Menjalankan installer dan menyembunyikan outputnya
-    yes | sudo bash blueprint.sh > /dev/null 2>&1
+    yes | sudo bash blueprint.sh
 
     # ... (Pesan sukses tidak berubah) ...
     echo -e "                                                       "
