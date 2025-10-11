@@ -105,12 +105,13 @@ install_theme() {
     echo -e "${BOLD} 5. Nightcore${NC}"
     echo -e "${BOLD} 6. Ice${NC}"
     echo -e "${BOLD} 7. Noobe${NC}"
+    echo -e "${BOLD} 8. Nook${NC}"
     echo " "
     print_info "[+] =============================================== [+]"
     echo " "
     echo -e "${BOLD}--- THEME BLUEPRINT (Wajib install Opsi #8 dari menu utama) ---${NC}"
-    echo -e "${BOLD} 8. Nebula${NC}"
-    echo -e "${BOLD} 9. Recolor${NC}"
+    echo -e "${BOLD} 9. Nebula${NC}"
+    echo -e "${BOLD} 10. Recolor${NC}"
     echo " "
     echo -e "${BOLD} x. Kembali${NC}"
     echo -n -e "${BOLD}Masukkan pilihan (1-9 atau x): ${NC}"
@@ -123,8 +124,9 @@ install_theme() {
       5) THEME_NAME="Nightcore"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nightcore.zip"; break;;
       6) THEME_NAME="Ice"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/ice.zip"; break;;
       7) THEME_NAME="Noobe"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/noobe.zip"; break;;
-      8) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
-      9) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
+      8) THEME_NAME="Nook"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nook.zip"; break;;
+      9) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
+      10) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
       x) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
       *) print_error "Pilihan tidak valid, silahkan coba lagi.";;
     esac
@@ -154,7 +156,7 @@ install_theme() {
   print_info "[2/4] Mengekstrak file tema..."
   unzip -oq "$THEME_ZIP_FILE" || true
 
-  if [ "$SELECT_THEME" -eq 8 ] || [ "$SELECT_THEME" -eq 9 ]; then
+  if [ "$SELECT_THEME" -eq 9 ] || [ "$SELECT_THEME" -eq 10 ]; then
     # --- JALUR INSTALASI BLUEPRINT ---
     print_info "[3/4] Mempersiapkan instalasi Blueprint..."
     if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "❌ ERROR: Blueprint belum terinstall."; return 1; fi
@@ -220,8 +222,8 @@ uninstall_theme() {
   print_info "[+]        RESET TOTAL PANEL (UNINSTALL THEME)        [+]"
   print_info "[+] =============================================== [+]"
   echo " "
-  echo -e "${BOLD}${YELLOW}PERINGATAN:${NC} ${BOLD}Proses ini akan MENGHAPUS TOTAL semua file panel dan${NC}"
-  echo -e "${BOLD}mengembalikannya ke kondisi original. Semua tema dan modifikasi akan hilang.${NC}"
+  echo -e "${BOLD}${YELLOW}PERINGATAN:${NC} ${BOLD}Proses ini akan MENGHAPUS TOTAL semua file panel,${NC}"
+  echo -e "${BOLD}sehingga semua tema kustom atau tools lainnya akan terhapus.${NC}"
   echo " "
 
   while true; do
@@ -237,65 +239,46 @@ uninstall_theme() {
         fi
         cd /var/www/pterodactyl || { print_error "Gagal masuk ke direktori Pterodactyl."; return 1; }
 
-        echo -e "${BOLD}⚙️  Memulai proses reset total...${NC}"
+        echo -e "${BOLD}⚙️  Memulai proses reset panel...${NC}"
 
-        # 1. Backup file penting
-        echo -e "${BOLD}   - Mem-backup .env dan storage/...${NC}"
+        echo -e "${BOLD}   - Mem-backup file .env...${NC}"
         TEMP_BACKUP=$(mktemp -d)
         if [ -f ".env" ]; then sudo mv .env "$TEMP_BACKUP/"; fi
-        if [ -d "storage" ]; then sudo mv storage "$TEMP_BACKUP/"; fi
-        
-        # 2. Hapus total semua file panel lama
+
         echo -e "${BOLD}   - Menghapus semua file panel lama...${NC}"
         sudo find . -mindepth 1 -delete
         
-        # 3. Unduh & ekstrak panel original
         echo -e "${BOLD}   - Mengunduh panel original terbaru...${NC}"
         curl -L https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz | sudo tar -xzf - -C /var/www/pterodactyl > /dev/null 2>&1
     
-        # 4. Kembalikan file penting
-        echo -e "${BOLD}   - Mengembalikan .env dan storage/...${NC}"
+        echo -e "${BOLD}   - Mengembalikan file .env...${NC}"
         if [ -f "$TEMP_BACKUP/.env" ]; then sudo mv "$TEMP_BACKUP"/.env .; fi
-        if [ -d "$TEMP_BACKUP/storage" ]; then
-            sudo rm -rf ./storage
-            sudo mv "$TEMP_BACKUP"/storage .;
-        fi
         rm -rf "$TEMP_BACKUP"
 
-        # =========================================================================
-        #            PERUBAHAN KUNCI ADA DI BLOK BERIKUT INI
-        # =========================================================================
-
-        # 5. Atur kepemilikan file DULUAN
         echo -e "${BOLD}   - Mengatur kepemilikan file ke 'www-data'...${NC}"
         sudo chown -R www-data:www-data /var/www/pterodactyl/*
 
-        # 6. BARU jalankan perintah instalasi sebagai www-data
         echo -e "${BOLD}   - Menginstal dependensi & menjalankan migrasi...${NC}"
         sudo -u www-data composer install --no-dev --optimize-autoloader > /dev/null 2>&1
         sudo -u www-data php artisan migrate --seed --force > /dev/null 2>&1
         sudo -u www-data php artisan view:clear > /dev/null 2>&1
         sudo -u www-data php artisan config:clear > /dev/null 2>&1
         
-        # 7. Hapus shortcut Blueprint
         echo -e "${BOLD}   - Membersihkan shortcut Blueprint (jika ada)...${NC}"
         sudo rm -f /usr/local/bin/blueprint
         
         break
         ;;
       [Nn]*)
-        # ... (bagian ini tidak berubah) ...
         echo -e "\n${BOLD}❌ Pembatalan oleh pengguna.${NC}"
         return
         ;;
       *)
-        # ... (bagian ini tidak berubah) ...
         echo -e "\n${BOLD}Pilihan tidak valid! Silahkan pilih (y) atau (n).${NC}"
         ;;
     esac
   done
 
-  # ... (Pesan sukses tidak berubah) ...
   echo " "
   print_success "[+] =============================================== [+]"
   print_success "[+]          PANEL BERHASIL DI-RESET TOTAL          [+]"
