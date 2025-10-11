@@ -166,7 +166,7 @@ install_theme() {
     cd /var/www/pterodactyl
     
     # <-- DIPERBAIKI: Urutan flag --no-interaction dipindahkan ke depan perintah
-    sudo blueprint --no-interaction -install "$THEME_NAME_LOWER"
+    yes | sudo bash blueprint.sh -install "$THEME_NAME_LOWER"
     
     sudo chown -R www-data:www-data /var/www/pterodactyl/*
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
@@ -207,7 +207,6 @@ install_theme() {
   print_success "[+] =============================================== [+]"
   echo " "
   sleep 3
-  clear
   return 0
 }
 
@@ -303,7 +302,6 @@ uninstall_theme() {
   sleep 3
   return 0
 }
-
 
 # Cretae
 create_node() {
