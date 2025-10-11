@@ -193,8 +193,8 @@ install_theme() {
       php artisan billing:install stable
     fi
     print_info "Menjalankan migrasi, build, dan optimisasi..."
-    php artisan migrate --force > /dev/null 2>&1
-    yarn build:production > /dev/null 2>&1
+    php artisan migrate --force
+    yarn build:production
     php artisan view:clear > /dev/null 2>&1
     php artisan optimize:clear > /dev/null 2>&1
     print_info "[4/4] Membersihkan file sisa..."
