@@ -191,11 +191,11 @@ install_theme() {
     yarn add react-feather > /dev/null 2>&1
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
-      php artisan billing:install stable > /dev/null 2>&1
+      php artisan billing:install stable
     fi
     print_info "Menjalankan migrasi, build, dan optimisasi..."
-    php artisan migrate --force
-    export NODE_OPTIONS=--openssl-legacy-provider && yarn build:production
+    php artisan migrate --force > /dev/null 2>&1
+    export NODE_OPTIONS=--openssl-legacy-provider && yarn build:production > /dev/null 2>&1
     php artisan view:clear > /dev/null 2>&1
     php artisan optimize:clear > /dev/null 2>&1
     print_info "[4/4] Membersihkan file sisa..."
