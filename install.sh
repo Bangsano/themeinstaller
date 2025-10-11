@@ -183,10 +183,10 @@ install_theme() {
     sudo cp -rfT pterodactyl /var/www/pterodactyl
 
     # <-- DIPERBAIKI: Mengembalikan metode instalasi Node.js yang benar dan senyap
-    curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - > /dev/null 2>&1
-    sudo apt-get update > /dev/null 2>&1
-    sudo apt-get install -y nodejs > /dev/null 2>&1
-    sudo npm i -g yarn > /dev/null 2>&1
+    curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+    sudo apt-get update
+    sudo apt-get install -y nodejs
+    sudo npm i -g yarn
     
     cd /var/www/pterodactyl
 
@@ -196,8 +196,8 @@ install_theme() {
     fi
     
     print_info "Menginstal dependensi Node.js..."
-    yarn > /dev/null 2>&1
-    yarn add react-feather > /dev/null 2>&1
+    yarn
+    yarn add react-feather
     
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
@@ -205,10 +205,10 @@ install_theme() {
     fi
 
     print_info "Menjalankan migrasi, build, dan optimisasi..."
-    php artisan migrate --force > /dev/null 2>&1
-    export NODE_OPTIONS=--openssl-legacy-provider && yarn build:production > /dev/null 2>&1
-    php artisan view:clear > /dev/null 2>&1
-    php artisan optimize:clear > /dev/null 2>&1
+    php artisan migrate --force
+    export NODE_OPTIONS=--openssl-legacy-provider && yarn build:production
+    php artisan view:clear
+    php artisan optimize:clear
     print_info "[4/4] Membersihkan file sisa..."
   fi
   
