@@ -182,7 +182,8 @@ install_theme() {
     fi
     print_info "[3/4] Menyalin file & membangun aset..."
     sudo cp -rfT pterodactyl /var/www/pterodactyl
-    (sudo apt-get update && sudo apt-get install -y nodejs jq) > /dev/null 2>&1 # Ditambahkan JQ
+    sudo apt-get update > /dev/null 2>&1
+    sudo apt-get install -y nodejs > /dev/null 2>&1
     sudo npm i -g yarn > /dev/null 2>&1
     cd /var/www/pterodactyl
 
