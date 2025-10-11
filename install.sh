@@ -88,9 +88,9 @@ check_token() {
 install_theme() {
   clear
   local SELECT_THEME
-  local THEME_NAME
-  local THEME_URL
+  # ... (sisa deklarasi variabel tidak berubah) ...
 
+  # ... (Blok menu 'while true' Anda tidak perlu diubah, sudah benar) ...
   while true; do
     echo " "
     print_info "[+] =============================================== [+]"
@@ -169,7 +169,7 @@ install_theme() {
     print_info "[4/4] Menjalankan instalasi tema via Blueprint..."
     cd /var/www/pterodactyl
     sudo blueprint --no-interaction -install "$THEME_NAME_LOWER"
-    sudo chown -R www-data:www-data /var/www/pterodactyl
+    sudo chown -R www-data:www-data /var/w ww/pterodactyl
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
   else
     # --- JALUR INSTALASI MANUAL ---
@@ -182,37 +182,31 @@ install_theme() {
     print_info "[3/4] Menyalin file & membangun aset..."
     sudo cp -rfT pterodactyl /var/www/pterodactyl
 
-    # <-- DIPERBAIKI: Menggunakan NVM untuk memastikan Node.js v16 aktif
     print_info "Memastikan Node.js v16 aktif menggunakan NVM..."
     export NVM_DIR="$HOME/.nvm"
-    # Muat NVM jika sudah ada, jika tidak, instal NVM
     if [ -s "$NVM_DIR/nvm.sh" ]; then
       source "$NVM_DIR/nvm.sh"
     else
-      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash > /dev/null 2>&1
       source "$NVM_DIR/nvm.sh"
     fi
-    nvm install 16
-    nvm use 16
+    nvm install 16 > /dev/null 2>&1
+    nvm use 16 > /dev/null 2>&1
     
-    # Instal Yarn menggunakan npm dari versi Node.js yang aktif
-    sudo npm i -g yarn
+    # <-- DIPERBAIKI: Menggunakan 'which npm' untuk memberikan path lengkap ke sudo
+    sudo $(which npm) i -g yarn
     
     cd /var/www/pterodactyl
 
-    # --- BLOK PERINTAH KHUSUS UNTUK TEMA TERTENTU ---
     if [ "$SELECT_THEME" -eq 9 ]; then # Khusus Arix
       print_info "Menginstall paket-paket yang diperlukan tema Arix..."
-      # Menggunakan versi tanpa @... sesuai gambar
       yarn add @types/md5 md5 react-icons @types/bbcode-to-react bbcode-to-react i18next-browser-languagedetector
     fi
     
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
-      # NODE_OPTIONS tidak lagi diperlukan karena kita sudah menggunakan Node v16
       php artisan billing:install stable > /dev/null 2>&1
     fi
-    # ---------------------------------------------------
     
     print_info "Menginstal dependensi Node.js..."
     yarn
@@ -220,10 +214,9 @@ install_theme() {
 
     print_info "Menjalankan migrasi, build, dan optimisasi..."
     php artisan migrate --force
-    # NODE_OPTIONS tidak lagi diperlukan karena kita sudah menggunakan Node v16
     yarn build:production
-    php artisan view:clear
-    php artisan optimize:clear
+    php artisan view:clear > /dev/null 2>&1
+    php artisan optimize:clear > /dev/null 2>&1
     print_info "[4/4] Membersihkan file sisa..."
   fi
   
