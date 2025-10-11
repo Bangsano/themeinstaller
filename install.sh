@@ -165,13 +165,10 @@ install_theme() {
     print_info "[4/4] Menjalankan instalasi tema via Blueprint..."
     cd /var/www/pterodactyl
     
-    # <-- DIPERBAIKI: Ditambahkan flag --no-interaction untuk otomatisasi penuh
-    # Output sengaja tidak disembunyikan sesuai permintaan Anda
-    sudo blueprint -install "$THEME_NAME_LOWER" --no-interaction
+    # <-- DIPERBAIKI: Urutan flag --no-interaction dipindahkan ke depan perintah
+    sudo blueprint --no-interaction -install "$THEME_NAME_LOWER"
     
-    # Segera perbaiki kepemilikan file kembali ke www-data
     sudo chown -R www-data:www-data /var/www/pterodactyl/*
-    
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
   else
     # --- JALUR INSTALASI MANUAL ---
@@ -241,57 +238,63 @@ uninstall_theme() {
 
         echo -e "${BOLD}⚙️  Memulai proses reset total...${NC}"
 
-        # 1. Backup file penting (.env dan folder storage)
+        # 1. Backup file penting
         echo -e "${BOLD}   - Mem-backup .env dan storage/...${NC}"
         TEMP_BACKUP=$(mktemp -d)
         if [ -f ".env" ]; then sudo mv .env "$TEMP_BACKUP/"; fi
         if [ -d "storage" ]; then sudo mv storage "$TEMP_BACKUP/"; fi
         
-        # 2. HAPUS TOTAL semua file panel lama (termasuk file tema & blueprint)
+        # 2. Hapus total semua file panel lama
         echo -e "${BOLD}   - Menghapus semua file panel lama...${NC}"
-        # Perintah 'find' ini lebih aman dan efektif daripada 'rm -rf *'
         sudo find . -mindepth 1 -delete
         
-        # 3. Unduh & ekstrak panel original yang bersih
+        # 3. Unduh & ekstrak panel original
         echo -e "${BOLD}   - Mengunduh panel original terbaru...${NC}"
         curl -L https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz | sudo tar -xzf - -C /var/www/pterodactyl > /dev/null 2>&1
     
-        # 4. Kembalikan file penting dari backup
+        # 4. Kembalikan file penting
         echo -e "${BOLD}   - Mengembalikan .env dan storage/...${NC}"
         if [ -f "$TEMP_BACKUP/.env" ]; then sudo mv "$TEMP_BACKUP"/.env .; fi
         if [ -d "$TEMP_BACKUP/storage" ]; then
-            sudo rm -rf ./storage # Hapus storage baru yang kosong dari tar
+            sudo rm -rf ./storage
             sudo mv "$TEMP_BACKUP"/storage .;
         fi
         rm -rf "$TEMP_BACKUP"
 
-        # 5. Jalankan perintah instalasi standar sebagai user www-data
+        # =========================================================================
+        #            PERUBAHAN KUNCI ADA DI BLOK BERIKUT INI
+        # =========================================================================
+
+        # 5. Atur kepemilikan file DULUAN
+        echo -e "${BOLD}   - Mengatur kepemilikan file ke 'www-data'...${NC}"
+        sudo chown -R www-data:www-data /var/www/pterodactyl/*
+
+        # 6. BARU jalankan perintah instalasi sebagai www-data
         echo -e "${BOLD}   - Menginstal dependensi & menjalankan migrasi...${NC}"
         sudo -u www-data composer install --no-dev --optimize-autoloader
         sudo -u www-data php artisan migrate --seed --force
         sudo -u www-data php artisan view:clear > /dev/null 2>&1
         sudo -u www-data php artisan config:clear > /dev/null 2>&1
         
-        # 6. Hapus shortcut Blueprint dari sistem
+        # 7. Hapus shortcut Blueprint
         echo -e "${BOLD}   - Membersihkan shortcut Blueprint (jika ada)...${NC}"
         sudo rm -f /usr/local/bin/blueprint
-
-        # 7. Atur kepemilikan file kembali ke www-data
-        echo -e "${BOLD}   - Mengatur ulang kepemilikan file...${NC}"
-        sudo chown -R www-data:data /var/www/pterodactyl/*
         
         break
         ;;
       [Nn]*)
+        # ... (bagian ini tidak berubah) ...
         echo -e "\n${BOLD}❌ Pembatalan oleh pengguna.${NC}"
         return
         ;;
       *)
+        # ... (bagian ini tidak berubah) ...
         echo -e "\n${BOLD}Pilihan tidak valid! Silahkan pilih (y) atau (n).${NC}"
         ;;
     esac
   done
 
+  # ... (Pesan sukses tidak berubah) ...
   echo " "
   print_success "[+] =============================================== [+]"
   print_success "[+]          PANEL BERHASIL DI-RESET TOTAL          [+]"
@@ -300,6 +303,7 @@ uninstall_theme() {
   sleep 3
   return 0
 }
+
 
 # Cretae
 create_node() {
@@ -550,8 +554,6 @@ display_welcome
 install_jq
 
 while true; do
-  clear
-  # ... (Banner Anda di sini, tidak perlu diubah) ...
   echo -e "\n  "
   echo -e "${BOLD}${CYAN}        _,gggggggggg.${NC}"
   echo -e "${BOLD}${CYAN}    ,ggggggggggggggggg.${NC}"
