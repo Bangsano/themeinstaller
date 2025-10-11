@@ -199,7 +199,7 @@ install_theme() {
     # <-- DITAMBAHKAN: Blok khusus untuk tema Arix
     if [ "$SELECT_THEME" -eq 9 ]; then # Khusus Arix
       print_info "Menjalankan instalasi spesifik untuk Arix..."
-      export NODE_OPTIONS=--openssl-legacy-provider && php artisan arix install > /dev/null 2>&1
+      export NODE_OPTIONS=--openssl-legacy-provider && php artisan arix install
     fi
     # ---------------------------------------------------
 
