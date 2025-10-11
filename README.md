@@ -21,7 +21,11 @@ Skrip ini sekarang mencakup berbagai macam fitur yang terbagi dalam beberapa kat
    * Nightcore
    * Ice
    * Noobe
- * Instalasi Tema Berbasis Blueprint (Nebula)
+   * Nookure
+   * Arix
+ * Instalasi Tema Berbasis Blueprint:
+   * Nebula
+   * Recolor
  * Uninstall Tema Kustom (Mengembalikan panel ke kondisi original)
 ⚙️ Manajemen Panel & Node
  * Buat Node & Lokasi Baru secara otomatis.
