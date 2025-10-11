@@ -161,15 +161,17 @@ install_theme() {
     THEME_NAME_LOWER=$(echo "$THEME_NAME" | tr '[:upper:]' '[:lower:]')
     BLUEPRINT_FILE="${THEME_NAME_LOWER}.blueprint"
     sudo mv "$BLUEPRINT_FILE" /var/www/pterodactyl/
+    
     print_info "[4/4] Menjalankan instalasi tema via Blueprint..."
     cd /var/www/pterodactyl
-
-    # Jalankan sebagai root (via sudo) untuk memastikan izin penuh
-    sudo blueprint -install "$THEME_NAME_LOWER"
-
-    # SEGERA setelah itu, perbaiki kepemilikan file kembali ke www-data
+    
+    # <-- DIPERBAIKI: Ditambahkan flag --no-interaction untuk otomatisasi penuh
+    # Output sengaja tidak disembunyikan sesuai permintaan Anda
+    sudo blueprint -install "$THEME_NAME_LOWER" --no-interaction
+    
+    # Segera perbaiki kepemilikan file kembali ke www-data
     sudo chown -R www-data:www-data /var/www/pterodactyl/*
-
+    
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
   else
     # --- JALUR INSTALASI MANUAL ---
@@ -191,7 +193,7 @@ install_theme() {
     yarn > /dev/null 2>&1
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
-      php artisan billing:install stable
+      php artisan billing:install stable > /dev/null 2>&1
     fi
     print_info "Menjalankan migrasi, build, dan optimisasi..."
     php artisan migrate --force > /dev/null 2>&1
