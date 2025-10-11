@@ -88,9 +88,9 @@ check_token() {
 install_theme() {
   clear
   local SELECT_THEME
-  local THEME_NAME
-  local THEME_URL
+  # ... (sisa deklarasi variabel tidak berubah) ...
 
+  # ... (Blok menu 'while true' Anda tidak perlu diubah, sudah benar) ...
   while true; do
     echo " "
     print_info "[+] =============================================== [+]"
@@ -196,10 +196,19 @@ install_theme() {
       export NODE_OPTIONS=--openssl-legacy-provider && php artisan billing:install stable > /dev/null 2>&1
     fi
     
-    # <-- DITAMBAHKAN: Blok khusus untuk tema Arix
+    # <-- DIPERBAIKI: Blok Arix dengan bypass versi yang akurat
     if [ "$SELECT_THEME" -eq 9 ]; then # Khusus Arix
       print_info "Menjalankan instalasi spesifik untuk Arix..."
+      # Backup file konfigurasi
+      sudo cp config/app.php config/app.php.bak
+      # Tipu installer dengan mengganti versi menjadi '1.11.5' (sesuai dokumentasi Arix)
+      sudo sed -i "s/'version' => '.*',/'version' => '1.11.5',/" config/app.php
+      
+      # Jalankan installer Arix
       export NODE_OPTIONS=--openssl-legacy-provider && php artisan arix install
+      
+      # Kembalikan file konfigurasi asli
+      sudo mv config/app.php.bak config/app.php
     fi
     # ---------------------------------------------------
 
