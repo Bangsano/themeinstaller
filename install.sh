@@ -90,7 +90,7 @@ install_theme() {
   local SELECT_THEME
   # ... (sisa deklarasi variabel tidak berubah) ...
 
-  # ... (Blok menu 'while true' Anda tidak perlu diubah, sudah benar) ...
+  # ... (Blok menu 'while true' tidak perlu diubah, sudah benar) ...
   while true; do
     echo " "
     print_info "[+] =============================================== [+]"
@@ -156,19 +156,23 @@ install_theme() {
 
   if [ "$SELECT_THEME" -eq 8 ] || [ "$SELECT_THEME" -eq 9 ]; then
     # --- JALUR INSTALASI BLUEPRINT ---
-    # ... (Blok ini tidak perlu diubah, sudah benar) ...
     print_info "[3/4] Mempersiapkan instalasi Blueprint..."
     if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "❌ ERROR: Blueprint belum terinstall."; return 1; fi
     THEME_NAME_LOWER=$(echo "$THEME_NAME" | tr '[:upper:]' '[:lower:]')
     BLUEPRINT_FILE="${THEME_NAME_LOWER}.blueprint"
     sudo mv "$BLUEPRINT_FILE" /var/www/pterodactyl/
+    
     print_info "[4/4] Menjalankan instalasi tema via Blueprint..."
     cd /var/www/pterodactyl
+    
+    # <-- DIKEMBALIKAN: Menggunakan perintah persis seperti yang Anda inginkan.
     sudo blueprint -install "$THEME_NAME_LOWER"
+    
     sudo chown -R www-data:www-data /var/www/pterodactyl/*
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
   else
     # --- JALUR INSTALASI MANUAL ---
+    # ... (Blok ini sudah benar dan tidak diubah) ...
     if [ "$SELECT_THEME" -eq 3 ]; then # Khusus Enigma
       print_info "Mengkonfigurasi link untuk tema Enigma..."
       sed -i "s|LINK_WA|$LINK_WA|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
@@ -184,17 +188,14 @@ install_theme() {
     cd /var/www/pterodactyl
     print_info "Menginstal dependensi Node.js..."
     yarn > /dev/null 2>&1
-    
-    # <-- DIPERBAIKI: Menambahkan dependensi khusus yang dibutuhkan oleh tema seperti Stellar
     yarn add react-feather > /dev/null 2>&1
-    
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
-      php artisan billing:install stable
+      php artisan billing:install stable > /dev/null 2>&1
     fi
     print_info "Menjalankan migrasi, build, dan optimisasi..."
-    php artisan migrate --force
-    yarn build:production
+    php artisan migrate --force > /dev/null 2>&1
+    export NODE_OPTIONS=--openssl-legacy-provider && yarn build:production
     php artisan view:clear > /dev/null 2>&1
     php artisan optimize:clear > /dev/null 2>&1
     print_info "[4/4] Membersihkan file sisa..."
@@ -209,6 +210,7 @@ install_theme() {
   sleep 3
   return 0
 }
+
 
 # Uninstall theme
 uninstall_theme() {
@@ -228,6 +230,7 @@ uninstall_theme() {
     
     case $yn in
       [Yy]*)
+        set -e
         if [ ! -d "/var/www/pterodactyl" ]; then
             print_error "🚨 ERROR: Direktori instalasi Pterodactyl tidak ditemukan."
             return 1
@@ -305,6 +308,7 @@ uninstall_theme() {
 # Cretae
 create_node() {
   clear
+  set -e
   echo " "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${BLUE}[+]             MEMULAI CREATE NODE SCRIPT            [+]${NC}"
@@ -330,6 +334,7 @@ create_node() {
 
 uninstall_panel() {
   clear
+  set -e
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${BLUE}[+]                    UNINSTALL PANEL                 [+]${NC}"
@@ -431,6 +436,7 @@ install_depend() {
     export NEEDRESTART_MODE=a
 
     clear
+    set -e
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "${BOLD}${GREEN}[+]           INSTALL NODE.JS & BLUEPRINT           [+]${NC}"
@@ -496,6 +502,7 @@ install_depend() {
 # install auto suspend
 install_auto_suspend() {
   clear
+  set -e
   echo " "
   print_info "[+] =============================================== [+]"
   print_info "[+]            INSTALL FITUR AUTO SUSPEND           [+]"
