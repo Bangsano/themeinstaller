@@ -264,7 +264,7 @@ uninstall_theme() {
         rm -rf "$TEMP_BACKUP"
 
         echo -e "${BOLD}   - Mengatur kepemilikan file ke 'www-data'...${NC}"
-        sudo chown -R www-data:www-data /var/www/pterodactyl/*
+        sudo chown -R www-data:www-data /var/www/pterodactyl
 
         echo -e "${BOLD}   - Menginstal dependensi & menjalankan migrasi...${NC}"
         sudo -u www-data composer install --no-dev --optimize-autoloader > /dev/null 2>&1
