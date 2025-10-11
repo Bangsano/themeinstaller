@@ -267,8 +267,8 @@ uninstall_theme() {
 
         # 5. Jalankan perintah instalasi standar sebagai user www-data
         echo -e "${BOLD}   - Menginstal dependensi & menjalankan migrasi...${NC}"
-        sudo -u www-data composer install --no-dev --optimize-autoloader > /dev/null 2>&1
-        sudo -u www-data php artisan migrate --seed --force > /dev/null 2>&1
+        sudo -u www-data composer install --no-dev --optimize-autoloader
+        sudo -u www-data php artisan migrate --seed --force
         sudo -u www-data php artisan view:clear > /dev/null 2>&1
         sudo -u www-data php artisan config:clear > /dev/null 2>&1
         
