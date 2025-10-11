@@ -91,6 +91,7 @@ install_theme() {
   local THEME_NAME
   local THEME_URL
 
+  # ... (Blok menu 'while true' Anda tidak perlu diubah, sudah benar) ...
   while true; do
     echo " "
     print_info "[+] =============================================== [+]"
@@ -181,27 +182,26 @@ install_theme() {
     fi
     print_info "[3/4] Menyalin file & membangun aset..."
     sudo cp -rfT pterodactyl /var/www/pterodactyl
-    curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - > /dev/null 2>&1
-    sudo apt-get update > /dev/null 2>&1
-    sudo apt-get install -y nodejs > /dev/null 2>&1
+    (sudo apt-get update && sudo apt-get install -y nodejs jq) > /dev/null 2>&1 # Ditambahkan JQ
     sudo npm i -g yarn > /dev/null 2>&1
     cd /var/www/pterodactyl
+
+    # <-- DIPERBAIKI: Blok khusus untuk Arix dengan patch resolusi
+    if [ "$SELECT_THEME" -eq 9 ]; then # Khusus Arix
+      print_info "Menerapkan patch resolusi untuk tema Arix..."
+      # Perintah ini memaksa yarn untuk menggunakan versi styled-components yang benar
+      sudo jq '.resolutions as $r | .resolutions = ({ "styled-components": "5.3.10" } + $r)' package.json > tmp.$$.json && sudo mv tmp.$$.json package.json
+    fi
+    # ---------------------------------------------------
+    
     print_info "Menginstal dependensi Node.js..."
     yarn > /dev/null 2>&1
     yarn add react-feather > /dev/null 2>&1
     
-    # --- BLOK PERINTAH KHUSUS UNTUK TEMA TERTENTU ---
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
       export NODE_OPTIONS=--openssl-legacy-provider && php artisan billing:install stable > /dev/null 2>&1
     fi
-    
-    # <-- DITAMBAHKAN: Blok khusus untuk tema Arix
-    if [ "$SELECT_THEME" -eq 9 ]; then # Khusus Arix
-      print_info "Menjalankan instalasi paket-paket yang diperlukan tema Arix..."
-      yarn add @types/md5 md5 react-icons @types/bbcode-to-react bbcode-to-react i18next-browser-languagedetector@7.2.1
-    fi
-    # ---------------------------------------------------
 
     print_info "Menjalankan migrasi, build, dan optimisasi..."
     php artisan migrate --force > /dev/null 2>&1
