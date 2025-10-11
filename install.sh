@@ -152,7 +152,7 @@ install_theme() {
   wget -q "$THEME_URL"
   local THEME_ZIP_FILE=$(basename "$THEME_URL")
   print_info "[2/4] Mengekstrak file tema..."
-  unzip -oq "$THEME_ZIP_FILE"
+  unzip -oq "$THEME_ZIP_FILE" || true
 
   if [ "$SELECT_THEME" -eq 8 ] || [ "$SELECT_THEME" -eq 9 ]; then
     # --- JALUR INSTALASI BLUEPRINT ---
@@ -191,7 +191,7 @@ install_theme() {
     yarn add react-feather > /dev/null 2>&1
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
-      export NODE_OPTIONS=--openssl-legacy-provider && php artisan billing:install stable
+      export NODE_OPTIONS=--openssl-legacy-provider && php artisan billing:install stable > /dev/null 2>&1
     fi
     print_info "Menjalankan migrasi, build, dan optimisasi..."
     php artisan migrate --force > /dev/null 2>&1
