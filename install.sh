@@ -135,6 +135,7 @@ install_theme() {
   echo -n -e "${BOLD}Anda memilih untuk menginstal tema '$THEME_NAME'. Lanjutkan? (y/n): ${NC}"
   read confirmation
   if [[ "$confirmation" != [yY] ]]; then echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return; fi
+  set -e
   export DEBIAN_FRONTEND=noninteractive
   export NEEDRESTART_MODE=a
   TEMP_DIR=$(mktemp -d)
@@ -155,23 +156,19 @@ install_theme() {
 
   if [ "$SELECT_THEME" -eq 8 ] || [ "$SELECT_THEME" -eq 9 ]; then
     # --- JALUR INSTALASI BLUEPRINT ---
+    # ... (Blok ini tidak perlu diubah, sudah benar) ...
     print_info "[3/4] Mempersiapkan instalasi Blueprint..."
     if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "❌ ERROR: Blueprint belum terinstall."; return 1; fi
     THEME_NAME_LOWER=$(echo "$THEME_NAME" | tr '[:upper:]' '[:lower:]')
     BLUEPRINT_FILE="${THEME_NAME_LOWER}.blueprint"
     sudo mv "$BLUEPRINT_FILE" /var/www/pterodactyl/
-    
     print_info "[4/4] Menjalankan instalasi tema via Blueprint..."
     cd /var/www/pterodactyl
-    
-    # <-- DIPERBAIKI: Urutan flag --no-interaction dipindahkan ke depan perintah
     sudo blueprint -install "$THEME_NAME_LOWER"
-    
     sudo chown -R www-data:www-data /var/www/pterodactyl/*
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
   else
     # --- JALUR INSTALASI MANUAL ---
-    # ... (Blok ini tidak perlu diubah, sudah benar) ...
     if [ "$SELECT_THEME" -eq 3 ]; then # Khusus Enigma
       print_info "Mengkonfigurasi link untuk tema Enigma..."
       sed -i "s|LINK_WA|$LINK_WA|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
@@ -187,9 +184,13 @@ install_theme() {
     cd /var/www/pterodactyl
     print_info "Menginstal dependensi Node.js..."
     yarn > /dev/null 2>&1
+    
+    # <-- DIPERBAIKI: Menambahkan dependensi khusus yang dibutuhkan oleh tema seperti Stellar
+    yarn add react-feather > /dev/null 2>&1
+    
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
-      php artisan billing:install stable > /dev/null 2>&1
+      php artisan billing:install stable
     fi
     print_info "Menjalankan migrasi, build, dan optimisasi..."
     php artisan migrate --force > /dev/null 2>&1
