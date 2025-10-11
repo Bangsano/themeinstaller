@@ -198,8 +198,8 @@ install_theme() {
     
     # <-- DITAMBAHKAN: Blok khusus untuk tema Arix
     if [ "$SELECT_THEME" -eq 9 ]; then # Khusus Arix
-      print_info "Menjalankan instalasi spesifik untuk Arix..."
-      export NODE_OPTIONS=--openssl-legacy-provider && php artisan arix install
+      print_info "Menjalankan instalasi paket-paket yang diperlukan tema Arix..."
+      yarn add @types/md5 md5 react-icons @types/bbcode-to-react bbcode-to-react i18next-browser-languagedetector@7.2.1
     fi
     # ---------------------------------------------------
 
