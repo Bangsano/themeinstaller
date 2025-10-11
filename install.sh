@@ -194,7 +194,7 @@ install_theme() {
       php artisan billing:install stable > /dev/null 2>&1
     fi
     print_info "Menjalankan migrasi, build, dan optimisasi..."
-    php artisan migrate --force > /dev/null 2>&1
+    php artisan migrate --force
     export NODE_OPTIONS=--openssl-legacy-provider && yarn build:production
     php artisan view:clear > /dev/null 2>&1
     php artisan optimize:clear > /dev/null 2>&1
