@@ -166,7 +166,7 @@ install_theme() {
     cd /var/www/pterodactyl
     
     # <-- DIPERBAIKI: Urutan flag --no-interaction dipindahkan ke depan perintah
-    yes | sudo bash blueprint.sh -install "$THEME_NAME_LOWER"
+    sudo blueprint -install "$THEME_NAME_LOWER"
     
     sudo chown -R www-data:www-data /var/www/pterodactyl/*
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
