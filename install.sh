@@ -88,9 +88,9 @@ check_token() {
 install_theme() {
   clear
   local SELECT_THEME
-  # ... (sisa deklarasi variabel tidak berubah) ...
+  local THEME_NAME
+  local THEME_URL
 
-  # ... (Blok menu 'while true' tidak perlu diubah, sudah benar) ...
   while true; do
     echo " "
     print_info "[+] =============================================== [+]"
@@ -160,23 +160,19 @@ install_theme() {
 
   if [ "$SELECT_THEME" -eq 10 ] || [ "$SELECT_THEME" -eq 11 ]; then
     # --- JALUR INSTALASI BLUEPRINT ---
+    # ... (Blok ini sudah benar dan tidak diubah) ...
     print_info "[3/4] Mempersiapkan instalasi Blueprint..."
     if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "❌ ERROR: Blueprint belum terinstall."; return 1; fi
     THEME_NAME_LOWER=$(echo "$THEME_NAME" | tr '[:upper:]' '[:lower:]')
     BLUEPRINT_FILE="${THEME_NAME_LOWER}.blueprint"
     sudo mv "$BLUEPRINT_FILE" /var/www/pterodactyl/
-    
     print_info "[4/4] Menjalankan instalasi tema via Blueprint..."
     cd /var/www/pterodactyl
-    
-    # <-- DIKEMBALIKAN: Menggunakan perintah persis seperti yang Anda inginkan.
-    sudo blueprint -install "$THEME_NAME_LOWER"
-    
-    sudo chown -R www-data:www-data /var/www/pterodactyl/*
+    sudo blueprint --no-interaction -install "$THEME_NAME_LOWER"
+    sudo chown -R www-data:www-data /var/www/pterodactyl
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
   else
     # --- JALUR INSTALASI MANUAL ---
-    # ... (Blok ini sudah benar dan tidak diubah) ...
     if [ "$SELECT_THEME" -eq 3 ]; then # Khusus Enigma
       print_info "Mengkonfigurasi link untuk tema Enigma..."
       sed -i "s|LINK_WA|$LINK_WA|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
@@ -185,27 +181,49 @@ install_theme() {
     fi
     print_info "[3/4] Menyalin file & membangun aset..."
     sudo cp -rfT pterodactyl /var/www/pterodactyl
-    curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - > /dev/null 2>&1
-    sudo apt-get update > /dev/null 2>&1
-    sudo apt-get install -y nodejs > /dev/null 2>&1
-    sudo npm i -g yarn > /dev/null 2>&1
-    cd /var/www/pterodactyl
-    if [ "$SELECT_THEME" -eq 9 ]; then # Khusus Arix
-      print_info "Menerapkan patch resolusi untuk tema Arix..."
-      sudo jq '.resolutions as $r | .resolutions = ({ "styled-components": "5.3.10" } + $r)' package.json > tmp.$$.json && sudo mv tmp.$$.json package.json
+
+    # <-- DIPERBAIKI: Menggunakan NVM untuk memastikan Node.js v16 aktif
+    print_info "Memastikan Node.js v16 aktif menggunakan NVM..."
+    export NVM_DIR="$HOME/.nvm"
+    # Muat NVM jika sudah ada, jika tidak, instal NVM
+    if [ -s "$NVM_DIR/nvm.sh" ]; then
+      source "$NVM_DIR/nvm.sh"
+    else
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+      source "$NVM_DIR/nvm.sh"
     fi
-    print_info "Menginstal dependensi Node.js..."
-    yarn > /dev/null 2>&1
-    yarn add react-feather > /dev/null 2>&1
+    nvm install 16
+    nvm use 16
+    
+    # Instal Yarn menggunakan npm dari versi Node.js yang aktif
+    sudo npm i -g yarn
+    
+    cd /var/www/pterodactyl
+
+    # --- BLOK PERINTAH KHUSUS UNTUK TEMA TERTENTU ---
+    if [ "$SELECT_THEME" -eq 9 ]; then # Khusus Arix
+      print_info "Menginstall paket-paket yang diperlukan tema Arix..."
+      # Menggunakan versi tanpa @... sesuai gambar
+      yarn add @types/md5 md5 react-icons @types/bbcode-to-react bbcode-to-react i18next-browser-languagedetector
+    fi
+    
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
-      export NODE_OPTIONS=--openssl-legacy-provider && php artisan billing:install stable > /dev/null 2>&1
+      # NODE_OPTIONS tidak lagi diperlukan karena kita sudah menggunakan Node v16
+      php artisan billing:install stable > /dev/null 2>&1
     fi
+    # ---------------------------------------------------
+    
+    print_info "Menginstal dependensi Node.js..."
+    yarn
+    yarn add react-feather
+
     print_info "Menjalankan migrasi, build, dan optimisasi..."
-    php artisan migrate --force > /dev/null 2>&1
-    export NODE_OPTIONS=--openssl-legacy-provider && yarn build:production > /dev/null 2>&1
-    php artisan view:clear > /dev/null 2>&1
-    php artisan optimize:clear > /dev/null 2>&1
+    php artisan migrate --force
+    # NODE_OPTIONS tidak lagi diperlukan karena kita sudah menggunakan Node v16
+    yarn build:production
+    php artisan view:clear
+    php artisan optimize:clear
     print_info "[4/4] Membersihkan file sisa..."
   fi
   
