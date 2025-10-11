@@ -182,9 +182,9 @@ install_theme() {
     fi
     print_info "[3/4] Menyalin file & membangun aset..."
     sudo cp -rfT pterodactyl /var/www/pterodactyl
-    sudo apt-get update > /dev/null 2>&1
-    sudo apt-get install -y nodejs > /dev/null 2>&1
-    sudo npm i -g yarn > /dev/null 2>&1
+    sudo apt-get update
+    sudo apt-get install -y nodejs
+    sudo npm i -g yarn
     cd /var/www/pterodactyl
 
     # <-- DIPERBAIKI: Blok khusus untuk Arix dengan patch resolusi
