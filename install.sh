@@ -88,8 +88,7 @@ check_token() {
 install_theme() {
   clear
   local SELECT_THEME
-  local THEME_NAME
-  local THEME_URL
+  # ... (sisa deklarasi variabel tidak berubah) ...
 
   # ... (Blok menu 'while true' Anda tidak perlu diubah, sudah benar) ...
   while true; do
@@ -182,18 +181,19 @@ install_theme() {
     fi
     print_info "[3/4] Menyalin file & membangun aset..."
     sudo cp -rfT pterodactyl /var/www/pterodactyl
-    sudo apt-get update
-    sudo apt-get install -y nodejs
-    sudo npm i -g yarn
+
+    # <-- DIPERBAIKI: Mengembalikan metode instalasi Node.js yang benar dan senyap
+    curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - > /dev/null 2>&1
+    sudo apt-get update > /dev/null 2>&1
+    sudo apt-get install -y nodejs > /dev/null 2>&1
+    sudo npm i -g yarn > /dev/null 2>&1
+    
     cd /var/www/pterodactyl
 
-    # <-- DIPERBAIKI: Blok khusus untuk Arix dengan patch resolusi
     if [ "$SELECT_THEME" -eq 9 ]; then # Khusus Arix
       print_info "Menerapkan patch resolusi untuk tema Arix..."
-      # Perintah ini memaksa yarn untuk menggunakan versi styled-components yang benar
       sudo jq '.resolutions as $r | .resolutions = ({ "styled-components": "5.3.10" } + $r)' package.json > tmp.$$.json && sudo mv tmp.$$.json package.json
     fi
-    # ---------------------------------------------------
     
     print_info "Menginstal dependensi Node.js..."
     yarn > /dev/null 2>&1
