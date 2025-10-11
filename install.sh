@@ -135,7 +135,6 @@ install_theme() {
   echo -n -e "${BOLD}Anda memilih untuk menginstal tema '$THEME_NAME'. Lanjutkan? (y/n): ${NC}"
   read confirmation
   if [[ "$confirmation" != [yY] ]]; then echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return; fi
-  set -e
   export DEBIAN_FRONTEND=noninteractive
   export NEEDRESTART_MODE=a
   TEMP_DIR=$(mktemp -d)
@@ -228,7 +227,6 @@ uninstall_theme() {
     
     case $yn in
       [Yy]*)
-        set -e
         if [ ! -d "/var/www/pterodactyl" ]; then
             print_error "🚨 ERROR: Direktori instalasi Pterodactyl tidak ditemukan."
             return 1
@@ -428,15 +426,10 @@ EOF
 
 # Install Dependencies Blueprint
 install_depend() {
-    # Hentikan skrip seketika jika ada perintah yang gagal
-    set -e
-    
-    # Mencegah dialog interaktif dari 'apt' dan 'needrestart'
     export DEBIAN_FRONTEND=noninteractive
     export NEEDRESTART_MODE=a
 
     clear
-    # ... (Banner Anda di sini, tidak berubah) ...
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "${BOLD}${GREEN}[+]           INSTALL NODE.JS & BLUEPRINT           [+]${NC}"
@@ -515,7 +508,6 @@ install_auto_suspend() {
     return
   fi
 
-  set -e
   TEMP_DIR=$(mktemp -d)
   trap 'rm -rf -- "$TEMP_DIR"' EXIT
   cd "$TEMP_DIR"
