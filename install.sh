@@ -169,7 +169,7 @@ install_theme() {
     print_info "[4/4] Menjalankan instalasi tema via Blueprint..."
     cd /var/www/pterodactyl
     sudo blueprint --no-interaction -install "$THEME_NAME_LOWER"
-    sudo chown -R www-data:www-data /var/www/pterodactyl/*
+    sudo chown -R www-data:www-data /var/www/pterodactyl
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
   else
     # --- JALUR INSTALASI MANUAL ---
