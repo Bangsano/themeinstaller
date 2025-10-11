@@ -165,7 +165,7 @@ install_theme() {
     cd /var/www/pterodactyl
 
     # Jalankan sebagai root (via sudo) untuk memastikan izin penuh
-    sudo blueprint -install "$THEME_NAME_LOWER" > /dev/null 2>&1
+    sudo blueprint -install "$THEME_NAME_LOWER"
 
     # SEGERA setelah itu, perbaiki kepemilikan file kembali ke www-data
     sudo chown -R www-data:www-data /var/www/pterodactyl/*
@@ -191,7 +191,7 @@ install_theme() {
     yarn > /dev/null 2>&1
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
-      php artisan billing:install stable > /dev/null 2>&1
+      php artisan billing:install stable
     fi
     print_info "Menjalankan migrasi, build, dan optimisasi..."
     php artisan migrate --force > /dev/null 2>&1
@@ -216,63 +216,72 @@ install_theme() {
 uninstall_theme() {
   clear
   echo " "
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+]              UNINSTALL CUSTOM THEME             [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
+  print_info "[+] =============================================== [+]"
+  print_info "[+]        RESET TOTAL PANEL (UNINSTALL THEME)        [+]"
+  print_info "[+] =============================================== [+]"
   echo " "
-  echo -e "${BOLD}Proses ini akan mereset panel Pterodactyl Anda ke kondisi standar (original).${NC}"
-  echo -e "${BOLD}Semua kustomisasi tema akan terhapus secara permanen.${NC}"
+  echo -e "${BOLD}${YELLOW}PERINGATAN:${NC} ${BOLD}Proses ini akan MENGHAPUS TOTAL semua file panel dan${NC}"
+  echo -e "${BOLD}mengembalikannya ke kondisi original. Semua tema dan modifikasi akan hilang.${NC}"
   echo " "
 
   while true; do
-    echo -n -e "${BOLD}Apakah Anda yakin ingin melanjutkan? [y/n] ${NC}"
+    echo -n -e "${BOLD}Apakah Anda benar-benar yakin ingin melanjutkan? (y/n): ${NC}"
     read yn
     
     case $yn in
       [Yy]*)
         set -e
-
         if [ ! -d "/var/www/pterodactyl" ]; then
-            echo -e "${BOLD}🚨 ERROR: Direktori instalasi Pterodactyl (/var/www/pterodactyl) tidak ditemukan. Batalkan operasi.${NC}"
+            print_error "🚨 ERROR: Direktori instalasi Pterodactyl tidak ditemukan."
             return 1
         fi
-        
-        cd /var/www/pterodactyl || { echo -e "${BOLD}Gagal masuk ke direktori Pterodactyl.${NC}"; return 1; }
+        cd /var/www/pterodactyl || { print_error "Gagal masuk ke direktori Pterodactyl."; return 1; }
 
-        echo -e "${BOLD}⚙️  Memulai proses reset Panel Pterodactyl...${NC}"
+        echo -e "${BOLD}⚙️  Memulai proses reset total...${NC}"
 
-        php artisan down > /dev/null 2>&1
-        echo -e "${BOLD}   - Mode maintenance diaktifkan.${NC}"
+        # 1. Backup file penting (.env dan folder storage)
+        echo -e "${BOLD}   - Mem-backup .env dan storage/...${NC}"
+        TEMP_BACKUP=$(mktemp -d)
+        if [ -f ".env" ]; then sudo mv .env "$TEMP_BACKUP/"; fi
+        if [ -d "storage" ]; then sudo mv storage "$TEMP_BACKUP/"; fi
         
-        echo -e "${BOLD}   - Menghapus direktori 'resources' (lokasi tema kustom)...${NC}"
-        sudo rm -rf /var/www/pterodactyl/resources
+        # 2. HAPUS TOTAL semua file panel lama (termasuk file tema & blueprint)
+        echo -e "${BOLD}   - Menghapus semua file panel lama...${NC}"
+        # Perintah 'find' ini lebih aman dan efektif daripada 'rm -rf *'
+        sudo find . -mindepth 1 -delete
         
-        echo -e "${BOLD}   - Mengunduh file Panel Pterodactyl original terbaru...${NC}"
-        # <-- DIUBAH: 'v' (verbose) pada tar dihapus agar senyap
-        curl -L https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz | sudo tar -xzf -
+        # 3. Unduh & ekstrak panel original yang bersih
+        echo -e "${BOLD}   - Mengunduh panel original terbaru...${NC}"
+        curl -L https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz | sudo tar -xzf - -C /var/www/pterodactyl > /dev/null 2>&1
     
-        echo -e "${BOLD}   - Menginstal dependensi Composer...${NC}"
-        # <-- DIPERBAIKI: Jalankan sebagai www-data & dibuat senyap agar tidak ada prompt
+        # 4. Kembalikan file penting dari backup
+        echo -e "${BOLD}   - Mengembalikan .env dan storage/...${NC}"
+        if [ -f "$TEMP_BACKUP/.env" ]; then sudo mv "$TEMP_BACKUP"/.env .; fi
+        if [ -d "$TEMP_BACKUP/storage" ]; then
+            sudo rm -rf ./storage # Hapus storage baru yang kosong dari tar
+            sudo mv "$TEMP_BACKUP"/storage .;
+        fi
+        rm -rf "$TEMP_BACKUP"
+
+        # 5. Jalankan perintah instalasi standar sebagai user www-data
+        echo -e "${BOLD}   - Menginstal dependensi & menjalankan migrasi...${NC}"
         sudo -u www-data composer install --no-dev --optimize-autoloader > /dev/null 2>&1
+        sudo -u www-data php artisan migrate --seed --force > /dev/null 2>&1
+        sudo -u www-data php artisan view:clear > /dev/null 2>&1
+        sudo -u www-data php artisan config:clear > /dev/null 2>&1
         
-        echo -e "${BOLD}   - Membersihkan cache dan menjalankan migrasi database...${NC}"
-        # <-- DITAMBAHKAN: Output disembunyikan agar senyap
-        php artisan view:clear > /dev/null 2>&1
-        php artisan config:clear > /dev/null 2>&1
-        php artisan migrate --seed --force > /dev/null 2>&1
-        
-        echo -e "${BOLD}   - Mengatur kepemilikan file ke 'www-data'...${NC}"
-        sudo chown -R www-data:www-data /var/www/pterodactyl/*
-        
-        echo -e "${BOLD}   - Me-restart queue worker...${NC}"
-        php artisan queue:restart > /dev/null 2>&1
-        php artisan up > /dev/null 2>&1
-        echo -e "${BOLD}   - Mode maintenance dimatikan.${NC}"
+        # 6. Hapus shortcut Blueprint dari sistem
+        echo -e "${BOLD}   - Membersihkan shortcut Blueprint (jika ada)...${NC}"
+        sudo rm -f /usr/local/bin/blueprint
+
+        # 7. Atur kepemilikan file kembali ke www-data
+        echo -e "${BOLD}   - Mengatur ulang kepemilikan file...${NC}"
+        sudo chown -R www-data:data /var/www/pterodactyl/*
         
         break
         ;;
       [Nn]*)
-        echo -e "\n${BOLD}❌ Pembatalan oleh pengguna. Tidak ada perubahan yang dilakukan.${NC}"
+        echo -e "\n${BOLD}❌ Pembatalan oleh pengguna.${NC}"
         return
         ;;
       *)
@@ -281,11 +290,10 @@ uninstall_theme() {
     esac
   done
 
-  # ... (Pesan sukses tidak berubah) ...
   echo " "
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]             RESET PANEL TELAH BERHASIL            [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
+  print_success "[+] =============================================== [+]"
+  print_success "[+]          PANEL BERHASIL DI-RESET TOTAL          [+]"
+  print_success "[+] =============================================== [+]"
   echo " "
   sleep 3
   return 0
