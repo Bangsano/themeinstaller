@@ -88,9 +88,9 @@ check_token() {
 install_theme() {
   clear
   local SELECT_THEME
-  # ... (sisa deklarasi variabel tidak berubah) ...
+  local THEME_NAME
+  local THEME_URL
 
-  # ... (Blok menu 'while true' tidak perlu diubah, sudah benar) ...
   while true; do
     echo " "
     print_info "[+] =============================================== [+]"
@@ -106,15 +106,16 @@ install_theme() {
     echo -e "${BOLD} 6. Ice${NC}"
     echo -e "${BOLD} 7. Noobe${NC}"
     echo -e "${BOLD} 8. Nookure${NC}"
+    echo -e "${BOLD} 9. Arix${NC}"
     echo " "
     print_info "[+] =============================================== [+]"
     echo " "
     echo -e "${BOLD}--- THEME BLUEPRINT (Wajib install Opsi #8 dari menu utama) ---${NC}"
-    echo -e "${BOLD} 9. Nebula${NC}"
-    echo -e "${BOLD} 10. Recolor${NC}"
+    echo -e "${BOLD} 10. Nebula${NC}"
+    echo -e "${BOLD} 11. Recolor${NC}"
     echo " "
     echo -e "${BOLD} x. Kembali${NC}"
-    echo -n -e "${BOLD}Masukkan pilihan (1-9 atau x): ${NC}"
+    echo -n -e "${BOLD}Masukkan pilihan (1-11 atau x): ${NC}"
     read SELECT_THEME
     case "$SELECT_THEME" in
       1) THEME_NAME="Stellar"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/stellar.zip"; break;;
@@ -125,8 +126,9 @@ install_theme() {
       6) THEME_NAME="Ice"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/ice.zip"; break;;
       7) THEME_NAME="Noobe"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/noobe.zip"; break;;
       8) THEME_NAME="Nookure"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nookure.zip"; break;;
-      9) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
-      10) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
+      9) THEME_NAME="Arix"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/arix.zip"; break;;
+      10) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
+      11) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
       x) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
       *) print_error "Pilihan tidak valid, silahkan coba lagi.";;
     esac
@@ -156,25 +158,21 @@ install_theme() {
   print_info "[2/4] Mengekstrak file tema..."
   unzip -oq "$THEME_ZIP_FILE" || true
 
-  if [ "$SELECT_THEME" -eq 9 ] || [ "$SELECT_THEME" -eq 10 ]; then
+  if [ "$SELECT_THEME" -eq 10 ] || [ "$SELECT_THEME" -eq 11 ]; then
     # --- JALUR INSTALASI BLUEPRINT ---
+    # ... (Blok ini sudah benar dan tidak diubah) ...
     print_info "[3/4] Mempersiapkan instalasi Blueprint..."
     if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "❌ ERROR: Blueprint belum terinstall."; return 1; fi
     THEME_NAME_LOWER=$(echo "$THEME_NAME" | tr '[:upper:]' '[:lower:]')
     BLUEPRINT_FILE="${THEME_NAME_LOWER}.blueprint"
     sudo mv "$BLUEPRINT_FILE" /var/www/pterodactyl/
-    
     print_info "[4/4] Menjalankan instalasi tema via Blueprint..."
     cd /var/www/pterodactyl
-    
-    # <-- DIKEMBALIKAN: Menggunakan perintah persis seperti yang Anda inginkan.
-    sudo blueprint -install "$THEME_NAME_LOWER"
-    
+    sudo blueprint --no-interaction -install "$THEME_NAME_LOWER"
     sudo chown -R www-data:www-data /var/www/pterodactyl/*
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
   else
     # --- JALUR INSTALASI MANUAL ---
-    # ... (Blok ini sudah benar dan tidak diubah) ...
     if [ "$SELECT_THEME" -eq 3 ]; then # Khusus Enigma
       print_info "Mengkonfigurasi link untuk tema Enigma..."
       sed -i "s|LINK_WA|$LINK_WA|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
@@ -191,10 +189,20 @@ install_theme() {
     print_info "Menginstal dependensi Node.js..."
     yarn > /dev/null 2>&1
     yarn add react-feather > /dev/null 2>&1
+    
+    # --- BLOK PERINTAH KHUSUS UNTUK TEMA TERTENTU ---
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
       export NODE_OPTIONS=--openssl-legacy-provider && php artisan billing:install stable > /dev/null 2>&1
     fi
+    
+    # <-- DITAMBAHKAN: Blok khusus untuk tema Arix
+    if [ "$SELECT_THEME" -eq 9 ]; then # Khusus Arix
+      print_info "Menjalankan instalasi spesifik untuk Arix..."
+      export NODE_OPTIONS=--openssl-legacy-provider && php artisan arix install > /dev/null 2>&1
+    fi
+    # ---------------------------------------------------
+
     print_info "Menjalankan migrasi, build, dan optimisasi..."
     php artisan migrate --force > /dev/null 2>&1
     export NODE_OPTIONS=--openssl-legacy-provider && yarn build:production > /dev/null 2>&1
@@ -212,7 +220,6 @@ install_theme() {
   sleep 3
   return 0
 }
-
 
 # Uninstall theme
 uninstall_theme() {
