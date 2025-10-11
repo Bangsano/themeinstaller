@@ -105,7 +105,7 @@ install_theme() {
     echo -e "${BOLD} 5. Nightcore${NC}"
     echo -e "${BOLD} 6. Ice${NC}"
     echo -e "${BOLD} 7. Noobe${NC}"
-    echo -e "${BOLD} 8. Nook${NC}"
+    echo -e "${BOLD} 8. Nookure${NC}"
     echo " "
     print_info "[+] =============================================== [+]"
     echo " "
@@ -124,7 +124,7 @@ install_theme() {
       5) THEME_NAME="Nightcore"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nightcore.zip"; break;;
       6) THEME_NAME="Ice"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/ice.zip"; break;;
       7) THEME_NAME="Noobe"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/noobe.zip"; break;;
-      8) THEME_NAME="Nook"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nook.zip"; break;;
+      8) THEME_NAME="Nookure"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nookure.zip"; break;;
       9) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
       10) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
       x) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
