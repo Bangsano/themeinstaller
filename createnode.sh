@@ -1,7 +1,11 @@
 #!/bin/bash
 
+# ============================================================
+# SKRIP INI DI-REMAKE OLEH SANO OFFICIAL (TELEGRAM: @batuofc)
+# DILARANG UNTUK MEMPERJUALBELIKAN SKRIP INI, APALAGI MEMBAGIKANNYA SECARA GRATIS!
+# GAK USAH NGEYEL! NGEYEL? MATI AJA LU, HIDUP LU GAK GUNA, KERJAANNYA CUMA MALING SC, JUAL/SHARE SC HASIL MALING
+# ============================================================
 
-# Minta input dari pengguna.
 echo "Masukkan nama lokasi: "
 read location_name
 echo "Masukkan deskripsi lokasi: "
@@ -16,17 +20,11 @@ echo "Masukkan jumlah maksimum disk space (dalam MB): "
 read disk_space
 echo "Masukkan Locid: "
 read locid
-
-# Ubah ke direktori pterodactyl
 cd /var/www/pterodactyl || { echo "Direktori tidak ditemukan"; exit 1; }
-
-# Membuat lokasi baru
 php artisan p:location:make <<EOF
 $location_name
 $location_description
 EOF
-
-# Membuat node baru
 php artisan p:node:make <<EOF
 $node_name
 $location_description
@@ -45,5 +43,4 @@ $disk_space
 2022
 /var/lib/pterodactyl/volumes
 EOF
-
 echo "Proses pembuatan lokasi dan node telah selesai."
