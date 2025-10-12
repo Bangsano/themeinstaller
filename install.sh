@@ -88,7 +88,8 @@ check_token() {
 install_theme() {
   clear
   local SELECT_THEME
-  # ... (sisa deklarasi variabel tidak berubah) ...
+  local THEME_NAME
+  local THEME_URL
 
   # ... (Blok menu 'while true' Anda tidak perlu diubah, sudah benar) ...
   while true; do
@@ -169,7 +170,7 @@ install_theme() {
     print_info "[4/4] Menjalankan instalasi tema via Blueprint..."
     cd /var/www/pterodactyl
     sudo blueprint --no-interaction -install "$THEME_NAME_LOWER"
-    sudo chown -R www-data:www-data /var/w ww/pterodactyl
+    sudo chown -R www-data:www-data /var/www/pterodactyl
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
   else
     # --- JALUR INSTALASI MANUAL ---
@@ -181,7 +182,8 @@ install_theme() {
     fi
     print_info "[3/4] Menyalin file & membangun aset..."
     sudo cp -rfT pterodactyl /var/www/pterodactyl
-
+    
+    # Menggunakan NVM untuk memastikan Node.js v16 aktif
     print_info "Memastikan Node.js v16 aktif menggunakan NVM..."
     export NVM_DIR="$HOME/.nvm"
     if [ -s "$NVM_DIR/nvm.sh" ]; then
@@ -192,21 +194,25 @@ install_theme() {
     fi
     nvm install 16 > /dev/null 2>&1
     nvm use 16 > /dev/null 2>&1
-    
-    # <-- DIPERBAIKI: Menggunakan 'which npm' untuk memberikan path lengkap ke sudo
-    sudo $(which npm) i -g yarn
+    sudo $(which npm) i -g yarn > /dev/null 2>&1
     
     cd /var/www/pterodactyl
 
+    # --- BLOK PERINTAH KHUSUS UNTUK TEMA TERTENTU ---
     if [ "$SELECT_THEME" -eq 9 ]; then # Khusus Arix
       print_info "Menginstall paket-paket yang diperlukan tema Arix..."
-      yarn add @types/md5 md5 react-icons @types/bbcode-to-react bbcode-to-react i18next-browser-languagedetector
+      # Langkah 1: Instal dependensi baru, abaikan peringatan/eror
+      yarn add @types/md5 md5 react-icons @types/bbcode-to-react bbcode-to-react i18next-browser-languagedetector || true
+      # Langkah 2: Paksa downgrade react-icons untuk mengatasi eror build
+      print_info "Menerapkan patch kompatibilitas untuk Arix (react-icons)..."
+      yarn add react-icons@^4.10.1
     fi
     
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
       php artisan billing:install stable > /dev/null 2>&1
     fi
+    # ---------------------------------------------------
     
     print_info "Menginstal dependensi Node.js..."
     yarn
