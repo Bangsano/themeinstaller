@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# ============================================================
+# SKRIP INI DI-REMAKE OLEH SANO OFFICIAL (TELEGRAM: @batuofc)
+# DILARANG UNTUK MEMPERJUALBELIKAN SKRIP INI, APALAGI MEMBAGIKANNYA SECARA GRATIS!
+# GAK USAH NGEYEL! NGEYEL? MATI AJA LU, HIDUP LU GAK GUNA, KERJAANNYA CUMA MALING SC, JUAL/SHARE SC HASIL MALING
+# ============================================================
+
 # Color
 BOLD='\033[1m'
 CYAN='\033[0;36m'
@@ -88,9 +94,9 @@ check_token() {
 install_theme() {
   clear
   local SELECT_THEME
-  # ... (sisa deklarasi variabel tidak berubah) ...
+  local THEME_NAME
+  local THEME_URL
 
-  # ... (Blok menu 'while true' tidak perlu diubah, sudah benar) ...
   while true; do
     echo " "
     print_info "[+] =============================================== [+]"
@@ -106,16 +112,15 @@ install_theme() {
     echo -e "${BOLD} 6. Ice${NC}"
     echo -e "${BOLD} 7. Noobe${NC}"
     echo -e "${BOLD} 8. Nookure${NC}"
-    echo -e "${BOLD} 9. Arix${NC}"
     echo " "
     print_info "[+] =============================================== [+]"
     echo " "
     echo -e "${BOLD}--- THEME BLUEPRINT (Wajib install Opsi #8 dari menu utama) ---${NC}"
-    echo -e "${BOLD} 10. Nebula${NC}"
-    echo -e "${BOLD} 11. Recolor${NC}"
+    echo -e "${BOLD} 9. Nebula${NC}"
+    echo -e "${BOLD} 10. Recolor${NC}"
     echo " "
     echo -e "${BOLD} x. Kembali${NC}"
-    echo -n -e "${BOLD}Masukkan pilihan (1-11 atau x): ${NC}"
+    echo -n -e "${BOLD}Masukkan pilihan (1-10 atau x): ${NC}"
     read SELECT_THEME
     case "$SELECT_THEME" in
       1) THEME_NAME="Stellar"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/stellar.zip"; break;;
@@ -126,15 +131,13 @@ install_theme() {
       6) THEME_NAME="Ice"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/ice.zip"; break;;
       7) THEME_NAME="Noobe"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/noobe.zip"; break;;
       8) THEME_NAME="Nookure"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nookure.zip"; break;;
-      9) THEME_NAME="Arix"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/arix.zip"; break;;
-      10) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
-      11) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
+      9) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
+      10) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
       x) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
       *) print_error "Pilihan tidak valid, silahkan coba lagi.";;
     esac
   done
 
-  # ... (Blok konfirmasi, setup, dan unduh tidak berubah) ...
   echo " "
   echo -n -e "${BOLD}Anda memilih untuk menginstal tema '$THEME_NAME'. Lanjutkan? (y/n): ${NC}"
   read confirmation
@@ -158,9 +161,8 @@ install_theme() {
   print_info "[2/4] Mengekstrak file tema..."
   unzip -oq "$THEME_ZIP_FILE" || true
 
-  if [ "$SELECT_THEME" -eq 10 ] || [ "$SELECT_THEME" -eq 11 ]; then
+  if [ "$SELECT_THEME" -eq 9 ] || [ "$SELECT_THEME" -eq 10 ]; then
     # --- JALUR INSTALASI BLUEPRINT ---
-    # ... (Blok ini sudah benar dan tidak diubah) ...
     print_info "[3/4] Mempersiapkan instalasi Blueprint..."
     if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "❌ ERROR: Blueprint belum terinstall."; return 1; fi
     THEME_NAME_LOWER=$(echo "$THEME_NAME" | tr '[:upper:]' '[:lower:]')
@@ -181,8 +183,6 @@ install_theme() {
     fi
     print_info "[3/4] Menyalin file & membangun aset..."
     sudo cp -rfT pterodactyl /var/www/pterodactyl
-    
-    # Menggunakan NVM untuk memastikan Node.js v16 aktif
     print_info "Memastikan Node.js v16 aktif menggunakan NVM..."
     export NVM_DIR="$HOME/.nvm"
     if [ -s "$NVM_DIR/nvm.sh" ]; then
@@ -194,38 +194,24 @@ install_theme() {
     nvm install 16 > /dev/null 2>&1
     nvm use 16 > /dev/null 2>&1
     sudo $(which npm) i -g yarn > /dev/null 2>&1
-    
     cd /var/www/pterodactyl
-
     print_info "Menginstal dependensi Node.js..."
     yarn > /dev/null 2>&1
     yarn add react-feather > /dev/null 2>&1
-
-    # --- BLOK PERINTAH KHUSUS UNTUK TEMA TERTENTU ---
-    # <-- DIPERBAIKI: Blok Arix yang paling lengkap dan andal
-    if [ "$SELECT_THEME" -eq 9 ]; then # Khusus Arix
-      print_info "Menginstall paket-paket yang diperlukan tema Arix dengan versi yang benar..."
-      yarn add @types/md5 md5 @types/bbcode-to-react bbcode-to-react \
-        react-icons@^4.10.1 \
-        i18next-browser-languagedetector@7.2.1 > /dev/null 2>&1
-    fi
     
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
       php artisan billing:install stable > /dev/null 2>&1
     fi
-    # ---------------------------------------------------
 
     print_info "Menjalankan migrasi, build, dan optimisasi..."
     php artisan migrate --force > /dev/null 2>&1
-    # NODE_OPTIONS tidak lagi diperlukan karena kita sudah menggunakan Node v16
-    yarn build:production
+    yarn build:production > /dev/null 2>&1
     php artisan view:clear > /dev/null 2>&1
     php artisan optimize:clear > /dev/null 2>&1
     print_info "[4/4] Membersihkan file sisa..."
   fi
-  
-  # ... (Pesan sukses tidak berubah) ...
+
   echo " "
   print_success "[+] =============================================== [+]"
   print_success "[+]           INSTALASI BERHASIL SELESAI            [+]"
@@ -309,7 +295,7 @@ uninstall_theme() {
   return 0
 }
 
-# Cretae
+# Create Node
 create_node() {
   clear
   set -e
@@ -321,10 +307,9 @@ create_node() {
 
   bash <(curl -s https://raw.githubusercontent.com/Bangsano/themeinstaller/main/createnode.sh)
 
-  # Cek status eksekusi terakhir. Jika gagal, tampilkan pesan error.
   if [ $? -ne 0 ]; then
     echo -e "\n${BOLD}🚨 TERJADI ERROR saat menjalankan skrip 'createnode.sh'.${NC}"
-    return 1 # Keluar dari fungsi dengan status error
+    return 1
   fi
 
   echo " "
@@ -452,53 +437,37 @@ install_depend() {
         echo -e "${BOLD}Instalasi dibatalkan.${NC}"
         return
     fi
-    # 1. Menginstal semua dependensi dasar
     echo -e "${BOLD}⚙️  Menginstal dependensi dasar (curl, gnupg, git, dll)...${NC}"
     sudo apt-get update > /dev/null 2>&1
     sudo apt-get install -y ca-certificates curl gnupg zip unzip git wget > /dev/null 2>&1
-
-    # 2. Menyiapkan repositori Node.js v20.x
     echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v20.x...${NC}"
     sudo mkdir -p /etc/apt/keyrings
-    # <-- DIPERBAIKI: Menggunakan 'tee' untuk menimpa file GPG tanpa bertanya
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-
-    # 3. Menginstal Node.js dan Yarn
     echo -e "${BOLD}⚙️  Menginstal Node.js dan Yarn...${NC}"
     sudo apt-get update > /dev/null 2>&1
     sudo apt-get install -y nodejs > /dev/null 2>&1
     sudo npm i -g yarn > /dev/null 2>&1
-
-    # 4. Menginstal dependensi Pterodactyl
     echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl di /var/www/pterodactyl...${NC}"
     cd /var/www/pterodactyl
     yarn > /dev/null 2>&1
     yarn add cross-env > /dev/null 2>&1
-
-    # 5. Mengunduh dan menginstal Blueprint Framework
     echo -e "${BOLD}⚙️  Mengunduh dan menginstal Blueprint Framework...${NC}"
     wget -q "$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | cut -d '"' -f 4)" -O /tmp/release.zip
     unzip -oq /tmp/release.zip -d /var/www/pterodactyl
     rm /tmp/release.zip
-
-    # 6. Menjalankan Blueprint
     cd /var/www/pterodactyl
     sed -i -E -e "s|WEBUSER=\"www-data\" #;|WEBUSER=\"www-data\" #;|g" \
                -e "s|USERSHELL=\"/bin/bash\" #;|USERSHELL=\"/bin/bash\" #;|g" \
                -e "s|OWNERSHIP=\"www-data:www-data\" #;|OWNERSHIP=\"www-data:www-data\" #;|g" blueprint.sh
     chmod +x blueprint.sh
-    
     echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
     yes | sudo bash blueprint.sh
-
-    # ... (Pesan sukses tidak berubah) ...
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "${BOLD}${GREEN}[+]        INSTALLASI NODE.JS & BLUEPRINT SELESAI   [+]${NC}"
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "                                                       "
-
     sleep 3
     return 0
 }
@@ -528,7 +497,6 @@ install_auto_suspend() {
   wget -q https://github.com/Bangsano/themeinstaller/raw/main/autosuspend.zip
   
   print_info "Mengekstrak file..."
-  # <-- DIPERBAIKI: Ditambahkan flag -q (quiet) agar senyap
   unzip -oq autosuspend.zip
   
   print_info "Menyalin file migrasi dan installer..."
@@ -537,7 +505,6 @@ install_auto_suspend() {
   cd /var/www/pterodactyl
   
   print_info "Menjalankan skrip autosuspend (installer.sh)..."
-  # <-- DIPERBAIKI: Ditambahkan pengalihan output agar senyap
   sudo bash installer.sh <<EOF > /dev/null 2>&1
 y
 EOF
@@ -583,11 +550,11 @@ while true; do
   echo -e "${BOLD} 6. Hack Back Panel${NC}"
   echo -e "${BOLD} 7. Ubah Password VPS${NC}"
   echo -e "${BOLD} 8. Install Dependencies (Blueprint)${NC}"
-  echo -e "${BOLD} 9. Install Fitur Auto Suspend${NC}" # <-- DITAMBAHKAN
+  echo -e "${BOLD} 9. Install Fitur Auto Suspend${NC}"
   echo -e "${BOLD} x. Exit${NC}"
   echo " "
   
-  echo -n -e "${BOLD}Masukkan pilihan (1-9 atau x): ${NC}" # <-- DIUBAH
+  echo -n -e "${BOLD}Masukkan pilihan (1-9 atau x): ${NC}"
   read -r MENU_CHOICE
   clear
 
