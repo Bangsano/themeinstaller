@@ -88,10 +88,9 @@ check_token() {
 install_theme() {
   clear
   local SELECT_THEME
-  local THEME_NAME
-  local THEME_URL
+  # ... (sisa deklarasi variabel tidak berubah) ...
 
-  # ... (Blok menu 'while true' Anda tidak perlu diubah, sudah benar) ...
+  # ... (Blok menu 'while true' tidak perlu diubah, sudah benar) ...
   while true; do
     echo " "
     print_info "[+] =============================================== [+]"
@@ -198,14 +197,17 @@ install_theme() {
     
     cd /var/www/pterodactyl
 
+    print_info "Menginstal dependensi Node.js..."
+    yarn > /dev/null 2>&1
+    yarn add react-feather > /dev/null 2>&1
+
     # --- BLOK PERINTAH KHUSUS UNTUK TEMA TERTENTU ---
+    # <-- DIPERBAIKI: Blok Arix yang paling lengkap dan andal
     if [ "$SELECT_THEME" -eq 9 ]; then # Khusus Arix
-      print_info "Menginstall paket-paket yang diperlukan tema Arix..."
-      # Langkah 1: Instal dependensi baru, abaikan peringatan/eror
-      yarn add @types/md5 md5 react-icons @types/bbcode-to-react bbcode-to-react i18next-browser-languagedetector || true
-      # Langkah 2: Paksa downgrade react-icons untuk mengatasi eror build
-      print_info "Menerapkan patch kompatibilitas untuk Arix (react-icons)..."
-      yarn add react-icons@^4.10.1
+      print_info "Menginstall paket-paket yang diperlukan tema Arix dengan versi yang benar..."
+      yarn add @types/md5 md5 @types/bbcode-to-react bbcode-to-react \
+        react-icons@^4.10.1 \
+        i18next-browser-languagedetector@7.2.1 > /dev/null 2>&1
     fi
     
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
@@ -213,13 +215,10 @@ install_theme() {
       php artisan billing:install stable > /dev/null 2>&1
     fi
     # ---------------------------------------------------
-    
-    print_info "Menginstal dependensi Node.js..."
-    yarn
-    yarn add react-feather
 
     print_info "Menjalankan migrasi, build, dan optimisasi..."
-    php artisan migrate --force
+    php artisan migrate --force > /dev/null 2>&1
+    # NODE_OPTIONS tidak lagi diperlukan karena kita sudah menggunakan Node v16
     yarn build:production
     php artisan view:clear > /dev/null 2>&1
     php artisan optimize:clear > /dev/null 2>&1
