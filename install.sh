@@ -401,22 +401,40 @@ ubahpw_vps() {
   echo -e "${BOLD}${GREEN}[+]                  UBAH PASSWORD VPS                    [+]${NC}"
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
-  read -p "Masukkan Pw Baru: " pw
-  read -p "Masukkan Ulang Pw Baru " pw
-  passwd <<EOF
-$pw
-$pw
 
+  while true; do
+    read -p "Masukkan Password Baru: " pw1
+    echo
+
+    read -p "Masukkan Ulang Password Baru: " pw2
+    echo
+
+    if [[ "$pw1" == "$pw2" ]]; then
+      break
+    else
+      echo -e "\n${BOLD}${RED}Password tidak cocok! Silakan coba lagi.${NC}\n"
+    fi
+  done
+
+  echo -e "\nMengubah password..."
+  passwd <<EOF
+$pw1
+$pw1
 EOF
 
-
-  echo -e "                                                       "
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]                 GANTI PW VPS SUKSES                    [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
-  sleep 3
-  return 0
+  if [ $? -eq 0 ]; then
+    echo -e "                                                       "
+    echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
+    echo -e "${BOLD}${GREEN}[+]              GANTI PASSWORD VPS SUKSES              [+]${NC}"
+    echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
+    echo -e "                                                       "
+    sleep 3
+    return 0
+  else
+    echo -e "\n${BOLD}${RED}Gagal mengubah password. Silakan periksa log sistem.${NC}\n"
+    sleep 3
+    return 1
+  fi
 }
 
 # Install Dependencies Blueprint
