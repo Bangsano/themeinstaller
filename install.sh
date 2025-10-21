@@ -188,12 +188,12 @@ install_theme() {
     if [ -s "$NVM_DIR/nvm.sh" ]; then
       source "$NVM_DIR/nvm.sh"
     else
-      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash > /dev/null 2>&1
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash# > /dev/null 2>&1
       source "$NVM_DIR/nvm.sh"
     fi
-    nvm install 16 > /dev/null 2>&1
-    nvm use 16 > /dev/null 2>&1
-    sudo $(which npm) i -g yarn > /dev/null 2>&1
+    nvm install 16# > /dev/null 2>&1
+    nvm use 16# > /dev/null 2>&1
+    sudo $(which npm) i -g yarn# > /dev/null 2>&1
     cd /var/www/pterodactyl
     print_info "Menginstal dependensi Node.js..."
     yarn > /dev/null 2>&1
