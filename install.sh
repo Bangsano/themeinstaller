@@ -193,7 +193,7 @@ install_theme() {
     fi
     nvm install 16 > /dev/null 2>&1
     nvm use 16 > /dev/null 2>&1
-    npm i -g yarn
+    npm i -g yarn > /dev/null 2>&1
     cd /var/www/pterodactyl
     print_info "Menginstal dependensi Node.js..."
     yarn > /dev/null 2>&1
