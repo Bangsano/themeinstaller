@@ -69,11 +69,11 @@ install_jq() {
   fi
   echo -e "                                                       "
   sleep 1
+  clear
 }
 
 #Check user token
 check_token() {
-  clear
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${BLUE}[+]              SANO OFFICIAL LICENSE            [+]${NC}"
@@ -88,11 +88,11 @@ check_token() {
     echo -e "${BOLD}${GREEN}Token yang anda masukkan salah.${NC}"
     exit 1
   fi
+  clear
 }
 
 # Install theme
 install_theme() {
-  clear
   local SELECT_THEME
   local THEME_NAME
   local THEME_URL
@@ -223,7 +223,6 @@ install_theme() {
 
 # Uninstall theme
 uninstall_theme() {
-  clear
   echo " "
   print_info "[+] =============================================== [+]"
   print_info "[+]        RESET TOTAL PANEL (UNINSTALL THEME)        [+]"
@@ -297,7 +296,6 @@ uninstall_theme() {
 
 # Create Node
 create_node() {
-  clear
   set -e
   echo " "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
@@ -322,7 +320,6 @@ create_node() {
 }
 
 uninstall_panel() {
-  clear
   set -e
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
@@ -349,7 +346,6 @@ EOF
 }
 
 configure_wings() {
-  clear
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${BLUE}[+]                    CONFIGURE WINGS                    [+]${NC}"
@@ -368,26 +364,61 @@ configure_wings() {
 }
 
 hackback_panel() {
-  clear
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${BLUE}[+]                    HACK BACK PANEL                 [+]${NC}"
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
-  read -p "Masukkan Username Panel: " user
-  read -p "password login: " psswdhb
-  cd /var/www/pterodactyl || { echo "Direktori tidak ditemukan"; return 1; }
-  php artisan p:user:make <<EOF
+  read -p "Masukkan Username Panel Baru: " user
+  read -p "Masukkan Password Baru: " pwhb
+  echo
+
+  if [[ -z "$user" || -z "$pwhb" ]]; then
+      echo -e "\n${BOLD}${RED}Username dan Password tidak boleh kosong!${NC}\n"
+      return 1
+  fi
+
+  if ! cd /var/www/pterodactyl; then
+    echo -e "\n${BOLD}${RED}Gagal pindah ke direktori /var/www/pterodactyl. Pastikan Pterodactyl terinstal.${NC}\n"
+    return 1
+  fi
+
+  echo -e "\nMembuat user admin baru..."
+  if ! php artisan p:user:make <<EOF
 yes
 $user@admin.com
 $user
 $user
 $user
-$psswdhb
+$pwhb
 EOF
+  then
+      echo -e "\n${BOLD}${RED}Gagal menjalankan perintah 'php artisan p:user:make'. Periksa log Pterodactyl.${NC}\n"
+      return 1
+  fi
+
+  local panel_url="URL Panel tidak ditemukan"
+  local env_file="/var/www/pterodactyl/.env"
+  if [[ -f "$env_file" ]]; then
+    local app_url_line=$(grep '^APP_URL=' "$env_file")
+    if [[ -n "$app_url_line" ]]; then
+      panel_url=${app_url_line#APP_URL=}
+      panel_url=$(echo "$panel_url" | sed 's|^https*://||')
+      panel_url="https://${panel_url}"
+    else
+      echo -e "\n${BOLD}${YELLOW}Peringatan: Baris APP_URL tidak ditemukan di $env_file.${NC}"
+    fi
+  else
+    echo -e "\n${BOLD}${YELLOW}Peringatan: File $env_file tidak ditemukan.${NC}"
+  fi
+
   echo -e "                                                       "
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]                 AKUN TELAH DI ADD             [+]${NC}"
+  echo -e "${BOLD}${GREEN}[+]                 AKUN TELAH DITAMBAHKAN            [+]${NC}"
+  echo -e "${BOLD}${GREEN}[+] ----------------------------------------------- [+]${NC}"
+  echo -e "${BOLD}${GREEN}[+] Username: $user                                   [+]"
+  echo -e "${BOLD}${GREEN}[+] Password: $pwhb    [+]"
+  echo -e "${BOLD}${GREEN}[+] URL Panel: $panel_url                        [+]"
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   sleep 3
@@ -395,7 +426,6 @@ EOF
 }
 
 ubahpw_vps() {
-  clear
   echo -e "                                                       "
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${GREEN}[+]                  UBAH PASSWORD VPS                    [+]${NC}"
@@ -442,7 +472,6 @@ install_depend() {
     export DEBIAN_FRONTEND=noninteractive
     export NEEDRESTART_MODE=a
 
-    clear
     set -e
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
@@ -492,7 +521,6 @@ install_depend() {
 
 # install auto suspend
 install_auto_suspend() {
-  clear
   set -e
   echo " "
   print_info "[+] =============================================== [+]"
@@ -574,7 +602,6 @@ while true; do
   
   echo -n -e "${BOLD}Masukkan pilihan (1-9 atau x): ${NC}"
   read -r MENU_CHOICE
-  clear
 
   case "$MENU_CHOICE" in
     1)
