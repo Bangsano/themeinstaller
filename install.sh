@@ -170,7 +170,7 @@ install_theme() {
     sudo mv "$BLUEPRINT_FILE" /var/www/pterodactyl/
     print_info "[4/4] Menjalankan instalasi tema via Blueprint..."
     cd /var/www/pterodactyl
-    sudo blueprint --no-interaction -install "$THEME_NAME_LOWER"
+    sudo blueprint -install "$THEME_NAME_LOWER"
     sudo chown -R www-data:www-data /var/www/pterodactyl
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
   else
@@ -188,12 +188,12 @@ install_theme() {
     if [ -s "$NVM_DIR/nvm.sh" ]; then
       source "$NVM_DIR/nvm.sh"
     else
-      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash > /dev/null 2>&1
       source "$NVM_DIR/nvm.sh"
     fi
-    nvm install 16
-    nvm use 16
-    sudo $(which npm) i -g yarn
+    nvm install 16 > /dev/null 2>&1
+    nvm use 16 > /dev/null 2>&1
+    npm i -g yarn
     cd /var/www/pterodactyl
     print_info "Menginstal dependensi Node.js..."
     yarn > /dev/null 2>&1
