@@ -370,7 +370,7 @@ hackback_panel() {
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   read -p "Masukkan Username Panel Baru: " user
-  read -p "Masukkan Password Baru: " pwhb
+  read -sp "Masukkan Password Baru (password yang anda masukkan tidak akan ditampilkan karena sebagai bentuk sensor): " pwhb
   echo
 
   if [[ -z "$user" || -z "$pwhb" ]]; then
@@ -417,7 +417,7 @@ EOF
   echo -e "${BOLD}${GREEN}[+]                 AKUN TELAH DITAMBAHKAN            [+]${NC}"
   echo -e "${BOLD}${GREEN}[+] ----------------------------------------------- [+]${NC}"
   echo -e "${BOLD}${GREEN}[+] Username: $user                                   [+]"
-  echo -e "${BOLD}${GREEN}[+] Password: $pwhb    [+]"
+  echo -e "${BOLD}${GREEN}[+] Password: (Password yang Anda masukkan tadi)    [+]"
   echo -e "${BOLD}${GREEN}[+] URL Panel: $panel_url                        [+]"
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
