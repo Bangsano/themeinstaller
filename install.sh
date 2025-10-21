@@ -370,7 +370,7 @@ hackback_panel() {
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   read -p "Masukkan Username Panel Baru: " user
-  read -sp "Masukkan Password Baru (password yang anda masukkan tidak akan ditampilkan karena sebagai bentuk sensor): " pwhb
+  read -sp "Masukkan Password Baru (password tidak akan ditampilkan): " pwhb
   echo
 
   if [[ -z "$user" || -z "$pwhb" ]]; then
@@ -384,14 +384,7 @@ hackback_panel() {
   fi
 
   echo -e "\nMembuat user admin baru..."
-  if ! php artisan p:user:make <<EOF
-yes
-$user@admin.com
-$user
-$user
-$user
-$pwhb
-EOF
+  if ! printf 'yes\n%s@admin.com\n%s\n%s\n%s\n%s\n' "$user" "$user" "$user" "$user" "$pwhb" | php artisan p:user:make
   then
       echo -e "\n${BOLD}${RED}Gagal menjalankan perintah 'php artisan p:user:make'. Periksa log Pterodactyl.${NC}\n"
       return 1
@@ -403,8 +396,10 @@ EOF
     local app_url_line=$(grep '^APP_URL=' "$env_file")
     if [[ -n "$app_url_line" ]]; then
       panel_url=${app_url_line#APP_URL=}
-      panel_url=$(echo "$panel_url" | sed 's|^https*://||')
-      panel_url="https://${panel_url}"
+      panel_url=$(echo "$panel_url" | tr -d '"')
+      if [[ ! "$panel_url" =~ ^https?:// ]]; then
+          panel_url="https://$panel_url"
+      fi
     else
       echo -e "\n${BOLD}${YELLOW}Peringatan: Baris APP_URL tidak ditemukan di $env_file.${NC}"
     fi
@@ -416,12 +411,12 @@ EOF
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${GREEN}[+]                 AKUN TELAH DITAMBAHKAN            [+]${NC}"
   echo -e "${BOLD}${GREEN}[+] ----------------------------------------------- [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+] Username: $user                                   [+]"
-  echo -e "${BOLD}${GREEN}[+] Password: (Password yang Anda masukkan tadi)    [+]"
-  echo -e "${BOLD}${GREEN}[+] URL Panel: $panel_url                        [+]"
+  echo -e "${BOLD}${GREEN}[+] Username: $user${NC}"
+  echo -e "${BOLD}${GREEN}[+] Password: (Password yang Anda masukkan tadi)${NC}"
+  echo -e "${BOLD}${GREEN}[+] URL Panel: $panel_url${NC}"
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
-  sleep 3
+  sleep 4
   return 0
 }
 
