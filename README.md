@@ -29,16 +29,21 @@ Skrip ini mencakup berbagai macam fitur canggih yang terbagi dalam beberapa kate
 
 ### 🎨 Manajemen Tema (Themes)
 
-Instalasi tema favorit Anda hanya dengan satu klik. Mendukung fitur Uninstall untuk mengembalikan panel ke kondisi original.
- * Premium Themes: Stellar, Billing, Enigma, Elysium, Nightcore.
- * Simple Themes: Ice, Noobe, Nookure.
- * Blueprint Based: Nebula, Recolor.
-⚙️ Manajemen Panel & Node
- * Auto Node: Buat Node & Lokasi baru secara otomatis.
- * Dependencies: Install Dependensi & Blueprint Framework.
- * Full Removal: Uninstall Pterodactyl Panel (Bersih sampai akar).
- * Security: Hack Back Panel (Utilitas Keamanan Darurat).
-🔧 Utilitas Server
+Instalasi tema favorit Anda hanya dengan satu klik. Mendukung fitur **Uninstall** untuk mengembalikan panel ke kondisi original.
+
+ * **Premium Themes:** Stellar, Billing, Enigma, Elysium, Nightcore.
+ * **Simple Themes:** Ice, Noobe, Nookure.
+ * **Blueprint Based:** Nebula, Recolor.
+
+### ⚙️ Manajemen Panel & Node
+
+ * **Auto Node:** Buat Node & Lokasi baru secara otomatis.
+ * **Dependencies:** Install Dependensi & Blueprint Framework.
+ * **Full Removal:** Uninstall Pterodactyl Panel (Bersih sampai akar).
+ * **Security:** Hack Back Panel (Utilitas Keamanan Darurat).
+
+### 🔧 Utilitas Server
+
  * Fix & Run Wings (Daemon).
  * Ganti Password VPS dengan mudah.
 
@@ -56,10 +61,11 @@ Script ini telah diuji dan berjalan optimal pada sistem operasi berikut:
 
 > Catatan: OS di atas adalah yang sudah saya tes, selebihnya bisa tes sendiri.
 
-> 📞 Bantuan & Dukungan
-Punya pertanyaan? Menemukan bug? Jangan ragu untuk menghubungi saya. Gunakan script ini dengan bijak!
-<p align="center">Made with ❤️ by Sano Official</p>
+> **📞 Bantuan & Dukungan**
+> Punya pertanyaan? Menemukan bug? Jangan ragu untuk menghubungi saya. Gunakan script ini dengan bijak!
 
 - Github Profile: [SANO OFFICIAL](https://github.com/Bangsano)
 - WhatsApp Channel: [KLIK DI SINI](https://whatsapp.com/channel/0029Vaji4SeLtOj6DEp4CO3G)
 - Telegram Chat: [HUBUNGI ATMIN](https://t.me/batuofc)
+
+<p align="center">Made with ❤️ by Sano Official</p>
