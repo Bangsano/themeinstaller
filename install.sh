@@ -480,20 +480,20 @@ install_depend() {
         return
     fi
     echo -e "${BOLD}⚙️  Menginstal dependensi dasar (curl, gnupg, git, dll)...${NC}"
-    sudo apt-get update > /dev/null 2>&1
-    sudo apt-get install -y ca-certificates curl gnupg zip unzip git wget > /dev/null 2>&1
+    sudo apt-get update
+    sudo apt-get install -y ca-certificates curl gnupg zip unzip git wget
     echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v20.x...${NC}"
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
     echo -e "${BOLD}⚙️  Menginstal Node.js dan Yarn...${NC}"
-    sudo apt-get update > /dev/null 2>&1
-    sudo apt-get install -y nodejs > /dev/null 2>&1
-    sudo npm i -g yarn > /dev/null 2>&1
+    sudo apt-get update
+    sudo apt-get install -y nodejs
+    sudo npm i -g yarn
     echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl di /var/www/pterodactyl...${NC}"
     cd /var/www/pterodactyl
-    yarn > /dev/null 2>&1
-    yarn add cross-env > /dev/null 2>&1
+    yarn
+    yarn add cross-env
     echo -e "${BOLD}⚙️  Mengunduh dan menginstal Blueprint Framework...${NC}"
     wget -q "$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | cut -d '"' -f 4)" -O /tmp/release.zip
     unzip -oq /tmp/release.zip -d /var/www/pterodactyl
