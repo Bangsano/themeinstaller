@@ -228,7 +228,7 @@ uninstall_theme() {
   print_info "[+]        RESET TOTAL PANEL (UNINSTALL THEME)        [+]"
   print_info "[+] =============================================== [+]"
   echo " "
-  echo -e "${BOLD}${YELLOW}PERINGATAN:${NC} ${BOLD}Proses ini akan MERESET semua file panel,${NC}"
+  echo -e "${BOLD}${YELLOW}PERINGATAN:${NC} ${BOLD}Proses ini akan MENGHAPUS TOTAL semua file panel,${NC}"
   echo -e "${BOLD}sehingga semua tema kustom atau tools lainnya akan terhapus.${NC}"
   echo " "
 
@@ -264,8 +264,13 @@ uninstall_theme() {
         echo -e "${BOLD}   - Mengatur kepemilikan file ke 'www-data'...${NC}"
         sudo chown -R www-data:www-data /var/www/pterodactyl
 
-        echo -e "${BOLD}   - Mengupdate Composer (untuk mencegah eror dependensi)...${NC}"
+        echo -e "${BOLD}   - Mengupdate Composer...${NC}"
         curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
+        
+        echo -e "${BOLD}   - Membersihkan cache permission...${NC}"
+        sudo rm -rf /var/www/.cache
+        sudo mkdir -p /var/www/.cache
+        sudo chown -R www-data:www-data /var/www/.cache
 
         echo -e "${BOLD}   - Menginstal dependensi & menjalankan migrasi...${NC}"
         sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
