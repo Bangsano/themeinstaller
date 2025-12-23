@@ -1,62 +1,65 @@
-# :bird: Pterodactyl All-in-One Script
+# 🦅 Pterodactyl All-in-One Script
 
-Skrip serbaguna untuk instalasi, manajemen tema, dan utilitas lainnya untuk Pterodactyl Panel. Dibuat untuk menyederhanakan dan mengotomatiskan tugas-tugas rutin.
+![Version](https://img.shields.io/badge/version-stable-blue) ![Maintenance](https://img.shields.io/badge/maintained-yes-green) ![Lang](https://img.shields.io/badge/language-bash-orange)
 
-## Perintah Instalasi:
+Selamat datang di **Pterodactyl All-in-One Script**. Tools otomatisasi terbaik untuk instalasi, manajemen tema, dan utilitas server Pterodactyl Anda. Dirancang untuk efisiensi, kecepatan, dan kemudahan penggunaan.
 
-Mau pakai bash ini? Silahkan saja, saya izinkan anda untuk memakainya.
+---
+
+## 🚀 Instalasi Cepat
+
+Untuk menghindari error dan memastikan Anda mendapatkan versi terbaru yang paling stabil, **sangat disarankan** untuk menjalankan script langsung melalui perintah di bawah ini.
+
+Anda tidak perlu pusing mengedit kode manual. Jika ada kendala atau bug, biarkan kami yang memperbaikinya untuk Anda. Cukup jalankan, dan nikmati hasilnya!
+
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/Bangsano/themeinstaller/main/install.sh)
+bash <(curl -s [https://raw.githubusercontent.com/Bangsano/themeinstaller/main/install.sh](https://raw.githubusercontent.com/Bangsano/themeinstaller/main/install.sh))
 ```
 
-Mau ngambil sc bash installernya? Saya tidak akan pernah mengizinkannya dan saya tidak akan ikhlas memberikannya jika anda ngambil sc installer ini dengan cara maling (tidak minta izin dulu)!
+> [!IMPORTANT]
+> **🛡️ EXCLUSIVE PROTECT PANEL**
+> Ingin melindungi panel Pterodactyl Anda dari tangan jahil?
+> Gunakan **Protect Panel Installer** yang tersedia khusus di website kami.
+>
+> 🔗 **Akses disini:** [www.sano.biz.id/pterodactyl](https://www.sano.biz.id/pterodactyl)
 
-## Fitur Tools:
+## ✨ Fitur Utama
 
-Skrip ini sekarang mencakup berbagai macam fitur yang terbagi dalam beberapa kategori:
-🎨 Manajemen Tema
- * Menu Instalasi Tema Terintegrasi, mendukung:
-   * Stellar
-   * Billing
-   * Enigma
-   * Elysium
-   * Nightcore
-   * Ice
-   * Noobe
-   * Nookure
- * Instalasi Tema Berbasis Blueprint:
-   * Nebula
-   * Recolor
- * Uninstall Tema Kustom (Mengembalikan panel ke kondisi original)
+Skrip ini mencakup berbagai macam fitur canggih yang terbagi dalam beberapa kategori:
+
+### 🎨 Manajemen Tema (Themes)
+
+Instalasi tema favorit Anda hanya dengan satu klik. Mendukung fitur Uninstall untuk mengembalikan panel ke kondisi original.
+ * Premium Themes: Stellar, Billing, Enigma, Elysium, Nightcore.
+ * Simple Themes: Ice, Noobe, Nookure.
+ * Blueprint Based: Nebula, Recolor.
 ⚙️ Manajemen Panel & Node
- * Buat Node & Lokasi Baru secara otomatis.
- * Install Dependensi & Blueprint Framework untuk dukungan tema tingkat lanjut.
- * Uninstall Pterodactyl Panel dari server Anda.
- * Hack Back Panel (Utilitas Keamanan).
+ * Auto Node: Buat Node & Lokasi baru secara otomatis.
+ * Dependencies: Install Dependensi & Blueprint Framework.
+ * Full Removal: Uninstall Pterodactyl Panel (Bersih sampai akar).
+ * Security: Hack Back Panel (Utilitas Keamanan Darurat).
 🔧 Utilitas Server
- * Menjalankan Wings (Daemon Pterodactyl).
- * Ubah Password VPS.
+ * Fix & Run Wings (Daemon).
+ * Ganti Password VPS dengan mudah.
 
-## System Support:
+## 💻 Kompatibilitas Sistem
 
-| Operating System | Version | Supported          |
-| ---------------- | ------- | ------------------ |
-| Ubuntu           | 20.04   | :white_check_mark: |
-|                  | 22.04   | :white_check_mark: |
-| Debian           | 10      | :white_check_mark: |
-|                  | 11      | :white_check_mark: |
-|                  | 12      | :white_check_mark: |
+Script ini telah diuji dan berjalan optimal pada sistem operasi berikut:
 
-_\* di atas adalah os yang saya test, selebihnya bisa test sendiri._
+| Operating System | Version | Status |
+|---|---|---|
+| Ubuntu | 20.04 | ✅ Tested |
+|  | 22.04 | ✅ Tested |
+| Debian | 10 | ✅ Tested |
+|  | 11 | ✅ Tested |
+|  | 12 | ✅ Tested |
 
+> Catatan: OS di atas adalah yang sudah saya tes, selebihnya bisa tes sendiri.
 
-## Credits 
-Mau pakai bash ini? silahkan.
-Mau ngambil sc installer ini? Minimal izin dulu!
-Mau izin ngambil? Izinnya ke telegram, dibalas gak dibalas tapi kalo sudah dibaca itu artinya diizinkan.
+> 📞 Bantuan & Dukungan
+Punya pertanyaan? Menemukan bug? Jangan ragu untuk menghubungi saya. Gunakan script ini dengan bijak!
+<p align="center">Made with ❤️ by Sano Official</p>
 
-Gak usah jadi maling!
-
-- Github: [SANO OFFICIAL](https://github.com/Bangsano)
-- WhatsApp: [KLIK DI SINI](https://whatsapp.com/channel/0029Vaji4SeLtOj6DEp4CO3G)
-- Telegram: [HUBUNGI ATMIN](https://t.me/batuofc)
+- Github Profile: [SANO OFFICIAL](https://github.com/Bangsano)
+- WhatsApp Channel: [KLIK DI SINI](https://whatsapp.com/channel/0029Vaji4SeLtOj6DEp4CO3G)
+- Telegram Chat: [HUBUNGI ATMIN](https://t.me/batuofc)

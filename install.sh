@@ -39,8 +39,8 @@ display_welcome() {
   echo -e "${BOLD}${BLUE}[+]                                                 [+]${NC}"
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e ""
-  echo -e "script ini dibuat untuk mempermudah penginstalasian tema pterodactyl,"
-  echo -e "Dilarang Keras Share Bebas."
+  echo -e "Script ini dibuat untuk mempermudah penginstalasian tema pterodactyl."
+  echo -e "Mengalami eror? Lapor ke admin agar diperbaiki."
   echo -e ""
   echo -e "𝗧𝗘𝗟𝗘𝗚𝗥𝗔𝗠: @batuofc"
   sleep 4
@@ -54,7 +54,7 @@ install_jq() {
   echo -e "${BOLD}${BLUE}[+]             UPDATE & INSTALL JQ                 [+]${NC}"
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
-  (sudo apt update && sudo apt install -y jq) > /dev/null 2>&1
+  (sudo apt update && sudo apt install -y jq)
   if [ $? -eq 0 ]; then
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
@@ -188,27 +188,27 @@ install_theme() {
     if [ -s "$NVM_DIR/nvm.sh" ]; then
       source "$NVM_DIR/nvm.sh"
     else
-      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash > /dev/null 2>&1
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
       source "$NVM_DIR/nvm.sh"
     fi
-    nvm install 16 > /dev/null 2>&1
-    nvm use 16 > /dev/null 2>&1
-    npm i -g yarn > /dev/null 2>&1
+    nvm install 16
+    nvm use 16
+    npm i -g yarn
     cd /var/www/pterodactyl
     print_info "Menginstal dependensi Node.js..."
-    yarn > /dev/null 2>&1
-    yarn add react-feather > /dev/null 2>&1
+    yarn
+    yarn add react-feather
     
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
-      php artisan billing:install stable > /dev/null 2>&1
+      php artisan billing:install stable
     fi
 
     print_info "Menjalankan migrasi, build, dan optimisasi..."
-    php artisan migrate --force > /dev/null 2>&1
-    yarn build:production > /dev/null 2>&1
-    php artisan view:clear > /dev/null 2>&1
-    php artisan optimize:clear > /dev/null 2>&1
+    php artisan migrate --force
+    yarn build:production
+    php artisan view:clear
+    php artisan optimize:clear
     print_info "[4/4] Membersihkan file sisa..."
   fi
 
@@ -255,7 +255,7 @@ uninstall_theme() {
         sudo find . -mindepth 1 -delete
         
         echo -e "${BOLD}   - Mengunduh panel original terbaru...${NC}"
-        curl -L https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz | sudo tar -xzf - -C /var/www/pterodactyl > /dev/null 2>&1
+        curl -L https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz | sudo tar -xzf - -C /var/www/pterodactyl
     
         echo -e "${BOLD}   - Mengembalikan file .env...${NC}"
         if [ -f "$TEMP_BACKUP/.env" ]; then sudo mv "$TEMP_BACKUP"/.env .; fi
@@ -265,10 +265,10 @@ uninstall_theme() {
         sudo chown -R www-data:www-data /var/www/pterodactyl
 
         echo -e "${BOLD}   - Menginstal dependensi & menjalankan migrasi...${NC}"
-        sudo -u www-data composer install --no-dev --optimize-autoloader > /dev/null 2>&1
-        sudo -u www-data php artisan migrate --seed --force > /dev/null 2>&1
-        sudo -u www-data php artisan view:clear > /dev/null 2>&1
-        sudo -u www-data php artisan config:clear > /dev/null 2>&1
+        sudo -u www-data composer install --no-dev --optimize-autoloader
+        sudo -u www-data php artisan migrate --seed --force
+        sudo -u www-data php artisan view:clear
+        sudo -u www-data php artisan config:clear
         
         echo -e "${BOLD}   - Membersihkan shortcut Blueprint (jika ada)...${NC}"
         sudo rm -f /usr/local/bin/blueprint
@@ -473,38 +473,63 @@ install_depend() {
     echo -e "${BOLD}${GREEN}[+]           INSTALL NODE.JS & BLUEPRINT           [+]${NC}"
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "                                                       "
+    
     echo -n -e "${BOLD}Apakah anda yakin ingin melanjutkannya? (y/n): ${NC}"
     read confirmation
     if [[ "$confirmation" != [yY] ]]; then
         echo -e "${BOLD}Instalasi dibatalkan.${NC}"
         return
     fi
-    echo -e "${BOLD}⚙️  Menginstal dependensi dasar (curl, gnupg, git, dll)...${NC}"
-    sudo apt-get update
-    sudo apt-get install -y ca-certificates curl gnupg zip unzip git wget
+
+    echo -e "${BOLD}⚙️  Menginstal dependensi dasar...${NC}"
+    sudo DEBIAN_FRONTEND=noninteractive apt-get update
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg zip unzip git wget
+
+    if [ -f /etc/needrestart/needrestart.conf ]; then
+        echo -e "${BOLD}⚙️  Mengonfigurasi needrestart ke mode otomatis...${NC}"
+        sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+        sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    fi
+
     echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v20.x...${NC}"
     sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
+
     echo -e "${BOLD}⚙️  Menginstal Node.js dan Yarn...${NC}"
-    sudo apt-get update
-    sudo apt-get install -y nodejs
+    sudo DEBIAN_FRONTEND=noninteractive apt-get update
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
     sudo npm i -g yarn
+
     echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl di /var/www/pterodactyl...${NC}"
     cd /var/www/pterodactyl
     yarn
     yarn add cross-env
+
     echo -e "${BOLD}⚙️  Mengunduh dan menginstal Blueprint Framework...${NC}"
-    wget -q "$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | cut -d '"' -f 4)" -O /tmp/release.zip
+    
+    DOWNLOAD_URL=$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | grep '.zip' | cut -d '"' -f 4)
+    
+    if [ -z "$DOWNLOAD_URL" ]; then
+        echo -e "${BOLD}${RED}[ERROR] Gagal mendapatkan link download Blueprint!${NC}"
+        return 1
+    fi
+
+    wget -q "$DOWNLOAD_URL" -O /tmp/release.zip
     unzip -oq /tmp/release.zip -d /var/www/pterodactyl
     rm /tmp/release.zip
+
     cd /var/www/pterodactyl
+    
     sed -i -E -e "s|WEBUSER=\"www-data\" #;|WEBUSER=\"www-data\" #;|g" \
                -e "s|USERSHELL=\"/bin/bash\" #;|USERSHELL=\"/bin/bash\" #;|g" \
                -e "s|OWNERSHIP=\"www-data:www-data\" #;|OWNERSHIP=\"www-data:www-data\" #;|g" blueprint.sh
+    
     chmod +x blueprint.sh
     echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
+    
     yes | sudo bash blueprint.sh
+
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "${BOLD}${GREEN}[+]        INSTALLASI NODE.JS & BLUEPRINT SELESAI   [+]${NC}"
@@ -546,7 +571,7 @@ install_auto_suspend() {
   cd /var/www/pterodactyl
   
   print_info "Menjalankan skrip autosuspend (installer.sh)..."
-  sudo bash installer.sh <<EOF > /dev/null 2>&1
+  sudo bash installer.sh <<EOF
 y
 EOF
 
