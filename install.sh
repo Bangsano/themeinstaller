@@ -471,6 +471,11 @@ EOF
 
 # Install Dependencies Blueprint
 install_depend() {
+    unset NVM_DIR
+    unset NVM_CD_FLAGS
+    unset NVM_BIN
+    unset NVM_INC
+    export PATH=$(echo $PATH | tr ":" "\n" | grep -v "nvm" | tr "\n" ":")
     export DEBIAN_FRONTEND=noninteractive
     export NEEDRESTART_MODE=a
 
@@ -492,12 +497,13 @@ install_depend() {
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg zip unzip git wget
 
-    echo -e "${BOLD}⚙️  Membersihkan versi Node.js lama...${NC}"
+    echo -e "${BOLD}⚙️  Membersihkan versi Node.js lama & NVM...${NC}"
     sudo apt-get remove -y nodejs npm
     sudo apt-get purge -y nodejs
     sudo rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
     sudo rm -rf /etc/apt/sources.list.d/nodesource.list
-
+    sudo rm -rf "$HOME/.nvm"
+    
     if [ -f /etc/needrestart/needrestart.conf ]; then
         echo -e "${BOLD}⚙️  Mengonfigurasi needrestart ke mode otomatis...${NC}"
         sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
@@ -512,14 +518,14 @@ install_depend() {
     echo -e "${BOLD}⚙️  Menginstal Node.js dan Yarn...${NC}"
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
-    hash -r
-    sudo npm i -g yarn
+    hash -r 
 
+    echo -e "${BOLD}INFO: Versi Node saat ini: $(node -v)${NC}"
+    sudo npm i -g yarn
     echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl di /var/www/pterodactyl...${NC}"
     cd /var/www/pterodactyl
-    yarn
-    yarn add cross-env
-
+    /usr/bin/node /usr/bin/yarn install
+    /usr/bin/node /usr/bin/yarn add cross-env
     echo -e "${BOLD}⚙️  Mengunduh dan menginstal Blueprint Framework...${NC}"
     
     DOWNLOAD_URL=$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | grep '.zip' | cut -d '"' -f 4)
