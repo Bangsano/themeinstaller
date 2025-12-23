@@ -183,19 +183,10 @@ install_theme() {
     fi
     print_info "[3/4] Menyalin file & membangun aset..."
     sudo cp -rfT pterodactyl /var/www/pterodactyl
-    print_info "Memastikan Node.js v16 aktif menggunakan NVM..."
-    export NVM_DIR="$HOME/.nvm"
-    if [ -s "$NVM_DIR/nvm.sh" ]; then
-      source "$NVM_DIR/nvm.sh"
-    else
-      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-      source "$NVM_DIR/nvm.sh"
-    fi
-    nvm install 16
-    nvm use 16
-    npm i -g yarn
     cd /var/www/pterodactyl
+    
     print_info "Menginstal dependensi Node.js..."
+    sudo npm i -g yarn
     yarn
     yarn add react-feather
     
@@ -205,6 +196,7 @@ install_theme() {
     fi
 
     print_info "Menjalankan migrasi, build, dan optimisasi..."
+    export NODE_OPTIONS=--openssl-legacy-provider
     php artisan migrate --force
     yarn build:production
     php artisan view:clear
@@ -493,6 +485,12 @@ install_depend() {
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg zip unzip git wget
 
+    echo -e "${BOLD}⚙️  Membersihkan versi Node.js lama...${NC}"
+    sudo apt-get remove -y nodejs npm
+    sudo apt-get purge -y nodejs
+    sudo rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
+    sudo rm -rf /etc/apt/sources.list.d/nodesource.list
+
     if [ -f /etc/needrestart/needrestart.conf ]; then
         echo -e "${BOLD}⚙️  Mengonfigurasi needrestart ke mode otomatis...${NC}"
         sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
@@ -507,6 +505,7 @@ install_depend() {
     echo -e "${BOLD}⚙️  Menginstal Node.js dan Yarn...${NC}"
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+    hash -r
     sudo npm i -g yarn
 
     echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl di /var/www/pterodactyl...${NC}"
