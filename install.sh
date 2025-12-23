@@ -228,7 +228,7 @@ uninstall_theme() {
   print_info "[+]        RESET TOTAL PANEL (UNINSTALL THEME)        [+]"
   print_info "[+] =============================================== [+]"
   echo " "
-  echo -e "${BOLD}${YELLOW}PERINGATAN:${NC} ${BOLD}Proses ini akan MENGHAPUS TOTAL semua file panel,${NC}"
+  echo -e "${BOLD}${YELLOW}PERINGATAN:${NC} ${BOLD}Proses ini akan MERESET semua file panel,${NC}"
   echo -e "${BOLD}sehingga semua tema kustom atau tools lainnya akan terhapus.${NC}"
   echo " "
 
@@ -264,8 +264,11 @@ uninstall_theme() {
         echo -e "${BOLD}   - Mengatur kepemilikan file ke 'www-data'...${NC}"
         sudo chown -R www-data:www-data /var/www/pterodactyl
 
+        echo -e "${BOLD}   - Mengupdate Composer (untuk mencegah eror dependensi)...${NC}"
+        curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
+
         echo -e "${BOLD}   - Menginstal dependensi & menjalankan migrasi...${NC}"
-        sudo -u www-data composer install --no-dev --optimize-autoloader
+        sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
         sudo -u www-data php artisan migrate --seed --force
         sudo -u www-data php artisan view:clear
         sudo -u www-data php artisan config:clear
@@ -276,7 +279,7 @@ uninstall_theme() {
         break
         ;;
       [Nn]*)
-        echo -e "\n${BOLD}❌ Pembatalan oleh pengguna.${NC}"
+        echo -e "\n${BOLD}❌ Operasi dibatalkan oleh pengguna.${NC}"
         return
         ;;
       *)
