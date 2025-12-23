@@ -184,6 +184,7 @@ install_theme() {
     print_info "[3/4] Menyalin file & membangun aset..."
     sudo cp -rfT pterodactyl /var/www/pterodactyl
     cd /var/www/pterodactyl
+    unset NVM_DIR
     
     print_info "Menginstal dependensi Node.js..."
     sudo npm i -g yarn
@@ -196,7 +197,13 @@ install_theme() {
     fi
 
     print_info "Menjalankan migrasi, build, dan optimisasi..."
-    export NODE_OPTIONS=--openssl-legacy-provider
+    NODE_VER=$(node -v | cut -d. -f1 | sed 's/v//')
+    if [ "$NODE_VER" -ge 17 ]; then
+        export NODE_OPTIONS=--openssl-legacy-provider
+    else
+        unset NODE_OPTIONS
+    fi
+    
     php artisan migrate --force
     yarn build:production
     php artisan view:clear
