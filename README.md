@@ -62,6 +62,7 @@ Script ini telah diuji dan berjalan optimal pada sistem operasi berikut:
 > Catatan: OS di atas adalah yang sudah saya tes, selebihnya bisa tes sendiri.
 
 > **📞 Bantuan & Dukungan**
+>
 > Punya pertanyaan? Menemukan bug? Jangan ragu untuk menghubungi saya. Gunakan script ini dengan bijak!
 
 - Github Profile: [SANO OFFICIAL](https://github.com/Bangsano)
