@@ -54,7 +54,11 @@ install_jq() {
   echo -e "${BOLD}${BLUE}[+]             UPDATE & INSTALL JQ                 [+]${NC}"
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
+  
+  export DEBIAN_FRONTEND=noninteractive
+  export NEEDRESTART_MODE=a
   (sudo apt update && sudo apt install -y jq)
+  
   if [ $? -eq 0 ]; then
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
