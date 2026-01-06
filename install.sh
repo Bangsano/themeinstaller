@@ -510,10 +510,10 @@ install_depend() {
         sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
     fi
 
-    echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v20.x...${NC}"
+    echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v22.x...${NC}"
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
 
     echo -e "${BOLD}⚙️  Menginstal Node.js dan Yarn...${NC}"
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
