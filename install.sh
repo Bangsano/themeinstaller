@@ -543,8 +543,9 @@ install_depend() {
 
     echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl...${NC}"
     cd /var/www/pterodactyl
-    /usr/bin/node /usr/bin/yarn install
-    /usr/bin/node /usr/bin/yarn add cross-env pathe axios
+    rm -rf node_modules yarn.lock
+    /usr/bin/yarn install --production=false
+    /usr/bin/yarn add cross-env
 
     sed -i -E -e "s|WEBUSER=\"www-data\" #;|WEBUSER=\"www-data\" #;|g" \
                -e "s|USERSHELL=\"/bin/bash\" #;|USERSHELL=\"/bin/bash\" #;|g" \
@@ -552,7 +553,6 @@ install_depend() {
     
     chmod +x blueprint.sh
     echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
-    
     yes | sudo bash blueprint.sh
 
     echo -e "                                                       "
