@@ -678,7 +678,7 @@ while true; do
       install_auto_suspend
       ;;
     x)
-      echo -e "${BOLD}Keluar dari skrip. Terima kasih!${NC}"
+      echo -e "${BOLD}${ORANGE}Keluar dari skrip. Terima kasih!${NC}"
       exit 0
       ;;
     *)
