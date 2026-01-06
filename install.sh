@@ -522,10 +522,12 @@ install_depend() {
 
     echo -e "${BOLD}INFO: Versi Node saat ini: $(node -v)${NC}"
     sudo npm i -g yarn
-    echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl di /var/www/pterodactyl...${NC}"
+
+    echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl...${NC}"
     cd /var/www/pterodactyl
     /usr/bin/node /usr/bin/yarn install
-    /usr/bin/node /usr/bin/yarn add cross-env
+    /usr/bin/node /usr/bin/yarn add cross-env pathe axios
+
     echo -e "${BOLD}⚙️  Mengunduh dan menginstal Blueprint Framework...${NC}"
     
     DOWNLOAD_URL=$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | grep '.zip' | cut -d '"' -f 4)
