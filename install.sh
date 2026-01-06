@@ -497,6 +497,12 @@ install_depend() {
         return
     fi
 
+    if [ -f /etc/needrestart/needrestart.conf ]; then
+        echo -e "${BOLD}⚙️  Mengonfigurasi needrestart ke mode otomatis...${NC}"
+        sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+        sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    fi
+
     echo -e "${BOLD}⚙️  Menginstal dependensi dasar...${NC}"
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg zip unzip git wget
@@ -507,12 +513,6 @@ install_depend() {
     sudo rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
     sudo rm -rf /etc/apt/sources.list.d/nodesource.list
     sudo rm -rf "$HOME/.nvm"
-    
-    if [ -f /etc/needrestart/needrestart.conf ]; then
-        echo -e "${BOLD}⚙️  Mengonfigurasi needrestart ke mode otomatis...${NC}"
-        sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-        sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-    fi
 
     echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v22.x...${NC}"
     sudo mkdir -p /etc/apt/keyrings
@@ -527,13 +527,7 @@ install_depend() {
     echo -e "${BOLD}INFO: Versi Node saat ini: $(node -v)${NC}"
     sudo npm i -g yarn
 
-    echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl...${NC}"
-    cd /var/www/pterodactyl
-    /usr/bin/node /usr/bin/yarn install
-    /usr/bin/node /usr/bin/yarn add cross-env pathe axios
-
-    echo -e "${BOLD}⚙️  Mengunduh dan menginstal Blueprint Framework...${NC}"
-    
+    echo -e "${BOLD}⚙️  Mengunduh Blueprint Framework...${NC}"
     DOWNLOAD_URL=$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | grep '.zip' | cut -d '"' -f 4)
     
     if [ -z "$DOWNLOAD_URL" ]; then
@@ -542,11 +536,16 @@ install_depend() {
     fi
 
     wget -q "$DOWNLOAD_URL" -O /tmp/release.zip
+    
+    echo -e "${BOLD}⚙️  Mengekstrak Blueprint ke Pterodactyl...${NC}"
     unzip -oq /tmp/release.zip -d /var/www/pterodactyl
     rm /tmp/release.zip
 
+    echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl...${NC}"
     cd /var/www/pterodactyl
-    
+    /usr/bin/node /usr/bin/yarn install
+    /usr/bin/node /usr/bin/yarn add cross-env pathe axios
+
     sed -i -E -e "s|WEBUSER=\"www-data\" #;|WEBUSER=\"www-data\" #;|g" \
                -e "s|USERSHELL=\"/bin/bash\" #;|USERSHELL=\"/bin/bash\" #;|g" \
                -e "s|OWNERSHIP=\"www-data:www-data\" #;|OWNERSHIP=\"www-data:www-data\" #;|g" blueprint.sh
