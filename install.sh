@@ -515,10 +515,7 @@ install_depend() {
     fi
 
     echo -e "${BOLD}⚙️  Mengunduh dan mengekstrak Blueprint Framework...${NC}"
-    # Versi Gak Taulah Malas Pengen Beli Truck
-    DOWNLOAD_URL="https://github.com/BlueprintFramework/framework/releases/download/beta-2025-11/beta-2025-11.zip"
-    # Versi Latestnya:
-    # DOWNLOAD_URL=$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | grep 'release.zip' | cut -d '"' -f 4)
+    DOWNLOAD_URL=$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | grep 'release.zip' | cut -d '"' -f 4)
     if [ -z "$DOWNLOAD_URL" ]; then
         echo -e "${BOLD}${RED}[ERROR] Gagal mendapatkan link download Blueprint!${NC}"
         return 1
