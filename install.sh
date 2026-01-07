@@ -515,14 +515,17 @@ install_depend() {
     fi
 
     echo -e "${BOLD}⚙️  Mengunduh dan mengekstrak Blueprint Framework...${NC}"
-    DOWNLOAD_URL=$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | grep 'release.zip' | cut -d '"' -f 4)
+    # Versi Gak Taulah Malas Pengen Beli Truck
+    DOWNLOAD_URL="https://github.com/BlueprintFramework/framework/releases/download/beta-2025-11/beta-2025-11.zip"
+    # Versi Latestnya:
+    # DOWNLOAD_URL=$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | grep 'release.zip' | cut -d '"' -f 4)
     if [ -z "$DOWNLOAD_URL" ]; then
         echo -e "${BOLD}${RED}[ERROR] Gagal mendapatkan link download Blueprint!${NC}"
         return 1
     fi
-    wget -q "$DOWNLOAD_URL" -O /tmp/release.zip
-    unzip -oq /tmp/release.zip -d /var/www/pterodactyl
-    rm /tmp/release.zip
+    wget -q "$DOWNLOAD_URL" -O /tmp/blueprint.zip
+    unzip -oq /tmp/blueprint.zip -d /var/www/pterodactyl
+    rm /tmp/blueprint.zip
 
     echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v20.x...${NC}"
     sudo mkdir -p /etc/apt/keyrings
