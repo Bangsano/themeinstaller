@@ -504,7 +504,7 @@ install_depend() {
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg zip unzip git wget
 
-    echo -e "${BOLD}⚙️  Membersihkan versi Node.js lama & NVM...${NC}"
+    echo -e "${BOLD}⚙️  Membersihkan versi Node.js lama...${NC}"
     sudo apt-get remove -y nodejs npm
     sudo apt-get purge -y nodejs
     sudo rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
@@ -516,7 +516,6 @@ install_depend() {
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
 
-    echo -e "${BOLD}⚙️  Menginstal Node.js dan Yarn...${NC}"
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
     hash -r 
@@ -530,29 +529,11 @@ install_depend() {
 
     echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl...${NC}"
     cd /var/www/pterodactyl
-
-    echo -e "${BOLD}⚙️  Mendeteksi versi Panel...${NC}"
-    PANEL_VERSION=$(grep "'version'" config/app.php | cut -d"'" -f4)
-    
-    if [ -z "$PANEL_VERSION" ]; then PANEL_VERSION="v1.11.11"; fi
-    echo -e "${BOLD}INFO: Terdeteksi versi ${PANEL_VERSION}${NC}"
-
     rm -rf node_modules yarn.lock
+    /usr/bin/yarn install
+    /usr/bin/yarn add cross-env pathe axios react-feather
+    /usr/bin/yarn add -D @types/react@16.14.68 @types/react-dom@16.9.25
 
-    echo -e "${BOLD}⚙️  Mengunduh yarn.lock untuk versi ${PANEL_VERSION}...${NC}"
-    HTTP_STATUS=$(curl -o yarn.lock -w "%{http_code}" https://raw.githubusercontent.com/pterodactyl/panel/$PANEL_VERSION/yarn.lock)
-
-    if [ "$HTTP_STATUS" != "200" ]; then
-        echo -e "${BOLD}⚠️  Lockfile versi ${PANEL_VERSION} tidak ditemukan. Menggunakan fallback v1.11.11...${NC}"
-        curl -o yarn.lock https://raw.githubusercontent.com/pterodactyl/panel/v1.11.11/yarn.lock
-    fi
-
-    echo -e "${BOLD}⚙️  Menginstal dependensi (Pure Lockfile)...${NC}"
-    /usr/bin/yarn install --pure-lockfile
-
-    echo -e "${BOLD}⚙️  Menambahkan cross-env...${NC}"
-    /usr/bin/yarn add cross-env
-    
     sed -i -E -e "s|WEBUSER=\"www-data\" #;|WEBUSER=\"www-data\" #;|g" \
                -e "s|USERSHELL=\"/bin/bash\" #;|USERSHELL=\"/bin/bash\" #;|g" \
                -e "s|OWNERSHIP=\"www-data:www-data\" #;|OWNERSHIP=\"www-data:www-data\" #;|g" blueprint.sh
@@ -565,6 +546,7 @@ install_depend() {
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "${BOLD}${GREEN}[+]        INSTALLASI NODE.JS & BLUEPRINT SELESAI   [+]${NC}"
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
+    echo -e "                                                       "
     sleep 3
     return 0
 }
