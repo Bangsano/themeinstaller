@@ -541,7 +541,7 @@ install_depend() {
     echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl...${NC}"
     cd /var/www/pterodactyl
     yarn install
-    yarn add cross-env pathe axios
+    # yarn add cross-env pathe axios
 
     echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
     cd /var/www/pterodactyl
