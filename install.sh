@@ -497,55 +497,57 @@ install_depend() {
         return
     fi
 
+    echo -e "${BOLD}⚙️  Memastikan instalasi berjalan otomatis...${NC}"
+    sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y needrestart || true
+
     echo -e "${BOLD}⚙️  Menginstal dependensi dasar...${NC}"
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg zip unzip git wget
 
-    echo -e "${BOLD}⚙️  Membersihkan versi Node.js lama & NVM...${NC}"
+    echo -e "${BOLD}⚙️  Membersihkan versi Node.js lama...${NC}"
     sudo apt-get remove -y nodejs npm
     sudo apt-get purge -y nodejs
     sudo rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
     sudo rm -rf /etc/apt/sources.list.d/nodesource.list
     sudo rm -rf "$HOME/.nvm"
-    
-    if [ -f /etc/needrestart/needrestart.conf ]; then
-        echo -e "${BOLD}⚙️  Mengonfigurasi needrestart ke mode otomatis...${NC}"
-        sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-        sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-    fi
 
     echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v22.x...${NC}"
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
 
-    echo -e "${BOLD}⚙️  Menginstal Node.js dan Yarn...${NC}"
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
     hash -r 
     sudo npm i -g yarn
 
-    echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl...${NC}"
-    cd /var/www/pterodactyl
-    /usr/bin/node /usr/bin/yarn install
-    /usr/bin/node /usr/bin/yarn add cross-env pathe axios
-
-    echo -e "${BOLD}⚙️  Mengunduh dan menginstal Blueprint Framework...${NC}"
+    echo -e "${BOLD}⚙️  Mengunduh Blueprint Framework...${NC}"
     DOWNLOAD_URL=$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | grep '.zip' | cut -d '"' -f 4)
-    if [ -z "$DOWNLOAD_URL" ]; then
-        echo -e "${BOLD}${RED}[ERROR] Gagal mendapatkan link download Blueprint!${NC}"
-        return 1
-    fi
     wget -q "$DOWNLOAD_URL" -O /tmp/release.zip
     unzip -oq /tmp/release.zip -d /var/www/pterodactyl
     rm /tmp/release.zip
 
-    echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
+    echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl...${NC}"
     cd /var/www/pterodactyl
+
+    echo -e "${BOLD}⚙️  Membersihkan cache dependensi lama...${NC}"
+    rm -rf node_modules yarn.lock
+
+    echo -e "${BOLD}⚙️  Menginstal dependensi dasar (yarn install)...${NC}"
+    /usr/bin/yarn install
+
+    echo -e "${BOLD}⚙️  Menambahkan paket Blueprint (pathe, axios, dll)...${NC}"
+    /usr/bin/yarn add cross-env pathe axios react-feather
+
+    echo -e "${BOLD}⚙️  Memperbaiki kompatibilitas tipe React...${NC}"
+    /usr/bin/yarn add -D @types/react@16.14.42 @types/react-dom@16.9.19
+
     sed -i -E -e "s|WEBUSER=\"www-data\" #;|WEBUSER=\"www-data\" #;|g" \
                -e "s|USERSHELL=\"/bin/bash\" #;|USERSHELL=\"/bin/bash\" #;|g" \
                -e "s|OWNERSHIP=\"www-data:www-data\" #;|OWNERSHIP=\"www-data:www-data\" #;|g" blueprint.sh
+    
     chmod +x blueprint.sh
+    echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
     yes | sudo bash blueprint.sh
 
     echo -e "                                                       "
