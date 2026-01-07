@@ -188,8 +188,18 @@ install_theme() {
     print_info "[3/4] Menyalin file & membangun aset..."
     sudo cp -rfT pterodactyl /var/www/pterodactyl
     cd /var/www/pterodactyl
+    print_info "Memastikan Node.js versi 22 terinstall..."
     unset NVM_DIR
-    
+    sudo apt-get remove -y nodejs npm
+    sudo apt-get purge -y nodejs
+    sudo rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
+    sudo rm -rf /etc/apt/sources.list.d/nodesource.list
+    sudo rm -rf "$HOME/.nvm"
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
+    sudo apt-get update
+    sudo apt-get install -y nodejs
     print_info "Menginstal dependensi Node.js..."
     sudo npm i -g yarn
     yarn
@@ -202,12 +212,7 @@ install_theme() {
 
     print_info "Menjalankan migrasi, build, dan optimisasi..."
     NODE_VER=$(node -v | cut -d. -f1 | sed 's/v//')
-    if [ "$NODE_VER" -ge 17 ]; then
-        export NODE_OPTIONS=--openssl-legacy-provider
-    else
-        unset NODE_OPTIONS
-    fi
-    
+    export NODE_OPTIONS=--openssl-legacy-provider
     php artisan migrate --force
     yarn build:production
     php artisan view:clear
@@ -524,10 +529,10 @@ install_depend() {
     unzip -oq /tmp/blueprint.zip -d /var/www/pterodactyl
     rm /tmp/blueprint.zip
 
-    echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v20.x...${NC}"
+    echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v22.x...${NC}"
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
 
     echo -e "${BOLD}⚙️  Menginstal Node.js dan Yarn...${NC}"
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
