@@ -497,11 +497,8 @@ install_depend() {
         return
     fi
 
-    if [ -f /etc/needrestart/needrestart.conf ]; then
-        echo -e "${BOLD}⚙️  Mengonfigurasi needrestart ke mode otomatis...${NC}"
-        sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-        sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-    fi
+    echo -e "${BOLD}⚙️  Memastikan instalasi berjalan otomatis...${NC}"
+    sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y needrestart || true
 
     echo -e "${BOLD}⚙️  Menginstal dependensi dasar...${NC}"
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
@@ -523,30 +520,39 @@ install_depend() {
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
     hash -r 
-
-    echo -e "${BOLD}INFO: Versi Node saat ini: $(node -v)${NC}"
     sudo npm i -g yarn
 
     echo -e "${BOLD}⚙️  Mengunduh Blueprint Framework...${NC}"
     DOWNLOAD_URL=$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | grep '.zip' | cut -d '"' -f 4)
-    
-    if [ -z "$DOWNLOAD_URL" ]; then
-        echo -e "${BOLD}${RED}[ERROR] Gagal mendapatkan link download Blueprint!${NC}"
-        return 1
-    fi
-
     wget -q "$DOWNLOAD_URL" -O /tmp/release.zip
-    
-    echo -e "${BOLD}⚙️  Mengekstrak Blueprint ke Pterodactyl...${NC}"
     unzip -oq /tmp/release.zip -d /var/www/pterodactyl
     rm /tmp/release.zip
 
     echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl...${NC}"
     cd /var/www/pterodactyl
-    rm -rf node_modules yarn.lock
-    /usr/bin/yarn install --production=false
-    /usr/bin/yarn add cross-env
 
+    echo -e "${BOLD}⚙️  Mendeteksi versi Panel...${NC}"
+    PANEL_VERSION=$(grep "'version'" config/app.php | cut -d"'" -f4)
+    
+    if [ -z "$PANEL_VERSION" ]; then PANEL_VERSION="v1.11.11"; fi
+    echo -e "${BOLD}INFO: Terdeteksi versi ${PANEL_VERSION}${NC}"
+
+    rm -rf node_modules yarn.lock
+
+    echo -e "${BOLD}⚙️  Mengunduh yarn.lock untuk versi ${PANEL_VERSION}...${NC}"
+    HTTP_STATUS=$(curl -o yarn.lock -w "%{http_code}" https://raw.githubusercontent.com/pterodactyl/panel/$PANEL_VERSION/yarn.lock)
+
+    if [ "$HTTP_STATUS" != "200" ]; then
+        echo -e "${BOLD}⚠️  Lockfile versi ${PANEL_VERSION} tidak ditemukan. Menggunakan fallback v1.11.11...${NC}"
+        curl -o yarn.lock https://raw.githubusercontent.com/pterodactyl/panel/v1.11.11/yarn.lock
+    fi
+
+    echo -e "${BOLD}⚙️  Menginstal dependensi (Pure Lockfile)...${NC}"
+    /usr/bin/yarn install --pure-lockfile
+
+    echo -e "${BOLD}⚙️  Menambahkan cross-env...${NC}"
+    /usr/bin/yarn add cross-env
+    
     sed -i -E -e "s|WEBUSER=\"www-data\" #;|WEBUSER=\"www-data\" #;|g" \
                -e "s|USERSHELL=\"/bin/bash\" #;|USERSHELL=\"/bin/bash\" #;|g" \
                -e "s|OWNERSHIP=\"www-data:www-data\" #;|OWNERSHIP=\"www-data:www-data\" #;|g" blueprint.sh
@@ -559,7 +565,6 @@ install_depend() {
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "${BOLD}${GREEN}[+]        INSTALLASI NODE.JS & BLUEPRINT SELESAI   [+]${NC}"
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-    echo -e "                                                       "
     sleep 3
     return 0
 }
