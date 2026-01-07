@@ -514,11 +514,6 @@ install_depend() {
         sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
     fi
 
-    echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v20.x...${NC}"
-    sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-
     echo -e "${BOLD}⚙️  Mengunduh dan mengekstrak Blueprint Framework...${NC}"
     DOWNLOAD_URL=$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | grep 'release.zip' | cut -d '"' -f 4)
     if [ -z "$DOWNLOAD_URL" ]; then
@@ -528,6 +523,11 @@ install_depend() {
     wget -q "$DOWNLOAD_URL" -O /tmp/release.zip
     unzip -oq /tmp/release.zip -d /var/www/pterodactyl
     rm /tmp/release.zip
+
+    echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v20.x...${NC}"
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
 
     echo -e "${BOLD}⚙️  Menginstal Node.js dan Yarn...${NC}"
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
