@@ -202,14 +202,37 @@ install_theme() {
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
     sudo apt-get update
     sudo apt-get install -y nodejs
+    hash -r
+    
     print_info "Menginstal dependensi Node.js..."
     sudo npm i -g yarn
-    yarn
-    yarn add react-feather
-    
+    yarn add cross-env react-feather
+    yarn install
+
     if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
       print_info "Menjalankan instalasi spesifik untuk Billing..."
       php artisan billing:install stable
+    fi
+
+    print_info "Mengecek spesifikasi Memori..."
+    RAM_SIZE=$(free -m | awk '/Mem:/ {print $2}')
+    SWAP_SIZE=$(free -m | awk '/Swap:/ {print $2}')
+
+    if [ "$RAM_SIZE" -gt 4000 ]; then
+        print_info "RAM Terdeteksi Besar ($RAM_SIZE MB). Skip pembuatan Swap tambahan."
+    else
+        if [ "$SWAP_SIZE" -lt 3000 ]; then
+            print_info "RAM Terbatas ($RAM_SIZE MB) dan Swap kurang ($SWAP_SIZE MB)."
+            print_info "Membuat Swap Ekstra 2GB untuk keamanan build..."
+            sudo fallocate -l 2G /swapfile_extra
+            sudo chmod 600 /swapfile_extra
+            sudo mkswap /swapfile_extra
+            sudo swapon /swapfile_extra
+            echo '/swapfile_extra none swap sw 0 0' | sudo tee -a /etc/fstab
+            print_success "Swap Ekstra berhasil ditambahkan."
+        else
+            print_info "RAM Terbatas, tapi Swap sudah cukup besar ($SWAP_SIZE MB). Aman."
+        fi
     fi
 
     print_info "Menjalankan migrasi, build, dan optimisasi..."
@@ -235,7 +258,7 @@ install_theme() {
 uninstall_theme() {
   echo " "
   print_info "[+] =============================================== [+]"
-  print_info "[+]        RESET TOTAL PANEL (UNINSTALL THEME)        [+]"
+  print_info "[+]        RESET PANEL (UNINSTALL THEME/TOOLS)        [+]"
   print_info "[+] =============================================== [+]"
   echo " "
   echo -e "${BOLD}${YELLOW}PERINGATAN:${NC} ${BOLD}Proses ini akan MENGHAPUS TOTAL semua file panel,${NC}"
@@ -305,7 +328,7 @@ uninstall_theme() {
 
   echo " "
   print_success "[+] =============================================== [+]"
-  print_success "[+]          PANEL BERHASIL DI-RESET TOTAL          [+]"
+  print_success "[+]             PANEL BERHASIL DI-RESET             [+]"
   print_success "[+] =============================================== [+]"
   echo " "
   sleep 3
