@@ -598,9 +598,6 @@ install_auto_suspend() {
   hash -r 
   sudo npm i -g yarn
 
-  CURRENT_NODE=$(node -v)
-  print_info "Node.js Version Detected: $CURRENT_NODE"
-
   TEMP_DIR=$(mktemp -d)
   trap 'rm -rf -- "$TEMP_DIR"' EXIT
   cd "$TEMP_DIR"
@@ -617,7 +614,6 @@ install_auto_suspend() {
   print_info "Menerapkan modifikasi sistem..."
   cd /var/www/pterodactyl
 
-  # Kernel.php
   sed -i "/use Ramsey\\\\Uuid\\\\Uuid;/a use Pterodactyl\\\\Models\\\\Server;" app/Console/Kernel.php
   if ! grep -q "Server::where('exp_date'" app/Console/Kernel.php; then
       sed -i "/\\\$schedule->command(CleanServiceBackupFilesCommand::class)->daily();/a \\
@@ -637,7 +633,6 @@ install_auto_suspend() {
           })->dailyAt('00:05');" app/Console/Kernel.php
   fi
 
-  # Controllers & Models
   sed -i "/'owner_id', 'external_id', 'name', 'description',/a \\\t\t\t'exp_date'," app/Http/Controllers/Admin/ServersController.php
   sed -i "/'oom_disabled' => 'sometimes|boolean',/a \\            'exp_date' => \$rules['exp_date']," app/Http/Requests/Api/Application/Servers/StoreServerRequest.php
   sed -i "/'oom_disabled' => array_get(\$data, 'oom_disabled'),/a \\            'exp_date' => array_get(\$data, 'exp_date')," app/Http/Requests/Api/Application/Servers/StoreServerRequest.php
@@ -646,13 +641,11 @@ install_auto_suspend() {
   sed -i "/'backup_limit' => Arr::get(\$data, 'backup_limit') ?? 0,/a \\                'exp_date' => Arr::get(\$data, 'exp_date') ?? null," app/Services/Servers/ServerCreationService.php
   sed -i "/'name' => \$server->name,/a \\                'exp_date' => \$server->exp_date," app/Transformers/Api/Client/ServerTransformer.php
   
-  # Frontend TS
   if [ -f "resources/scripts/api/server/getServer.ts" ]; then
       sed -i "/name: string;/a \\        expDate: string;" resources/scripts/api/server/getServer.ts
       sed -i "/name: data.name,/a \\        expDate: data.exp_date," resources/scripts/api/server/getServer.ts
   fi
 
-  # Frontend Components
   if [ -f "resources/scripts/components/server/console/ServerDetailsBlock.tsx" ]; then
       sed -i "/faMicrochip,/a \\        faCalendarDay," resources/scripts/components/server/console/ServerDetailsBlock.tsx
       sed -i "/const limits = ServerContext.useStoreState((state) => state.server.data!.limits);/a \\        const expDate = ServerContext.useStoreState((state) => state.server.data!.expDate);" resources/scripts/components/server/console/ServerDetailsBlock.tsx
@@ -661,7 +654,6 @@ install_auto_suspend() {
              -e '\%<StatBlock icon={faMicrochip} title={'\''CPU Load'\''} color={getBackgroundColor(stats.cpu, limits.cpu)}>%'"{s%^%\t\t\t<StatBlock icon={faCalendarDay} title={'Expiration Date'}>\n\t\t\t\t{expDate ? expDate : 'Unlimited'}\n\t\t\t<\/StatBlock>\n%}" resources/scripts/components/server/console/ServerDetailsBlock.tsx
   fi
 
-  # Blade Views
   TARGET_BLADE="resources/views/admin/servers/view/details.blade.php"
   if [ -f "$TARGET_BLADE" ] && ! grep -q "exp_date" "$TARGET_BLADE"; then
       sed -i "/<p class=\"text-muted small\">Character limits: <code>a-zA-Z0-9_-<\/code> and <code>\[Space\]<\/code>.<\/p>/,/<\/div>/ {
@@ -682,6 +674,10 @@ install_auto_suspend() {
 
   print_info "Menjalankan migrasi database..."
   php artisan migrate --force
+
+  print_info "Menginstal dependensi build..."
+  yarn add cross-env
+  yarn install
 
   print_info "Membangun ulang aset panel..."
   export NODE_OPTIONS=--openssl-legacy-provider
