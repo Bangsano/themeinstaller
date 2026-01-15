@@ -609,7 +609,7 @@ install_auto_suspend() {
   wget -q https://github.com/Bangsano/themeinstaller/raw/main/autosuspend.zip
   
   print_info "Mengekstrak file..."
-  unzip -oq autosuspend.zip
+  unzip -oq autosuspend.zip || true
   
   print_info "Menyalin file migrasi database..."
   sudo cp -rf pterodactyl/* /var/www/pterodactyl/
