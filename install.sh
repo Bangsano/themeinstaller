@@ -116,15 +116,16 @@ install_theme() {
     echo -e "${BOLD} 6. Ice${NC}"
     echo -e "${BOLD} 7. Noobe${NC}"
     echo -e "${BOLD} 8. Nookure${NC}"
+    echo -e "${BOLD} 9. Reviactyl${NC}"
     echo " "
     print_info "[+] =============================================== [+]"
     echo " "
     echo -e "${BOLD}--- THEME BLUEPRINT (Wajib install Opsi #8 dari menu utama) ---${NC}"
-    echo -e "${BOLD} 9. Nebula${NC}"
-    echo -e "${BOLD} 10. Recolor${NC}"
+    echo -e "${BOLD} 10. Nebula${NC}"
+    echo -e "${BOLD} 11. Recolor${NC}"
     echo " "
     echo -e "${BOLD} x. Kembali${NC}"
-    echo -n -e "${BOLD}Masukkan pilihan (1-10 atau x): ${NC}"
+    echo -n -e "${BOLD}Masukkan pilihan (1-11 atau x): ${NC}"
     read SELECT_THEME
     case "$SELECT_THEME" in
       1) THEME_NAME="Stellar"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/stellar.zip"; break;;
@@ -135,8 +136,9 @@ install_theme() {
       6) THEME_NAME="Ice"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/ice.zip"; break;;
       7) THEME_NAME="Noobe"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/noobe.zip"; break;;
       8) THEME_NAME="Nookure"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nookure.zip"; break;;
-      9) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
-      10) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
+      9) THEME_NAME="Reviactyl"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/reviactyl.zip"; break;;
+      10) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
+      11) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
       x) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
       *) print_error "Pilihan tidak valid, silahkan coba lagi.";;
     esac
@@ -165,7 +167,7 @@ install_theme() {
   print_info "[2/4] Mengekstrak file tema..."
   unzip -oq "$THEME_ZIP_FILE" || true
 
-  if [ "$SELECT_THEME" -eq 9 ] || [ "$SELECT_THEME" -eq 10 ]; then
+  if [ "$SELECT_THEME" -eq 10 ] || [ "$SELECT_THEME" -eq 11 ]; then
     # --- JALUR INSTALASI BLUEPRINT ---
     print_info "[3/4] Mempersiapkan instalasi Blueprint..."
     if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "❌ ERROR: Blueprint belum terinstall."; return 1; fi
