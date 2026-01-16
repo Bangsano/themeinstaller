@@ -28,19 +28,19 @@ FG_WHITE='\033[97m'
 FG_CYAN='\033[36m'
 
 print_info() {
-  echo -e "\n    ${BG_BLUE}${FG_WHITE}${BOLD} INFO ${NC} ${BOLD}$1${NC}\n"
+  echo -e "\n  ${BG_BLUE}${FG_WHITE}${BOLD} INFO ${NC} ${BOLD}$1${NC}\n"
 }
 
 print_success() {
-  echo -e "\n    ${BG_GREEN}${FG_WHITE}${BOLD} SUCCESS ${NC} ${BOLD}$1${NC}\n"
+  echo -e "\n  ${BG_GREEN}${FG_WHITE}${BOLD} SUCCESS ${NC} ${BOLD}$1${NC}\n"
 }
 
 print_warning() {
-  echo -e "\n    ${BG_YELLOW}${FG_WHITE}${BOLD} WARNING ${NC} ${BOLD}$1${NC}\n"
+  echo -e "\n  ${BG_YELLOW}${FG_WHITE}${BOLD} WARNING ${NC} ${BOLD}$1${NC}\n"
 }
 
 print_error() {
-  echo -e "\n    ${BG_RED}${FG_WHITE}${BOLD} ERROR ${NC} ${BOLD}$1${NC}\n"
+  echo -e "\n  ${BG_RED}${FG_WHITE}${BOLD} ERROR ${NC} ${BOLD}$1${NC}\n"
 }
 
 log_info() {
