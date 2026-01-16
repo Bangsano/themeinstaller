@@ -28,19 +28,19 @@ FG_WHITE='\033[97m'
 FG_CYAN='\033[36m'
 
 print_info() {
-  echo -e "${BG_BLUE}${FG_WHITE}${BOLD} INFO ${NC} $1"
+  echo -e "\n    ${BG_BLUE}${FG_WHITE}${BOLD} INFO ${NC} ${BOLD}$1${NC}\n"
 }
 
 print_success() {
-  echo -e "${BG_GREEN}${FG_WHITE}${BOLD} SUCCESS ${NC} $1"
+  echo -e "\n    ${BG_GREEN}${FG_WHITE}${BOLD} SUCCESS ${NC} ${BOLD}$1${NC}\n"
 }
 
 print_warning() {
-  echo -e "${BG_YELLOW}${FG_WHITE}${BOLD} WARNING ${NC} $1"
+  echo -e "\n    ${BG_YELLOW}${FG_WHITE}${BOLD} WARNING ${NC} ${BOLD}$1${NC}\n"
 }
 
 print_error() {
-  echo -e "${BG_RED}${FG_WHITE}${BOLD} ERROR ${NC} $1"
+  echo -e "\n    ${BG_RED}${FG_WHITE}${BOLD} ERROR ${NC} ${BOLD}$1${NC}\n"
 }
 
 log_info() {
@@ -231,7 +231,7 @@ install_theme() {
     if [[ "$CURRENT_NODE_VER" == "22" ]]; then
         print_success "Node.js v22 sudah terinstall. Melewati instalasi ulang."
     else
-        print_warning "Node.js v22 belum terdeteksi (Versi: v$CURRENT_NODE_VER). Melakukan Clean Install..."
+        print_warning "Node.js v22 belum terinstall (Versi saat ini: v$CURRENT_NODE_VER). Menginstall Node.js v22..."
         unset NVM_DIR
         sudo apt-get remove -y nodejs npm > /dev/null 2>&1 || true
         sudo apt-get purge -y nodejs > /dev/null 2>&1 || true
@@ -280,7 +280,7 @@ install_theme() {
     fi
 
     print_info "[4/4] Membangun aset panel..."
-    print_warning "Proses build sedang berjalan. Mohon bersabar dan JANGAN tutup terminal."
+    print_warning "Proses build sedang berjalan. Mohon bersabar dan JANGAN tutup terminal sampai proses selesai!"
     
     export NODE_OPTIONS="--max-old-space-size=4096 --openssl-legacy-provider"
     
@@ -305,7 +305,7 @@ install_theme() {
 uninstall_theme() {
   echo " "
   log_info "[+] =============================================== [+]"
-  log_info "[+]        RESET PANEL (UNINSTALL THEME/TOOLS)        [+]"
+  log_info "[+]       RESET PANEL (UNINSTALL THEME/TOOLS)       [+]"
   log_info "[+] =============================================== [+]"
   echo " "
   echo -e "${BOLD}${YELLOW}PERINGATAN:${NC} ${BOLD}Proses ini akan MENGHAPUS TOTAL semua file panel,${NC}"
@@ -325,7 +325,7 @@ uninstall_theme() {
         fi
         cd /var/www/pterodactyl || { print_error "Gagal masuk ke direktori Pterodactyl."; return 1; }
 
-        echo -e "${BOLD}⚙️  Memulai proses reset panel...${NC}"
+        print_info "⚙️  Memulai proses reset panel..."
 
         echo -e "${BOLD}   - Mem-backup file .env...${NC}"
         TEMP_BACKUP=$(mktemp -d)
@@ -394,7 +394,7 @@ create_node() {
   bash <(curl -s https://raw.githubusercontent.com/Bangsano/themeinstaller/main/createnode.sh)
 
   if [ $? -ne 0 ]; then
-    echo -e "\n${BOLD}🚨 TERJADI ERROR saat menjalankan skrip 'createnode.sh'.${NC}"
+    print_error "🚨 TERJADI ERROR saat menjalankan skrip 'createnode.sh'."
     return 1
   fi
 
@@ -414,6 +414,10 @@ uninstall_panel() {
   echo -e "${BOLD}${BLUE}[+]                    UNINSTALL PANEL                 [+]${NC}"
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
+
+  echo -n -e "${BOLD}Anda yakin ingin uninstall panel? (y/n): ${NC}"
+  read confirmation
+  if [[ "$confirmation" != [yY] ]]; then echo -e "${BOLD}Uninstall dibatalkan.${NC}"; return; fi
 
 bash <(curl -s https://pterodactyl-installer.se) <<EOF
 6
@@ -462,19 +466,19 @@ hackback_panel() {
   echo
 
   if [[ -z "$user" || -z "$pwhb" ]]; then
-      echo -e "\n${BOLD}${RED}Username dan Password tidak boleh kosong!${NC}\n"
+      print_error "Username dan Password tidak boleh kosong!"
       return 1
   fi
 
   if ! cd /var/www/pterodactyl; then
-    echo -e "\n${BOLD}${RED}Gagal pindah ke direktori /var/www/pterodactyl. Pastikan Pterodactyl terinstal.${NC}\n"
+    print_error "Gagal pindah ke direktori /var/www/pterodactyl. Pastikan Pterodactyl terinstal."
     return 1
   fi
 
-  echo -e "\nMembuat user admin baru..."
+  print_info "Membuat user admin baru..."
   if ! printf 'yes\n%s@admin.com\n%s\n%s\n%s\n%s\n' "$user" "$user" "$user" "$user" "$pwhb" | php artisan p:user:make
   then
-      echo -e "\n${BOLD}${RED}Gagal menjalankan perintah 'php artisan p:user:make'. Periksa log Pterodactyl.${NC}\n"
+      print_error "Gagal menjalankan perintah 'php artisan p:user:make'. Periksa log Pterodactyl."
       return 1
   fi
 
@@ -489,10 +493,10 @@ hackback_panel() {
           panel_url="https://$panel_url"
       fi
     else
-      echo -e "\n${BOLD}${YELLOW}Peringatan: Baris APP_URL tidak ditemukan di $env_file.${NC}"
+      print_warning "Baris APP_URL tidak ditemukan di $env_file."
     fi
   else
-    echo -e "\n${BOLD}${YELLOW}Peringatan: File $env_file tidak ditemukan.${NC}"
+    print_warning "File $env_file tidak ditemukan."
   fi
 
   echo -e "                                                       "
@@ -525,11 +529,11 @@ ubahpw_vps() {
     if [[ "$pw1" == "$pw2" ]]; then
       break
     else
-      echo -e "\n${BOLD}${RED}Password tidak cocok! Silakan coba lagi.${NC}\n"
+      print_error "Password tidak cocok! Silakan coba lagi."
     fi
   done
 
-  echo -e "\nMengubah password..."
+  print_info "Mengubah password..."
   passwd <<EOF
 $pw1
 $pw1
@@ -544,7 +548,7 @@ EOF
     sleep 3
     return 0
   else
-    echo -e "\n${BOLD}${RED}Gagal mengubah password. Silakan periksa log sistem.${NC}\n"
+    print_error "Gagal mengubah password. Silakan periksa log sistem."
     sleep 3
     return 1
   fi
@@ -574,11 +578,11 @@ install_depend() {
         return
     fi
 
-    echo -e "${BOLD}⚙️  Menginstal dependensi dasar...${NC}"
+    print_info "⚙️  Menginstal dependensi dasar..."
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg zip unzip git wget
 
-    echo -e "${BOLD}⚙️  Membersihkan versi Node.js lama & NVM...${NC}"
+    print_info "⚙️  Membersihkan versi Node.js lama & NVM..."
     sudo apt-get remove -y nodejs npm
     sudo apt-get purge -y nodejs
     sudo rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
@@ -586,38 +590,38 @@ install_depend() {
     sudo rm -rf "$HOME/.nvm"
     
     if [ -f /etc/needrestart/needrestart.conf ]; then
-        echo -e "${BOLD}⚙️  Mengonfigurasi needrestart ke mode otomatis...${NC}"
+        print_info "⚙️  Mengonfigurasi needrestart ke mode otomatis..."
         sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
         sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
     fi
 
-    echo -e "${BOLD}⚙️  Mengunduh dan mengekstrak Blueprint Framework...${NC}"
+    print_info "⚙️  Mengunduh dan mengekstrak Blueprint Framework..."
     DOWNLOAD_URL=$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | grep 'release.zip' | cut -d '"' -f 4)
     if [ -z "$DOWNLOAD_URL" ]; then
-        echo -e "${BOLD}${RED}[ERROR] Gagal mendapatkan link download Blueprint!${NC}"
+        print_error "Gagal mendapatkan link download Blueprint!"
         return 1
     fi
     wget -q "$DOWNLOAD_URL" -O /tmp/blueprint.zip
     unzip -oq /tmp/blueprint.zip -d /var/www/pterodactyl
     rm /tmp/blueprint.zip
 
-    echo -e "${BOLD}⚙️  Menyiapkan repositori Node.js v22.x...${NC}"
+    print_info "⚙️  Menyiapkan repositori Node.js v22.x..."
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
 
-    echo -e "${BOLD}⚙️  Menginstal Node.js dan Yarn...${NC}"
+    print_info "⚙️  Menginstal Node.js dan Yarn..."
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
     hash -r 
     sudo npm i -g yarn
 
-    echo -e "${BOLD}⚙️  Menginstal dependensi Pterodactyl...${NC}"
+    print_info "⚙️  Menginstal dependensi Pterodactyl..."
     cd /var/www/pterodactyl
+    yarn add cross-env
     yarn install
-    # yarn add cross-env pathe axios
 
-    echo -e "${BOLD}⚙️  Menjalankan blueprint.sh...${NC}"
+    print_info "⚙️  Menjalankan blueprint.sh..."
     cd /var/www/pterodactyl
     sed -i -E -e "s|WEBUSER=\"www-data\" #;|WEBUSER=\"www-data\" #;|g" \
                -e "s|USERSHELL=\"/bin/bash\" #;|USERSHELL=\"/bin/bash\" #;|g" \
@@ -803,9 +807,7 @@ while true; do
   echo -e "${BOLD} 8. Install Dependencies (Blueprint)${NC}"
   echo -e "${BOLD} 9. Install Fitur Auto Suspend${NC}"
   echo -e "${BOLD} x. Exit${NC}"
-  echo " "
   print_info "Jika panel mengalami eror setelah menginstall tema atau tools lainnya, silakan jalankan fitur reset panel."
-  
   echo -n -e "${BOLD}Masukkan pilihan (1-9 atau x): ${NC}"
   read -r MENU_CHOICE
 
