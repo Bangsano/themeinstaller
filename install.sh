@@ -18,24 +18,24 @@ REVERSE='\033[7m'
 HIDDEN='\033[8m'
 
 # Foreground (Text Color Normal)
-BLACK='\033[0;30m'
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
-WHITE='\033[0;37m'
+BLACK='\033[030m'
+RED='\033[031m'
+GREEN='\033[032m'
+YELLOW='\033[033m'
+BLUE='\033[034m'
+MAGENTA='\033[035m'
+CYAN='\033[036m'
+WHITE='\033[037m'
 
 # Foreground (Text Color Bright)
-BRIGHT_BLACK='\033[0;90m'
-BRIGHT_RED='\033[0;91m'
-BRIGHT_GREEN='\033[0;92m'
-BRIGHT_YELLOW='\033[0;93m'
-BRIGHT_BLUE='\033[0;94m'
-BRIGHT_MAGENTA='\033[0;95m'
-BRIGHT_CYAN='\033[0;96m'
-BRIGHT_WHITE='\033[0;97m'
+BRIGHT_BLACK='\033[090m'
+BRIGHT_RED='\033[091m'
+BRIGHT_GREEN='\033[092m'
+BRIGHT_YELLOW='\033[093m'
+BRIGHT_BLUE='\033[094m'
+BRIGHT_MAGENTA='\033[095m'
+BRIGHT_CYAN='\033[096m'
+BRIGHT_WHITE='\033[097m'
 
 # Background Colors (Normal)
 BG_BLACK='\033[40m'
@@ -161,27 +161,29 @@ install_theme() {
   while true; do
     clear
     echo " "
+    echo -e "${BRIGHT_BLUE}${BOLD}[+] ================================================== [+]${NC}"
     echo -e "${BG_BLUE}${BRIGHT_WHITE}${BOLD}                       SELECT THEME                       ${NC}"
+    echo -e "${BRIGHT_BLUE}${BOLD}[+] ================================================== [+]${NC}"
     echo " "
     echo -e "${BRIGHT_CYAN}${BOLD}--- STANDARD THEME ---${NC}"
-    echo -e " ${CYAN}[1]${NC} ${WHITE}Stellar${NC}"
-    echo -e " ${CYAN}[2]${NC} ${WHITE}Billing${NC}"
-    echo -e " ${CYAN}[3]${NC} ${WHITE}Enigma${NC}"
-    echo -e " ${CYAN}[4]${NC} ${WHITE}Elysium${NC}"
-    echo -e " ${CYAN}[5]${NC} ${WHITE}Nightcore${NC}"
-    echo -e " ${CYAN}[6]${NC} ${WHITE}Ice${NC}"
-    echo -e " ${CYAN}[7]${NC} ${WHITE}Noobe${NC}"
-    echo -e " ${CYAN}[8]${NC} ${WHITE}Nookure${NC}"
-    echo -e " ${CYAN}[9]${NC} ${WHITE}Reviactyl${NC}"
+    echo -e " ${BRIGHT_WHITE}[1]${NC} ${WHITE}Stellar${NC}"
+    echo -e " ${BRIGHT_WHITE}[2]${NC} ${WHITE}Billing${NC}"
+    echo -e " ${BRIGHT_WHITE}[3]${NC} ${WHITE}Enigma${NC}"
+    echo -e " ${BRIGHT_WHITE}[4]${NC} ${WHITE}Elysium${NC}"
+    echo -e " ${BRIGHT_WHITE}[5]${NC} ${WHITE}Nightcore${NC}"
+    echo -e " ${BRIGHT_WHITE}[6]${NC} ${WHITE}Ice${NC}"
+    echo -e " ${BRIGHT_WHITE}[7]${NC} ${WHITE}Noobe${NC}"
+    echo -e " ${BRIGHT_WHITE}[8]${NC} ${WHITE}Nookure${NC}"
+    echo -e " ${BRIGHT_WHITE}[9]${NC} ${WHITE}Reviactyl${NC}"
     echo " "
     echo -e "${BRIGHT_MAGENTA}${BOLD}--- BLUEPRINT THEME ---${NC}"
     echo -e "${BG_RED}${BRIGHT_WHITE}${BOLD} (!) WAJIB INSTALL BLUEPRINT DULU (OPSI #8 DI MENU UTAMA) ${NC}"
-    echo -e " ${MAGENTA}[10]${NC} ${WHITE}Nebula${NC}"
-    echo -e " ${MAGENTA}[11]${NC} ${WHITE}Recolor${NC}"
+    echo -e " ${BRIGHT_WHITE}[10]${NC} ${WHITE}Nebula${NC}"
+    echo -e " ${BRIGHT_WHITE}[11]${NC} ${WHITE}Recolor${NC}"
     echo " "
-    echo -e " ${RED}[x]${NC} ${WHITE}Kembali ke Menu Utama${NC}"
+    echo -e " ${BRIGHT_WHITE}[x]${NC} ${WHITE}Kembali ke Menu Utama${NC}"
     echo " "
-    echo -n -e "${BOLD}Masukkan pilihan ${CYAN}(1-11)${NC}${BOLD} atau ${RED}(x)${NC}${BOLD}: ${NC}"
+    echo -n -e "${BOLD}Masukkan pilihan (1-11 atau x)${NC}${BOLD}: ${NC}"
     read SELECT_THEME
     case "$SELECT_THEME" in
       1) THEME_NAME="Stellar"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/stellar.zip"; break;;
