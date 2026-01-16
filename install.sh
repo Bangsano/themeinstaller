@@ -599,7 +599,7 @@ install_blueprint() {
     set -e
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-    echo -e "${BOLD}${GREEN}[+]           INSTALL NODE.JS & BLUEPRINT           [+]${NC}"
+    echo -e "${BOLD}${GREEN}[+]                INSTALL BLUEPRINT                [+]${NC}"
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "                                                       "
     
@@ -663,7 +663,7 @@ install_blueprint() {
 
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-    echo -e "${BOLD}${GREEN}[+]        INSTALLASI NODE.JS & BLUEPRINT SELESAI   [+]${NC}"
+    echo -e "${BOLD}${GREEN}[+]          INSTALLASI BLUEPRINT SELESAI           [+]${NC}"
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "                                                       "
     sleep 3
