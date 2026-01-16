@@ -163,7 +163,7 @@ install_theme() {
     clear
     echo " "
     echo -e "${BRIGHT_BLUE}${BOLD}[+] ================================================== [+]${NC}"
-    echo -e "${BRIGHT_BLUE}${BOLD}[+]${NC} ${BG_BLUE}${BRIGHT_WHITE}${BOLD}                       SELECT THEME                   ${NC} ${BRIGHT_BLUE}${BOLD}[+]${NC}"
+    echo -e "${BRIGHT_BLUE}${BOLD}[+]${NC} ${BG_BLUE}${BRIGHT_WHITE}${BOLD}                   SELECT THEME                   ${NC} ${BRIGHT_BLUE}${BOLD}[+]${NC}"
     echo -e "${BRIGHT_BLUE}${BOLD}[+] ================================================== [+]${NC}"
     echo " "
     echo -e "${BRIGHT_CYAN}${BOLD}--- STANDARD THEME ---${NC}"
@@ -182,7 +182,7 @@ install_theme() {
     echo -e " ${BRIGHT_WHITE}${BOLD}[10]${NC} ${WHITE}Nebula${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[11]${NC} ${WHITE}Recolor${NC}"
     echo " "
-    echo -e " ${BRIGHT_WHITE}[x]${NC} ${WHITE}Kembali ke Menu Utama${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[x]${NC} ${WHITE}Kembali ke Menu Utama${NC}"
     echo " "
     echo -n -e "${BOLD}Masukkan pilihan (1-11 atau x)${NC}${BOLD}: ${NC}"
     read SELECT_THEME
