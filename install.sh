@@ -212,6 +212,7 @@ install_theme() {
     sudo blueprint -install "$THEME_NAME_LOWER"
     sudo chown -R www-data:www-data /var/www/pterodactyl
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
+    print_success "Tema '$THEME_NAME' berhasil diinstall."
   else
     # --- JALUR MANUAL ---
     if [ "$SELECT_THEME" -eq 3 ]; then # Khusus Enigma
@@ -253,43 +254,41 @@ install_theme() {
     yarn install
 
     if [ "$SELECT_THEME" -eq 2 ]; then
-      print_info "Menjalankan instalasi Billing..."
+      print_info "Menjalankan instalasi $THEME_NAME..."
       php artisan billing:install stable
     fi
 
-    print_info "Mengecek ketersediaan Memori..."
     RAM_SIZE=$(free -m | awk '/Mem:/ {print $2}')
     SWAP_SIZE=$(free -m | awk '/Swap:/ {print $2}')
+    TOTAL_MEM=$((RAM_SIZE + SWAP_SIZE))
 
-    if [ "$RAM_SIZE" -gt 8000 ]; then
-        print_info "RAM Besar ($RAM_SIZE MB). Skip Swap."
-    else
-        if [ "$SWAP_SIZE" -lt 4000 ]; then
-            print_warning "RAM Kecil ($RAM_SIZE MB) & Swap kurang. Menambahkan Swap Ekstra 4GB..."
-            sudo fallocate -l 4G /swapfile_extra
+    if [ "$SELECT_THEME" -eq 9 ]; then
+        print_info "Memeriksa kebutuhan memori untuk proses build $THEME_NAME..."
+        if [ "$TOTAL_MEM" -lt 2000 ]; then
+            print_warning "Total Memori (RAM $RAM_SIZE + Swap $SWAP_SIZE = $TOTAL_MEM MB) di bawah 2GB."
+            print_warning "Menambahkan Swap 1.5GB agar proses build aman..."
+            sudo fallocate -l 1536M /swapfile_extra
             sudo chmod 600 /swapfile_extra
             sudo mkswap /swapfile_extra
             sudo swapon /swapfile_extra
             echo '/swapfile_extra none swap sw 0 0' | sudo tee -a /etc/fstab
-            print_success "Swap Ekstra 4GB berhasil ditambahkan."
-            print_warning "Karena menggunakan swap, proses build mungkin akan memakan waktu sedikit lebih lama."
+            print_success "Swap Ekstra 1.5GB berhasil ditambahkan."
+            print_warning "Karena menggunakan swap, proses build mungkin akan lebih lama."
         else
-            print_info "Memori aman (RAM: $RAM_SIZE MB, Swap: $SWAP_SIZE MB)."
-            print_warning "Karena menggunakan swap, proses build mungkin akan memakan waktu sedikit lebih lama."
+            print_info "Total Memori aman ($TOTAL_MEM MB). Melewati pembuatan Swap."
         fi
     fi
 
     print_info "[4/4] Membangun aset panel..."
     print_warning "Proses build sedang berjalan. Mohon bersabar dan JANGAN tutup terminal sampai proses selesai!"
-    
-    export NODE_OPTIONS="--max-old-space-size=4096 --openssl-legacy-provider"
-    
+
+    export NODE_OPTIONS="--max-old-space-size=2048 --openssl-legacy-provider"
     php artisan migrate --force
     yarn build:production
     php artisan view:clear
     php artisan optimize:clear
     
-    print_success "Pembersihan file sisa..."
+    print_success "Tema '$THEME_NAME' berhasil diinstall."
   fi
 
   echo " "
