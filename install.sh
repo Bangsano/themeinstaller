@@ -237,7 +237,7 @@ install_theme() {
 
     print_info "Menjalankan migrasi, build, dan optimisasi..."
     NODE_VER=$(node -v | cut -d. -f1 | sed 's/v//')
-    export NODE_OPTIONS=--openssl-legacy-provider
+    export NODE_OPTIONS="--max-old-space-size=4096 --openssl-legacy-provider"
     php artisan migrate --force
     yarn build:production
     php artisan view:clear
