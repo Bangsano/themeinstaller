@@ -1,46 +1,76 @@
 #!/bin/bash
 
 # ============================================================
-# SKRIP INI DI-REMAKE OLEH SANO OFFICIAL (TELEGRAM: @batuofc)
-# DILARANG UNTUK MEMPERJUALBELIKAN SKRIP INI, APALAGI MEMBAGIKANNYA SECARA GRATIS!
-# GAK USAH NGEYEL! NGEYEL? MATI AJA LU, HIDUP LU GAK GUNA, KERJAANNYA CUMA MALING SC, JUAL/SHARE SC HASIL MALING
+# SKRIP INI DIBUAT OLEH SANO OFFICIAL
+# TELEGRAM: @batuofc
+# DISARANKAN GAK USAH NYOLONG!
+# LEBIH BAIK LANGSUNG PAKE AJA, KALO EROR BIAR GW (SANO) YANG BENERINNYA, LU TINGGAL LAPOR AJA KE TELEGRAM.
 # ============================================================
 
-BOLD='\033[1m'
-NC='\033[0m' # No Color
+NC='\033[0m' # No Color / Reset
 
-# Colors
-CYAN='\033[0;36m'
-ORANGE='\033[0;33m'
-BLUE='\033[0;34m'       
+# Style
+BOLD='\033[1m'
+DIM='\033[2m'
+UNDERLINE='\033[4m'
+BLINK='\033[5m'
+REVERSE='\033[7m'
+HIDDEN='\033[8m'
+
+# Foreground (Text Color Normal)
+BLACK='\033[0;30m'
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[0;37m'
 
-# Background Colors for Tags
-BG_BLUE='\033[44m'
-BG_GREEN='\033[42m'
+# Foreground (Text Color Bright)
+BRIGHT_BLACK='\033[0;90m'
+BRIGHT_RED='\033[0;91m'
+BRIGHT_GREEN='\033[0;92m'
+BRIGHT_YELLOW='\033[0;93m'
+BRIGHT_BLUE='\033[0;94m'
+BRIGHT_MAGENTA='\033[0;95m'
+BRIGHT_CYAN='\033[0;96m'
+BRIGHT_WHITE='\033[0;97m'
+
+# Background Colors (Normal)
+BG_BLACK='\033[40m'
 BG_RED='\033[41m'
+BG_GREEN='\033[42m'
 BG_YELLOW='\033[43m'
+BG_BLUE='\033[44m'
+BG_MAGENTA='\033[45m'
+BG_CYAN='\033[46m'
+BG_WHITE='\033[47m'
 
-# Text Colors
-FG_WHITE='\033[97m'
-FG_CYAN='\033[36m'
+# Background Colors (Bright)
+BG_BRIGHT_BLACK='\033[100m'
+BG_BRIGHT_RED='\033[101m'
+BG_BRIGHT_GREEN='\033[102m'
+BG_BRIGHT_YELLOW='\033[103m'
+BG_BRIGHT_BLUE='\033[104m'
+BG_BRIGHT_MAGENTA='\033[105m'
+BG_BRIGHT_CYAN='\033[106m'
+BG_BRIGHT_WHITE='\033[107m'
 
 print_info() {
-  echo -e "\n  ${BG_BLUE}${FG_WHITE}${BOLD} INFO ${NC} ${BOLD}$1${NC}\n"
+  echo -e "\n  ${BG_BLUE}${BRIGHT_WHITE}${BOLD} INFO ${NC} ${BOLD}$1${NC}\n"
 }
 
 print_success() {
-  echo -e "\n  ${BG_GREEN}${FG_WHITE}${BOLD} SUCCESS ${NC} ${BOLD}$1${NC}\n"
+  echo -e "\n  ${BG_GREEN}${BRIGHT_WHITE}${BOLD} SUCCESS ${NC} ${BOLD}$1${NC}\n"
 }
 
 print_warning() {
-  echo -e "\n  ${BG_YELLOW}${FG_WHITE}${BOLD} WARNING ${NC} ${BOLD}$1${NC}\n"
+  echo -e "\n  ${BG_YELLOW}${BRIGHT_WHITE}${BOLD} WARNING ${NC} ${BOLD}$1${NC}\n"
 }
 
 print_error() {
-  echo -e "\n  ${BG_RED}${FG_WHITE}${BOLD} ERROR ${NC} ${BOLD}$1${NC}\n"
+  echo -e "\n  ${BG_RED}${BRIGHT_WHITE}${BOLD} ERROR ${NC} ${BOLD}$1${NC}\n"
 }
 
 log_info() {
@@ -129,30 +159,29 @@ install_theme() {
   local THEME_URL
 
   while true; do
+    clear
     echo " "
-    log_info "==============================================="
-    log_info "                SELECT THEME                   "
-    log_info "==============================================="
+    echo -e "${BG_BLUE}${BRIGHT_WHITE}${BOLD}                       SELECT THEME                       ${NC}"
     echo " "
-    echo -e "${BOLD}--- THEME MANUAL ---${NC}"
-    echo -e "${BOLD} 1. Stellar${NC}"
-    echo -e "${BOLD} 2. Billing${NC}"
-    echo -e "${BOLD} 3. Enigma${NC}"
-    echo -e "${BOLD} 4. Elysium${NC}"
-    echo -e "${BOLD} 5. Nightcore${NC}"
-    echo -e "${BOLD} 6. Ice${NC}"
-    echo -e "${BOLD} 7. Noobe${NC}"
-    echo -e "${BOLD} 8. Nookure${NC}"
-    echo -e "${BOLD} 9. Reviactyl${NC}"
+    echo -e "${BRIGHT_CYAN}${BOLD}--- STANDARD THEME ---${NC}"
+    echo -e " ${CYAN}[1]${NC} ${WHITE}Stellar${NC}"
+    echo -e " ${CYAN}[2]${NC} ${WHITE}Billing${NC}"
+    echo -e " ${CYAN}[3]${NC} ${WHITE}Enigma${NC}"
+    echo -e " ${CYAN}[4]${NC} ${WHITE}Elysium${NC}"
+    echo -e " ${CYAN}[5]${NC} ${WHITE}Nightcore${NC}"
+    echo -e " ${CYAN}[6]${NC} ${WHITE}Ice${NC}"
+    echo -e " ${CYAN}[7]${NC} ${WHITE}Noobe${NC}"
+    echo -e " ${CYAN}[8]${NC} ${WHITE}Nookure${NC}"
+    echo -e " ${CYAN}[9]${NC} ${WHITE}Reviactyl${NC}"
     echo " "
-    log_info "==============================================="
+    echo -e "${BRIGHT_MAGENTA}${BOLD}--- BLUEPRINT THEME ---${NC}"
+    echo -e "${BG_RED}${BRIGHT_WHITE}${BOLD} (!) WAJIB INSTALL BLUEPRINT DULU (OPSI #8 DI MENU UTAMA) ${NC}"
+    echo -e " ${MAGENTA}[10]${NC} ${WHITE}Nebula${NC}"
+    echo -e " ${MAGENTA}[11]${NC} ${WHITE}Recolor${NC}"
     echo " "
-    echo -e "${BOLD}--- THEME BLUEPRINT (Wajib install Opsi #8 dulu) ---${NC}"
-    echo -e "${BOLD} 10. Nebula${NC}"
-    echo -e "${BOLD} 11. Recolor${NC}"
+    echo -e " ${RED}[x]${NC} ${WHITE}Kembali ke Menu Utama${NC}"
     echo " "
-    echo -e "${BOLD} x. Kembali${NC}"
-    echo -n -e "${BOLD}Masukkan pilihan (1-11 atau x): ${NC}"
+    echo -n -e "${BOLD}Masukkan pilihan ${CYAN}(1-11)${NC}${BOLD} atau ${RED}(x)${NC}${BOLD}: ${NC}"
     read SELECT_THEME
     case "$SELECT_THEME" in
       1) THEME_NAME="Stellar"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/stellar.zip"; break;;
