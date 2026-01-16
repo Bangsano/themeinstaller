@@ -854,7 +854,7 @@ while true; do
     8) hackback_panel ;;
     9) ubahpw_vps ;;
     x)
-      echo -e "${BOLD}${ORANGE}Keluar dari skrip. Terima kasih!${NC}"
+      echo -e "${BOLD}${YELLOW}Keluar dari skrip. Terima kasih!${NC}"
       exit 0
       ;;
     *)
