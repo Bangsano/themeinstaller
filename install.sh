@@ -162,9 +162,9 @@ install_theme() {
   while true; do
     clear
     echo " "
-    echo -e "${BRIGHT_BLUE}${BOLD}[+] ================================================== [+]${NC}"
-    echo -e "${BRIGHT_BLUE}${BOLD}[+]${NC} ${BG_BLUE}${BRIGHT_WHITE}${BOLD}                   SELECT THEME                   ${NC} ${BRIGHT_BLUE}${BOLD}[+]${NC}"
-    echo -e "${BRIGHT_BLUE}${BOLD}[+] ================================================== [+]${NC}"
+    echo -e "${BLUE}${BOLD}[+] ================================================== [+]${NC}"
+    echo -e "${BLUE}${BOLD}[+]${NC} ${BG_BLUE}${BRIGHT_WHITE}${BOLD}                   SELECT THEME                   ${NC} ${BLUE}${BOLD}[+]${NC}"
+    echo -e "${BLUE}${BOLD}[+] ================================================== [+]${NC}"
     echo " "
     echo -e "${BRIGHT_CYAN}${BOLD}--- STANDARD THEME ---${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[1]${NC} ${WHITE}Stellar${NC}"
@@ -818,7 +818,7 @@ while true; do
   echo -e "${BOLD}${CYAN}',gg       ,ggg.      'ggg:${NC}"
   echo -e "${BOLD}${CYAN}'ggg      ,gg'''  .    ggg${NC}     ${BOLD}${BLUE}Auto Installer Theme Pterodactyl${NC}"
   echo -e "${BOLD}${CYAN}gggg      gg     ,    ggg${NC}      ${BOLD}${BLUE}By Sano Official${NC}"
-  echo -e "${BOLD}${CYAN}ggg:     gg.     -   ,ggg${NC}       ${BOLD}${GREEN}----------------------------------${NC}"
+  echo -e "${BOLD}${CYAN}ggg:     gg.     -   ,ggg${NC}     ${BOLD}${GREEN}----------------------------------${NC}"
   echo -e "${BOLD}${CYAN} ggg:     ggg._    _,ggg${NC}       ${BOLD}${BLUE}Telegram : @batuofc${NC}"
   echo -e "${BOLD}${CYAN} ggg.    '.'''ggggggp${NC}"
   echo -e "${BOLD}${CYAN}  'ggg    '-.__${NC}"
