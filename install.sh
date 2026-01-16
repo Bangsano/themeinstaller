@@ -19,14 +19,14 @@ REVERSE='\033[7m'
 HIDDEN='\033[8m'
 
 # Foreground (Text Color Normal)
-BLACK='\033[30m'
-RED='\033[31m'
-GREEN='\033[32m'
-YELLOW='\033[33m'
-BLUE='\033[34m'
-MAGENTA='\033[35m'
-CYAN='\033[36m'
-WHITE='\033[37m'
+BLACK='\033[0;30m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[0;37m'
 
 # Foreground (Text Color Bright/Bold)
 BRIGHT_BLACK='\033[90m'
