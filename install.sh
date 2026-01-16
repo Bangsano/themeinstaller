@@ -6,25 +6,52 @@
 # GAK USAH NGEYEL! NGEYEL? MATI AJA LU, HIDUP LU GAK GUNA, KERJAANNYA CUMA MALING SC, JUAL/SHARE SC HASIL MALING
 # ============================================================
 
-# Color
 BOLD='\033[1m'
+NC='\033[0m' # No Color
+
+# Colors
 CYAN='\033[0;36m'
 ORANGE='\033[0;33m'
 BLUE='\033[0;34m'       
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
-NC='\033[0m'
+
+# Background Colors for Tags
+BG_BLUE='\033[44m'
+BG_GREEN='\033[42m'
+BG_RED='\033[41m'
+BG_YELLOW='\033[43m'
+
+# Text Colors
+FG_WHITE='\033[97m'
+FG_CYAN='\033[36m'
 
 print_info() {
-  echo -e "${BOLD}${CYAN}$1${NC}"
+  echo -e "${BG_BLUE}${FG_WHITE}${BOLD} INFO ${NC} $1"
 }
 
 print_success() {
-  echo -e "${BOLD}${GREEN}$1${NC}"
+  echo -e "${BG_GREEN}${FG_WHITE}${BOLD} SUCCESS ${NC} $1"
+}
+
+print_warning() {
+  echo -e "${BG_YELLOW}${FG_WHITE}${BOLD} WARNING ${NC} $1"
 }
 
 print_error() {
+  echo -e "${BG_RED}${FG_WHITE}${BOLD} ERROR ${NC} $1"
+}
+
+log_info() {
+  echo -e "${BOLD}${CYAN}$1${NC}"
+}
+
+log_success() {
+  echo -e "${BOLD}${GREEN}$1${NC}"
+}
+
+log_error() {
   echo -e "${BOLD}${RED}$1${NC}"
 }
 
@@ -103,9 +130,9 @@ install_theme() {
 
   while true; do
     echo " "
-    print_info "[+] =============================================== [+]"
-    print_info "[+]                   SELECT THEME                  [+]"
-    print_info "[+] =============================================== [+]"
+    log_info "==============================================="
+    log_info "                SELECT THEME                   "
+    log_info "==============================================="
     echo " "
     echo -e "${BOLD}--- THEME MANUAL ---${NC}"
     echo -e "${BOLD} 1. Stellar${NC}"
@@ -118,9 +145,9 @@ install_theme() {
     echo -e "${BOLD} 8. Nookure${NC}"
     echo -e "${BOLD} 9. Reviactyl${NC}"
     echo " "
-    print_info "[+] =============================================== [+]"
+    log_info "==============================================="
     echo " "
-    echo -e "${BOLD}--- THEME BLUEPRINT (Wajib install Opsi #8 dari menu utama) ---${NC}"
+    echo -e "${BOLD}--- THEME BLUEPRINT (Wajib install Opsi #8 dulu) ---${NC}"
     echo -e "${BOLD} 10. Nebula${NC}"
     echo -e "${BOLD} 11. Recolor${NC}"
     echo " "
@@ -145,110 +172,130 @@ install_theme() {
   done
 
   echo " "
-  echo -n -e "${BOLD}Anda memilih untuk menginstal tema '$THEME_NAME'. Lanjutkan? (y/n): ${NC}"
+  echo -n -e "${BOLD}Anda memilih tema '$THEME_NAME'. Lanjutkan? (y/n): ${NC}"
   read confirmation
   if [[ "$confirmation" != [yY] ]]; then echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return; fi
+  
   set -e
   export DEBIAN_FRONTEND=noninteractive
   export NEEDRESTART_MODE=a
+  
   TEMP_DIR=$(mktemp -d)
   trap 'rm -rf -- "$TEMP_DIR"' EXIT
   cd "$TEMP_DIR"
+  
   print_info "Memulai instalasi tema $THEME_NAME..."
+  
   if [ "$SELECT_THEME" -eq 3 ]; then # Khusus Enigma
-      YELLOW='\033[1;33m';
-      echo -n -e "${BOLD}${YELLOW}Masukkan link whatsapp (https://wa.me/...): ${NC}"; read LINK_WA
-      echo -n -e "${BOLD}${YELLOW}Masukkan link channel whatsapp (https://whatsapp.com/channel/...): ${NC}"; read LINK_CHANNEL
-      echo -n -e "${BOLD}${YELLOW}Masukkan link grup whatsapp (https://chat.whatsapp.com/...): ${NC}"; read LINK_GROUP
+      echo -n -e "${BOLD}Masukkan link whatsapp: ${NC}"; read LINK_WA
+      echo -n -e "${BOLD}Masukkan link channel whatsapp: ${NC}"; read LINK_CHANNEL
+      echo -n -e "${BOLD}Masukkan link grup whatsapp: ${NC}"; read LINK_GROUP
   fi
+
   print_info "[1/4] Mengunduh file tema..."
   wget -q "$THEME_URL"
   local THEME_ZIP_FILE=$(basename "$THEME_URL")
+  
   print_info "[2/4] Mengekstrak file tema..."
   unzip -oq "$THEME_ZIP_FILE" || true
 
   if [ "$SELECT_THEME" -eq 10 ] || [ "$SELECT_THEME" -eq 11 ]; then
-    # --- JALUR INSTALASI BLUEPRINT ---
-    print_info "[3/4] Mempersiapkan instalasi Blueprint..."
-    if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "❌ ERROR: Blueprint belum terinstall."; return 1; fi
+    # --- JALUR BLUEPRINT ---
+    print_info "[3/4] Menyiapkan Blueprint..."
+    if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "Blueprint belum terinstall."; return 1; fi
     THEME_NAME_LOWER=$(echo "$THEME_NAME" | tr '[:upper:]' '[:lower:]')
     BLUEPRINT_FILE="${THEME_NAME_LOWER}.blueprint"
     sudo mv "$BLUEPRINT_FILE" /var/www/pterodactyl/
-    print_info "[4/4] Menjalankan instalasi tema via Blueprint..."
+    
+    print_info "[4/4] Menginstall via Blueprint..."
     cd /var/www/pterodactyl
     sudo blueprint -install "$THEME_NAME_LOWER"
     sudo chown -R www-data:www-data /var/www/pterodactyl
     sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
   else
-    # --- JALUR INSTALASI MANUAL ---
+    # --- JALUR MANUAL ---
     if [ "$SELECT_THEME" -eq 3 ]; then # Khusus Enigma
-      print_info "Mengkonfigurasi link untuk tema Enigma..."
+      print_info "Mengkonfigurasi variabel Enigma..."
       sed -i "s|LINK_WA|$LINK_WA|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
       sed -i "s|LINK_CHANNEL|$LINK_CHANNEL|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
       sed -i "s|LINK_GROUP|$LINK_GROUP|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
     fi
-    print_info "[3/4] Menyalin file & membangun aset..."
+    
+    print_info "[3/4] Menyalin file..."
     sudo cp -rfT pterodactyl /var/www/pterodactyl
     cd /var/www/pterodactyl
-    print_info "Memastikan Node.js versi 22 terinstall..."
-    unset NVM_DIR
-    sudo apt-get remove -y nodejs npm
-    sudo apt-get purge -y nodejs
-    sudo rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
-    sudo rm -rf /etc/apt/sources.list.d/nodesource.list
-    sudo rm -rf "$HOME/.nvm"
-    sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-    sudo apt-get update
-    sudo apt-get install -y nodejs
-    hash -r
     
-    print_info "Menginstal dependensi Node.js..."
-    sudo npm i -g yarn
+    print_info "Memeriksa versi Node.js..."
+    CURRENT_NODE_VER=$(node -v 2>/dev/null | cut -d'.' -f1 | sed 's/v//')
+    
+    if [[ "$CURRENT_NODE_VER" == "22" ]]; then
+        print_success "Node.js v22 sudah terinstall. Melewati instalasi ulang."
+    else
+        print_warning "Node.js v22 belum terdeteksi (Versi: v$CURRENT_NODE_VER). Melakukan Clean Install..."
+        unset NVM_DIR
+        sudo apt-get remove -y nodejs npm > /dev/null 2>&1 || true
+        sudo apt-get purge -y nodejs > /dev/null 2>&1 || true
+        sudo rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
+        sudo rm -rf /etc/apt/sources.list.d/nodesource.list
+        sudo rm -rf "$HOME/.nvm"
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
+        echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
+        sudo apt-get update
+        sudo apt-get install -y nodejs
+    fi
+
+    hash -r
+    sudo npm i -g yarn > /dev/null 2>&1
+    
+    print_info "Menginstal dependensi build..."
     yarn add cross-env react-feather
     yarn install
 
-    if [ "$SELECT_THEME" -eq 2 ]; then # Khusus Billing
-      print_info "Menjalankan instalasi spesifik untuk Billing..."
+    if [ "$SELECT_THEME" -eq 2 ]; then
+      print_info "Menjalankan instalasi Billing..."
       php artisan billing:install stable
     fi
 
-    print_info "Mengecek spesifikasi Memori..."
+    print_info "Mengecek ketersediaan Memori..."
     RAM_SIZE=$(free -m | awk '/Mem:/ {print $2}')
     SWAP_SIZE=$(free -m | awk '/Swap:/ {print $2}')
 
-    if [ "$RAM_SIZE" -gt 4000 ]; then
-        print_info "RAM Terdeteksi Besar ($RAM_SIZE MB). Skip pembuatan Swap tambahan."
+    if [ "$RAM_SIZE" -gt 8000 ]; then
+        print_info "RAM Besar ($RAM_SIZE MB). Skip Swap."
     else
-        if [ "$SWAP_SIZE" -lt 3000 ]; then
-            print_info "RAM Terbatas ($RAM_SIZE MB) dan Swap kurang ($SWAP_SIZE MB)."
-            print_info "Membuat Swap Ekstra 2GB untuk keamanan build..."
-            sudo fallocate -l 2G /swapfile_extra
+        if [ "$SWAP_SIZE" -lt 4000 ]; then
+            print_warning "RAM Kecil ($RAM_SIZE MB) & Swap kurang. Menambahkan Swap Ekstra 4GB..."
+            sudo fallocate -l 4G /swapfile_extra
             sudo chmod 600 /swapfile_extra
             sudo mkswap /swapfile_extra
             sudo swapon /swapfile_extra
             echo '/swapfile_extra none swap sw 0 0' | sudo tee -a /etc/fstab
-            print_success "Swap Ekstra berhasil ditambahkan."
+            print_success "Swap Ekstra 4GB berhasil ditambahkan."
+            print_warning "Karena menggunakan swap, proses build mungkin akan memakan waktu sedikit lebih lama."
         else
-            print_info "RAM Terbatas, tapi Swap sudah cukup besar ($SWAP_SIZE MB). Aman."
+            print_info "Memori aman (RAM: $RAM_SIZE MB, Swap: $SWAP_SIZE MB)."
+            print_warning "Karena menggunakan swap, proses build mungkin akan memakan waktu sedikit lebih lama."
         fi
     fi
 
-    print_info "Menjalankan migrasi, build, dan optimisasi..."
-    NODE_VER=$(node -v | cut -d. -f1 | sed 's/v//')
+    print_info "[4/4] Membangun aset panel..."
+    print_warning "Proses build sedang berjalan. Mohon bersabar dan JANGAN tutup terminal."
+    
     export NODE_OPTIONS="--max-old-space-size=4096 --openssl-legacy-provider"
+    
     php artisan migrate --force
     yarn build:production
     php artisan view:clear
     php artisan optimize:clear
-    print_info "[4/4] Membersihkan file sisa..."
+    
+    print_success "Pembersihan file sisa..."
   fi
 
   echo " "
-  print_success "[+] =============================================== [+]"
-  print_success "[+]           INSTALASI BERHASIL SELESAI            [+]"
-  print_success "[+] =============================================== [+]"
+  log_success "==============================================="
+  log_success "         INSTALASI BERHASIL SELESAI            "
+  log_success "==============================================="
   echo " "
   sleep 3
   return 0
@@ -257,9 +304,9 @@ install_theme() {
 # Uninstall theme
 uninstall_theme() {
   echo " "
-  print_info "[+] =============================================== [+]"
-  print_info "[+]        RESET PANEL (UNINSTALL THEME/TOOLS)        [+]"
-  print_info "[+] =============================================== [+]"
+  log_info "[+] =============================================== [+]"
+  log_info "[+]        RESET PANEL (UNINSTALL THEME/TOOLS)        [+]"
+  log_info "[+] =============================================== [+]"
   echo " "
   echo -e "${BOLD}${YELLOW}PERINGATAN:${NC} ${BOLD}Proses ini akan MENGHAPUS TOTAL semua file panel,${NC}"
   echo -e "${BOLD}sehingga semua tema kustom atau tools lainnya akan terhapus.${NC}"
@@ -273,7 +320,7 @@ uninstall_theme() {
       [Yy]*)
         set -e
         if [ ! -d "/var/www/pterodactyl" ]; then
-            print_error "🚨 ERROR: Direktori instalasi Pterodactyl tidak ditemukan."
+            print_error "Direktori instalasi Pterodactyl tidak ditemukan."
             return 1
         fi
         cd /var/www/pterodactyl || { print_error "Gagal masuk ke direktori Pterodactyl."; return 1; }
@@ -327,9 +374,9 @@ uninstall_theme() {
   done
 
   echo " "
-  print_success "[+] =============================================== [+]"
-  print_success "[+]             PANEL BERHASIL DI-RESET             [+]"
-  print_success "[+] =============================================== [+]"
+  log_success "[+] =============================================== [+]"
+  log_success "[+]             PANEL BERHASIL DI-RESET             [+]"
+  log_success "[+] =============================================== [+]"
   echo " "
   sleep 3
   return 0
@@ -594,9 +641,9 @@ install_auto_suspend() {
   export NEEDRESTART_MODE=a
   
   echo " "
-  print_info "[+] =============================================== [+]"
-  print_info "[+]            INSTALL FITUR AUTO SUSPEND           [+]"
-  print_info "[+] =============================================== [+]"
+  log_info "[+] =============================================== [+]"
+  log_info "[+]            INSTALL FITUR AUTO SUSPEND           [+]"
+  log_info "[+] =============================================== [+]"
   echo " "
   echo -e "${BOLD}Fitur ini akan menambahkan fungsionalitas auto-suspend server.${NC}"
   echo -n -e "${BOLD}Lanjutkan instalasi? (y/n): ${NC}"
@@ -714,9 +761,9 @@ install_auto_suspend() {
   chown -R www-data:www-data /var/www/pterodactyl/*
 
   echo " "
-  print_success "[+] =============================================== [+]"
-  print_success "[+]        FITUR AUTO SUSPEND BERHASIL DIINSTALL      [+]"
-  print_success "[+] =============================================== [+]"
+  log_success "[+] =============================================== [+]"
+  log_success "[+]        FITUR AUTO SUSPEND BERHASIL DIINSTALL      [+]"
+  log_success "[+] =============================================== [+]"
   echo " "
   sleep 3
   return 0
@@ -757,6 +804,7 @@ while true; do
   echo -e "${BOLD} 9. Install Fitur Auto Suspend${NC}"
   echo -e "${BOLD} x. Exit${NC}"
   echo " "
+  print_info "Jika panel mengalami eror setelah menginstall tema atau tools lainnya, silakan jalankan fitur reset panel."
   
   echo -n -e "${BOLD}Masukkan pilihan (1-9 atau x): ${NC}"
   read -r MENU_CHOICE
