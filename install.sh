@@ -19,24 +19,24 @@ REVERSE='\033[7m'
 HIDDEN='\033[8m'
 
 # Foreground (Text Color Normal)
-BLACK='\033[0;30m'
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
-WHITE='\033[0;37m'
+BLACK='\033[30m'
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+BLUE='\033[34m'
+MAGENTA='\033[35m'
+CYAN='\033[36m'
+WHITE='\033[37m'
 
 # Foreground (Text Color Bright/Bold)
-BRIGHT_BLACK='\033[0;90m'
-BRIGHT_RED='\033[0;91m'
-BRIGHT_GREEN='\033[0;92m'
-BRIGHT_YELLOW='\033[0;93m'
-BRIGHT_BLUE='\033[0;94m'
-BRIGHT_MAGENTA='\033[0;95m'
-BRIGHT_CYAN='\033[0;96m'
-BRIGHT_WHITE='\033[0;97m'
+BRIGHT_BLACK='\033[90m'
+BRIGHT_RED='\033[91m'
+BRIGHT_GREEN='\033[92m'
+BRIGHT_YELLOW='\033[93m'
+BRIGHT_BLUE='\033[94m'
+BRIGHT_MAGENTA='\033[95m'
+BRIGHT_CYAN='\033[96m'
+BRIGHT_WHITE='\033[97m'
 
 # Background Colors (Normal)
 BG_BLACK='\033[40m'
@@ -178,7 +178,7 @@ install_theme() {
     echo -e " ${BRIGHT_WHITE}${BOLD}[9]${NC} ${WHITE}Reviactyl${NC}"
     echo " "
     echo -e "${BRIGHT_MAGENTA}${BOLD}--- BLUEPRINT THEME ---${NC}"
-    echo -e "${BG_RED}${BRIGHT_WHITE} (!) WAJIB INSTALL BLUEPRINT DULU (OPSI #8 DI MENU UTAMA) ${NC}"
+    echo -e "${BG_RED}${BRIGHT_WHITE} (!) WAJIB INSTALL BLUEPRINT DULU (OPSI #2 DI MENU UTAMA) ${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[10]${NC} ${WHITE}Nebula${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[11]${NC} ${WHITE}Recolor${NC}"
     echo " "
@@ -587,7 +587,7 @@ EOF
 }
 
 # Install Dependencies Blueprint
-install_depend() {
+install_blueprint() {
     unset NVM_DIR
     unset NVM_CD_FLAGS
     unset NVM_BIN
@@ -829,48 +829,30 @@ while true; do
   echo -e "${BOLD}${CYAN}             b.${NC}"
   echo -e "  "
   echo -e "${BOLD} BERIKUT ADALAH LIST FITUR:${NC}"
-  echo -e "${BOLD} 1. Install Themes (Stellar, Elysium, Nebula, dll)${NC}"
-  echo -e "${BOLD} 2. Reset Panel (menghapus semua modifikasi panel seperti tema kustom atau tools lainnya)${NC}"
-  echo -e "${BOLD} 3. Configure Wings${NC}"
-  echo -e "${BOLD} 4. Create Node & Location${NC}"
-  echo -e "${BOLD} 5. Uninstall Panel${NC}"
-  echo -e "${BOLD} 6. Hack Back Panel${NC}"
-  echo -e "${BOLD} 7. Ubah Password VPS${NC}"
-  echo -e "${BOLD} 8. Install Dependencies (Blueprint)${NC}"
-  echo -e "${BOLD} 9. Install Fitur Auto Suspend${NC}"
-  echo -e "${BOLD} x. Exit${NC}"
+  echo -e "${BOLD}  1. Install Themes${NC}"
+  echo -e "${BOLD}  2. Install Blueprint${NC}"
+  echo -e "${BOLD}  3. Install Fitur Auto Suspend${NC}"
+  echo -e "${BOLD}  4. Reset Panel (menghapus semua modifikasi panel seperti tema kustom atau tools lainnya)${NC}"
+  echo -e "${BOLD}  5. Uninstall Panel${NC}"
+  echo -e "${BOLD}  6. Configure Wings${NC}"
+  echo -e "${BOLD}  7. Create Node & Location${NC}"
+  echo -e "${BOLD}  8. Hack Back Panel${NC}"
+  echo -e "${BOLD}  9. Ubah Password VPS${NC}"
+  echo -e "${BOLD}  x. Exit${NC}"
   print_info "Jika panel mengalami eror setelah menginstall tema atau tools lainnya, silakan jalankan fitur reset panel."
   echo -n -e "${BOLD}Masukkan pilihan (1-9 atau x): ${NC}"
   read -r MENU_CHOICE
 
   case "$MENU_CHOICE" in
-    1)
-      install_theme
-      ;;
-    2)
-      uninstall_theme
-      ;;
-    3)
-      configure_wings
-      ;;
-    4)
-      create_node
-      ;;
-    5)
-      uninstall_panel
-      ;;
-    6)
-      hackback_panel
-      ;;
-    7)
-      ubahpw_vps
-      ;;
-    8)
-      install_depend
-      ;;
-    9)
-      install_auto_suspend
-      ;;
+    1) install_theme ;;
+    2) install_blueprint ;;
+    3) install_auto_suspend ;;
+    4) uninstall_theme ;;
+    5) uninstall_panel ;;
+    6) configure_wings ;;
+    7) create_node ;;
+    8) hackback_panel ;;
+    9) ubahpw_vps ;;
     x)
       echo -e "${BOLD}${ORANGE}Keluar dari skrip. Terima kasih!${NC}"
       exit 0
