@@ -7,7 +7,8 @@
 # LEBIH BAIK LANGSUNG PAKE AJA, KALO EROR BIAR GW (SANO) YANG BENERINNYA, LU TINGGAL LAPOR AJA KE TELEGRAM.
 # ============================================================
 
-NC='\033[0m' # No Color / Reset
+# Reset
+NC='\033[0m'
 
 # Style
 BOLD='\033[1m'
@@ -18,24 +19,24 @@ REVERSE='\033[7m'
 HIDDEN='\033[8m'
 
 # Foreground (Text Color Normal)
-BLACK='\033[030m'
-RED='\033[031m'
-GREEN='\033[032m'
-YELLOW='\033[033m'
-BLUE='\033[034m'
-MAGENTA='\033[035m'
-CYAN='\033[036m'
-WHITE='\033[037m'
+BLACK='\033[0;30m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[0;37m'
 
-# Foreground (Text Color Bright)
-BRIGHT_BLACK='\033[090m'
-BRIGHT_RED='\033[091m'
-BRIGHT_GREEN='\033[092m'
-BRIGHT_YELLOW='\033[093m'
-BRIGHT_BLUE='\033[094m'
-BRIGHT_MAGENTA='\033[095m'
-BRIGHT_CYAN='\033[096m'
-BRIGHT_WHITE='\033[097m'
+# Foreground (Text Color Bright/Bold)
+BRIGHT_BLACK='\033[0;90m'
+BRIGHT_RED='\033[0;91m'
+BRIGHT_GREEN='\033[0;92m'
+BRIGHT_YELLOW='\033[0;93m'
+BRIGHT_BLUE='\033[0;94m'
+BRIGHT_MAGENTA='\033[0;95m'
+BRIGHT_CYAN='\033[0;96m'
+BRIGHT_WHITE='\033[0;97m'
 
 # Background Colors (Normal)
 BG_BLACK='\033[40m'
@@ -162,24 +163,24 @@ install_theme() {
     clear
     echo " "
     echo -e "${BRIGHT_BLUE}${BOLD}[+] ================================================== [+]${NC}"
-    echo -e "${BG_BLUE}${BRIGHT_WHITE}${BOLD}                       SELECT THEME                       ${NC}"
+    echo -e "${BRIGHT_BLUE}${BOLD}[+]${NC} ${BG_BLUE}${BRIGHT_WHITE}${BOLD}                       SELECT THEME                   ${NC} ${BRIGHT_BLUE}${BOLD}[+]${NC}"
     echo -e "${BRIGHT_BLUE}${BOLD}[+] ================================================== [+]${NC}"
     echo " "
     echo -e "${BRIGHT_CYAN}${BOLD}--- STANDARD THEME ---${NC}"
-    echo -e " ${BRIGHT_WHITE}[1]${NC} ${WHITE}Stellar${NC}"
-    echo -e " ${BRIGHT_WHITE}[2]${NC} ${WHITE}Billing${NC}"
-    echo -e " ${BRIGHT_WHITE}[3]${NC} ${WHITE}Enigma${NC}"
-    echo -e " ${BRIGHT_WHITE}[4]${NC} ${WHITE}Elysium${NC}"
-    echo -e " ${BRIGHT_WHITE}[5]${NC} ${WHITE}Nightcore${NC}"
-    echo -e " ${BRIGHT_WHITE}[6]${NC} ${WHITE}Ice${NC}"
-    echo -e " ${BRIGHT_WHITE}[7]${NC} ${WHITE}Noobe${NC}"
-    echo -e " ${BRIGHT_WHITE}[8]${NC} ${WHITE}Nookure${NC}"
-    echo -e " ${BRIGHT_WHITE}[9]${NC} ${WHITE}Reviactyl${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[1]${NC} ${WHITE}Stellar${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[2]${NC} ${WHITE}Billing${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[3]${NC} ${WHITE}Enigma${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[4]${NC} ${WHITE}Elysium${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[5]${NC} ${WHITE}Nightcore${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[6]${NC} ${WHITE}Ice${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[7]${NC} ${WHITE}Noobe${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[8]${NC} ${WHITE}Nookure${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[9]${NC} ${WHITE}Reviactyl${NC}"
     echo " "
     echo -e "${BRIGHT_MAGENTA}${BOLD}--- BLUEPRINT THEME ---${NC}"
-    echo -e "${BG_RED}${BRIGHT_WHITE}${BOLD} (!) WAJIB INSTALL BLUEPRINT DULU (OPSI #8 DI MENU UTAMA) ${NC}"
-    echo -e " ${BRIGHT_WHITE}[10]${NC} ${WHITE}Nebula${NC}"
-    echo -e " ${BRIGHT_WHITE}[11]${NC} ${WHITE}Recolor${NC}"
+    echo -e "${BG_RED}${BRIGHT_WHITE} (!) WAJIB INSTALL BLUEPRINT DULU (OPSI #8 DI MENU UTAMA) ${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[10]${NC} ${WHITE}Nebula${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[11]${NC} ${WHITE}Recolor${NC}"
     echo " "
     echo -e " ${BRIGHT_WHITE}[x]${NC} ${WHITE}Kembali ke Menu Utama${NC}"
     echo " "
