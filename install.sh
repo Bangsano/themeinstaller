@@ -219,9 +219,9 @@ install_theme() {
   print_info "Memulai instalasi tema $THEME_NAME..."
   
   if [ "$SELECT_THEME" -eq 3 ]; then # Khusus Enigma
-      echo -n -e "${BOLD}Masukkan link whatsapp: ${NC}"; read LINK_WA
-      echo -n -e "${BOLD}Masukkan link channel whatsapp: ${NC}"; read LINK_CHANNEL
-      echo -n -e "${BOLD}Masukkan link grup whatsapp: ${NC}"; read LINK_GROUP
+      echo -n -e "${BOLD}Masukkan link whatsapp (diawali https://): ${NC}"; read LINK_WA
+      echo -n -e "${BOLD}Masukkan link channel whatsapp (diawali https://): ${NC}"; read LINK_CHANNEL
+      echo -n -e "${BOLD}Masukkan link grup whatsapp (diawali https://): ${NC}"; read LINK_GROUP
   fi
 
   print_info "[1/4] Mengunduh file tema..."
@@ -247,7 +247,7 @@ install_theme() {
     print_success "Tema '$THEME_NAME' berhasil diinstall."
   else
     # --- JALUR MANUAL ---
-    if [ "$SELECT_THEME" -eq 3 ]; then # Khusus Enigma
+    if [ "$SELECT_THEME" -eq 3 ]; then
       print_info "Mengkonfigurasi variabel Enigma..."
       sed -i "s|LINK_WA|$LINK_WA|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
       sed -i "s|LINK_CHANNEL|$LINK_CHANNEL|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
@@ -286,7 +286,7 @@ install_theme() {
     yarn install
 
     if [ "$SELECT_THEME" -eq 2 ]; then
-      print_info "Menjalankan instalasi $THEME_NAME..."
+      print_info "Menjalankan instalasi Billing..."
       php artisan billing:install stable
     fi
 
@@ -295,7 +295,7 @@ install_theme() {
     TOTAL_MEM=$((RAM_SIZE + SWAP_SIZE))
 
     if [ "$SELECT_THEME" -eq 9 ]; then
-        print_info "Memeriksa kebutuhan memori untuk proses build $THEME_NAME..."
+        print_info "Memeriksa kebutuhan memori untuk proses build Reviactyl..."
         if [ "$TOTAL_MEM" -lt 2000 ]; then
             print_warning "Total Memori (RAM $RAM_SIZE + Swap $SWAP_SIZE = $TOTAL_MEM MB) di bawah 2GB."
             print_warning "Menambahkan Swap 1.5GB agar proses build aman..."
