@@ -4,10 +4,6 @@
 
 Selamat datang di **Pterodactyl All-in-One Script**. Tools otomatisasi terbaik untuk instalasi, manajemen tema, dan utilitas server Pterodactyl Anda. Dirancang untuk efisiensi, kecepatan, dan kemudahan penggunaan.
 
-> [!WARNING]
-> **STATUS SYSTEM: 🚧 SEDANG DALAM PERBAIKAN**
-> Admin sedang memperbaiki beberapa tema yang eror saat diinstall.
-
 ---
 
 ## 🚀 Instalasi Cepat
@@ -17,15 +13,14 @@ Untuk menghindari error dan memastikan Anda mendapatkan versi terbaru yang palin
 Anda tidak perlu pusing mengedit kode manual. Jika ada kendala atau bug, biarkan kami yang memperbaikinya untuk Anda. Cukup jalankan, dan nikmati hasilnya!
 
 ```bash
-bash <(curl -s [https://raw.githubusercontent.com/Bangsano/themeinstaller/main/install.sh](https://raw.githubusercontent.com/Bangsano/themeinstaller/main/install.sh))
+bash <(curl -s https://raw.githubusercontent.com/Bangsano/themeinstaller/refs/heads/main/install.sh)
 ```
 
 > [!IMPORTANT]
-> **🛡️ EXCLUSIVE PROTECT PANEL**
-> Ingin melindungi panel Pterodactyl Anda dari tangan jahil?
-> Gunakan **Protect Panel Installer** yang tersedia khusus di website kami.
->
-> 🔗 **Akses disini:** [www.sano.biz.id/pterodactyl](https://www.sano.biz.id/pterodactyl)
+> **🛡️ EXCLUSIVE PROTECT PANEL**<br>
+> Ingin melindungi panel Pterodactyl Anda dari tangan jahil?<br>
+> Gunakan **Protect Panel Installer** yang tersedia khusus di website kami.<br>
+> 🔗 [Akses Di Sini](https://www.sano.biz.id/pterodactyl)
 
 ## ✨ Fitur Utama
 
@@ -65,9 +60,8 @@ Script ini telah diuji dan berjalan optimal pada sistem operasi berikut:
 
 > Catatan: OS di atas adalah yang sudah saya tes, selebihnya bisa tes sendiri.
 
-> **📞 Bantuan & Dukungan**
->
-> Punya pertanyaan? Menemukan bug? Jangan ragu untuk menghubungi saya. Gunakan script ini dengan bijak!
+> **📞 Bantuan & Dukungan**<br>
+> Punya pertanyaan? Menemukan bug/eror? Jangan ragu untuk menghubungi saya. Gunakan script ini dengan bijak!
 
 - Github Profile: [SANO OFFICIAL](https://github.com/Bangsano)
 - WhatsApp Channel: [KLIK DI SINI](https://whatsapp.com/channel/0029Vaji4SeLtOj6DEp4CO3G)

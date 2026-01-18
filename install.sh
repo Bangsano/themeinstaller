@@ -174,7 +174,7 @@ install_theme() {
     echo -e " ${BRIGHT_WHITE}${BOLD}[5]${NC} ${WHITE}Frostcore (Original Style)${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[6]${NC} ${WHITE}Nightcore (Original Style)${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[7]${NC} ${WHITE}IceMinecraft (Original Style)${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[8]${NC} ${WHITE}Noobe${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[8]${NC} ${WHITE}Noobe (Original Style)${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[9]${NC} ${WHITE}Nookure${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[10]${NC} ${WHITE}Reviactyl${NC}"
     echo " "
@@ -194,10 +194,10 @@ install_theme() {
       4) THEME_NAME="Elysium"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/elysium.zip"; break;;
       5) THEME_NAME="Frostcore"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/frostcore.zip"; break;;
       6) THEME_NAME="Nightcore"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nightcore.zip"; break;;
-      7) THEME_NAME="Ice"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/ice.zip"; break;;
+      7) THEME_NAME="IceMinecraft"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/ice.zip"; break;;
       8) THEME_NAME="Noobe"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/noobe.zip"; break;;
       9) THEME_NAME="Nookure"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nookure.zip"; break;;
-      10) THEME_NAME="Reviactyl"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/reviactyl.zip"; break;;
+      10) THEME_NAME="Reviactyl"; THEME_URL="https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz"; break;;
       11) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
       12) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
       x|X) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
@@ -229,9 +229,15 @@ install_theme() {
   print_info "[1/4] Mengunduh file tema..."
   wget -q "$THEME_URL"
   local THEME_ZIP_FILE=$(basename "$THEME_URL")
-  
+
   print_info "[2/4] Mengekstrak file tema..."
-  unzip -oq "$THEME_ZIP_FILE" || true
+  if [[ "$THEME_ZIP_FILE" == *.tar.gz ]]; then
+    tar -xzf "$THEME_ZIP_FILE"
+  else
+    unzip -oq "$THEME_ZIP_FILE" || true
+  fi
+  
+  rm -f "$THEME_ZIP_FILE"
 
   if [ "$SELECT_THEME" -eq 11 ] || [ "$SELECT_THEME" -eq 12 ]; then
     # --- JALUR BLUEPRINT ---
@@ -255,9 +261,14 @@ install_theme() {
       sed -i "s|LINK_CHANNEL|$LINK_CHANNEL|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
       sed -i "s|LINK_GROUP|$LINK_GROUP|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
     fi
-    
+
     print_info "[3/4] Menyalin file..."
-    sudo cp -rfT pterodactyl /var/www/pterodactyl
+    if [ "$SELECT_THEME" -eq 10 ]; then
+        sudo cp -rf * /var/www/pterodactyl/
+    else
+        sudo cp -rfT pterodactyl /var/www/pterodactyl
+    fi
+
     cd /var/www/pterodactyl
 
     print_info "Memeriksa versi Node.js..."
@@ -300,7 +311,7 @@ install_theme() {
     SWAP_SIZE=$(free -m | awk '/Swap:/ {print $2}')
     TOTAL_MEM=$((RAM_SIZE + SWAP_SIZE))
 
-    if [ "$SELECT_THEME" -eq 9 ]; then
+    if [ "$SELECT_THEME" -eq 10 ]; then
       print_info "Memeriksa kebutuhan memori untuk proses build Reviactyl..."
       if [ "$TOTAL_MEM" -lt 2000 ]; then
         print_warning "Total Memori (RAM $RAM_SIZE + Swap $SWAP_SIZE = $TOTAL_MEM MB) di bawah 2GB."
