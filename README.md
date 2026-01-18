@@ -4,6 +4,10 @@
 
 Selamat datang di **Pterodactyl All-in-One Script**. Tools otomatisasi terbaik untuk instalasi, manajemen tema, dan utilitas server Pterodactyl Anda. Dirancang untuk efisiensi, kecepatan, dan kemudahan penggunaan.
 
+> [!WARNING]
+> **STATUS SYSTEM: 🚧 SEDANG DALAM PERBAIKAN**
+> Admin sedang memperbaiki beberapa tema yang eror saat diinstall.
+
 ---
 
 ## 🚀 Instalasi Cepat
@@ -31,8 +35,8 @@ Skrip ini mencakup berbagai macam fitur canggih yang terbagi dalam beberapa kate
 
 Instalasi tema favorit Anda hanya dengan satu klik. Mendukung fitur **Uninstall** untuk mengembalikan panel ke kondisi original.
 
- * **Premium Themes:** Stellar, Billing, Enigma, Elysium, Nightcore.
- * **Simple Themes:** Ice, Noobe, Nookure.
+ * **Premium Themes:** Stellar, Billing, Enigma, Elysium, Frostcore, Nightcore, Reviactyl.
+ * **Simple Themes:** IceMinecraft, Noobe, Nookure.
  * **Blueprint Based:** Nebula, Recolor.
 
 ### ⚙️ Manajemen Panel & Node
@@ -53,8 +57,8 @@ Script ini telah diuji dan berjalan optimal pada sistem operasi berikut:
 
 | Operating System | Version | Status |
 |---|---|---|
-| Ubuntu | 20.04 | ✅ Tested |
-|  | 22.04 | ✅ Tested |
+| Ubuntu | 22.04 | ✅ Tested |
+|  | 24.04 | ✅ Tested |
 | Debian | 10 | ✅ Tested |
 |  | 11 | ✅ Tested |
 |  | 12 | ✅ Tested |
