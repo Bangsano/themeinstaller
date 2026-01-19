@@ -389,7 +389,7 @@ install_timpa() {
   fi
   
   cd /var/www/pterodactyl
-  php artisan down || true
+  php artisan down > /dev/null 2>&1 || true
   
   if [ -f ".env" ]; then 
     cp .env /tmp/.env.backup
@@ -408,9 +408,16 @@ install_timpa() {
   sudo chmod -R 755 storage/* bootstrap/cache/
   sudo chown -R www-data:www-data /var/www/pterodactyl
 
+  if [[ "$TARGET_NAME" == *"Pelican"* ]]; then
+      print_info "Menginstall dependensi PHP tambahan untuk Pelican..."
+      PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+      sudo apt-get update -y > /dev/null 2>&1
+      sudo apt-get install -y php${PHP_VER}-intl php${PHP_VER}-sqlite3 php${PHP_VER}-pdo-sqlite > /dev/null 2>&1
+  fi
+
   print_info "[4/4] Menginstal dependensi & Membangun aset..."
-  if ! command -v composer; then
-      curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
+  if ! command -v composer &> /dev/null; then
+      curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer > /dev/null 2>&1
   fi
 
   sudo rm -rf /var/www/.cache
@@ -420,7 +427,7 @@ install_timpa() {
   sudo -u www-data php artisan migrate --seed --force
   sudo -u www-data php artisan view:clear
   sudo -u www-data php artisan config:clear
-  sudo -u www-data php artisan up
+  sudo -u www-data php artisan up > /dev/null 2>&1
 
   print_success "Tema '$TARGET_NAME' berhasil diinstall."
   echo " "
