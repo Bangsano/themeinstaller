@@ -175,18 +175,13 @@ install_theme() {
     echo -e " ${BRIGHT_WHITE}${BOLD}[6]${NC} ${WHITE}Nightcore (Original Style)${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[7]${NC} ${WHITE}IceMinecraft (Original Style)${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[8]${NC} ${WHITE}Noobe (Original Style)${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[9]${NC} ${WHITE}Nookure${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[10]${NC} ${WHITE}Reviactyl${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[9]${NC} ${WHITE}Reviactyl${NC}"
     echo " "
     echo -e "${BRIGHT_MAGENTA}${BOLD}--- BLUEPRINT THEME ---${NC}"
     echo -e "${BG_RED}${BRIGHT_WHITE} (!) WAJIB INSTALL BLUEPRINT DULU (OPSI #2 DI MENU UTAMA) ${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[11]${NC} ${WHITE}Nebula${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[12]${NC} ${WHITE}Recolor${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[13]${NC} ${WHITE}NavySeals${NC}"
-    echo " "
-    echo -e "${BRIGHT_RED}${BOLD}--- FULL REPLACEMENT (PROSES TES) ---${NC}"
-    echo -e " ${RED}${BOLD}[r]${NC} ${WHITE}Reviactyl${NC}"
-    echo -e " ${RED}${BOLD}[p]${NC} ${WHITE}Pelican${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[10]${NC} ${WHITE}Nebula${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[11]${NC} ${WHITE}Recolor (Original Style)${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[12]${NC} ${WHITE}NavySeals${NC}"
     echo " "
     echo -e " ${BRIGHT_WHITE}${BOLD}[x]${NC} ${WHITE}Kembali ke Menu Utama${NC}"
     echo " "
@@ -201,13 +196,10 @@ install_theme() {
       6) THEME_NAME="Nightcore"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nightcore.zip"; break;;
       7) THEME_NAME="IceMinecraft"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/ice.zip"; break;;
       8) THEME_NAME="Noobe"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/noobe.zip"; break;;
-      9) THEME_NAME="Nookure"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nookure.zip"; break;;
-      10) THEME_NAME="Reviactyl"; THEME_URL="https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz"; break;;
-      11) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
-      12) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
-      13) THEME_NAME="NavySeals"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/navyseals.zip"; break;;
-      r|R) install_timpa "https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz" "Reviactyl"; return;;
-      p|P) install_timpa "https://github.com/pelican-dev/panel/releases/latest/download/panel.tar.gz" "Pelican"; return;;
+      9) install_timpa "https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz" "Reviactyl"; return;;
+      10) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
+      11) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
+      12) THEME_NAME="NavySeals"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/navyseals.zip"; break;;
       x|X) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
       *) print_error "Pilihan tidak valid, silahkan coba lagi.";;
     esac
@@ -247,7 +239,7 @@ install_theme() {
   
   rm -f "$THEME_ZIP_FILE"
 
-  if [ "$SELECT_THEME" -ge 11 ] && [ "$SELECT_THEME" -le 13 ]; then
+  if [ "$SELECT_THEME" -ge 10 ] && [ "$SELECT_THEME" -le 12 ]; then
     # --- JALUR BLUEPRINT ---
     print_info "[3/4] Menyiapkan Blueprint..."
     if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "Blueprint belum terinstall."; return 1; fi
@@ -271,12 +263,7 @@ install_theme() {
     fi
 
     print_info "[3/4] Menyalin file..."
-    if [ "$SELECT_THEME" -eq 10 ]; then
-        sudo cp -rf * /var/www/pterodactyl/
-    else
-        sudo cp -rfT pterodactyl /var/www/pterodactyl
-    fi
-
+    sudo cp -rfT pterodactyl /var/www/pterodactyl
     cd /var/www/pterodactyl
 
     print_info "Memeriksa versi Node.js..."
@@ -315,32 +302,11 @@ install_theme() {
       php artisan billing:install stable
     fi
 
-    RAM_SIZE=$(free -m | awk '/Mem:/ {print $2}')
-    SWAP_SIZE=$(free -m | awk '/Swap:/ {print $2}')
-    TOTAL_MEM=$((RAM_SIZE + SWAP_SIZE))
-
-    if [ "$SELECT_THEME" -eq 10 ]; then
-      print_info "Memeriksa kebutuhan memori untuk proses build Reviactyl..."
-      if [ "$TOTAL_MEM" -lt 2000 ]; then
-        print_warning "Total Memori (RAM $RAM_SIZE + Swap $SWAP_SIZE = $TOTAL_MEM MB) di bawah 2GB."
-        print_warning "Menambahkan Swap 1.5GB agar proses build aman..."
-        sudo fallocate -l 1536M /swapfile_extra
-        sudo chmod 600 /swapfile_extra
-        sudo mkswap /swapfile_extra
-        sudo swapon /swapfile_extra
-        echo '/swapfile_extra none swap sw 0 0' | sudo tee -a /etc/fstab
-        print_success "Swap Ekstra 1.5GB berhasil ditambahkan."
-        print_warning "Karena menggunakan swap, proses build mungkin akan lebih lama."
-      else
-        print_info "Total Memori aman ($TOTAL_MEM MB). Melewati pembuatan Swap."
-      fi
-    fi
-
     print_info "[4/4] Membangun aset panel..."
     print_warning "Proses build sedang berjalan. Mohon bersabar dan JANGAN tutup terminal sampai proses selesai!"
     if [ "$RAM_SIZE" -lt 4000 ]; then print_warning "Di RAM kecil mungkin proses buildnya akan memakan waktu sedikit lebih lama."; fi
 
-    export NODE_OPTIONS="--max-old-space-size=2048 --openssl-legacy-provider"
+    export NODE_OPTIONS=--openssl-legacy-provider
     php artisan migrate --force
     yarn build:production
     php artisan view:clear
@@ -389,7 +355,7 @@ install_timpa() {
   fi
   
   cd /var/www/pterodactyl
-  php artisan down > /dev/null 2>&1 || true
+  php artisan down || true
   
   if [ -f ".env" ]; then 
     cp .env /tmp/.env.backup
@@ -408,16 +374,9 @@ install_timpa() {
   sudo chmod -R 755 storage/* bootstrap/cache/
   sudo chown -R www-data:www-data /var/www/pterodactyl
 
-  if [[ "$TARGET_NAME" == *"Pelican"* ]]; then
-      print_info "Menginstall dependensi PHP tambahan untuk Pelican..."
-      PHP_VER=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
-      sudo apt-get update -y > /dev/null 2>&1
-      sudo apt-get install -y php${PHP_VER}-intl php${PHP_VER}-sqlite3 php${PHP_VER}-pdo-sqlite > /dev/null 2>&1
-  fi
-
   print_info "[4/4] Menginstal dependensi & Membangun aset..."
-  if ! command -v composer &> /dev/null; then
-      curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer > /dev/null 2>&1
+  if ! command -v composer; then
+      curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
   fi
 
   sudo rm -rf /var/www/.cache
@@ -427,7 +386,7 @@ install_timpa() {
   sudo -u www-data php artisan migrate --seed --force
   sudo -u www-data php artisan view:clear
   sudo -u www-data php artisan config:clear
-  sudo -u www-data php artisan up > /dev/null 2>&1
+  sudo -u www-data php artisan up
 
   print_success "Tema '$TARGET_NAME' berhasil diinstall."
   echo " "
