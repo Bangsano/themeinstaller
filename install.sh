@@ -390,9 +390,9 @@ install_timpa() {
 
   print_success "Tema '$TARGET_NAME' berhasil diinstall."
   echo " "
-  print_success "==============================================="
-  print_success "         INSTALASI BERHASIL SELESAI            "
-  print_success "==============================================="
+  log_success "==============================================="
+  log_success "         INSTALASI BERHASIL SELESAI            "
+  log_success "==============================================="
   echo " "
   sleep 3
 }
