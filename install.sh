@@ -1,5 +1,7 @@
 #!/bin/bash
-
+#
+# Apa? Mau nyolong?? 😹😹
+#
 # ============================================================
 # SKRIP INI DIBUAT OLEH SANO OFFICIAL
 # TELEGRAM: @batuofc
