@@ -206,8 +206,8 @@ install_theme() {
       11) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
       12) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
       13) THEME_NAME="NavySeals"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/navyseals.zip"; break;;
-      r|R) install_full_override "https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz" "Reviactyl" ;;
-      p|P) install_full_override "https://github.com/pelican-dev/panel/releases/latest/download/panel.tar.gz" "Pelican" ;;
+      r|R) install_timpa "https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz" "Reviactyl"; return;;
+      p|P) install_timpa "https://github.com/pelican-dev/panel/releases/latest/download/panel.tar.gz" "Pelican"; return;;
       x|X) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
       *) print_error "Pilihan tidak valid, silahkan coba lagi.";;
     esac
@@ -359,7 +359,7 @@ install_theme() {
 }
 
 # Override panel
-install_full_override() {
+install_timpa() {
   local TARGET_URL=$1
   local TARGET_NAME=$2
 
@@ -389,7 +389,7 @@ install_full_override() {
   fi
   
   cd /var/www/pterodactyl
-  php artisan down > /dev/null 2>&1 || true
+  php artisan down || true
   
   if [ -f ".env" ]; then 
     cp .env /tmp/.env.backup
@@ -409,18 +409,18 @@ install_full_override() {
   sudo chown -R www-data:www-data /var/www/pterodactyl
 
   print_info "[4/4] Menginstal dependensi & Membangun aset..."
-  if ! command -v composer &> /dev/null; then
-      curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer > /dev/null 2>&1
+  if ! command -v composer; then
+      curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
   fi
 
   sudo rm -rf /var/www/.cache
   sudo mkdir -p /var/www/.cache
   sudo chown -R www-data:www-data /var/www/.cache
-  sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist > /dev/null 2>&1
+  sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
   sudo -u www-data php artisan migrate --seed --force
   sudo -u www-data php artisan view:clear
   sudo -u www-data php artisan config:clear
-  sudo -u www-data php artisan up > /dev/null 2>&1
+  sudo -u www-data php artisan up
 
   print_success "Tema '$TARGET_NAME' berhasil diinstall."
   echo " "
@@ -429,7 +429,6 @@ install_full_override() {
   print_success "==============================================="
   echo " "
   sleep 3
-  return 0
 }
 
 # Uninstall theme
