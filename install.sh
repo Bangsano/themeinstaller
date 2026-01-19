@@ -183,6 +183,10 @@ install_theme() {
     echo -e " ${BRIGHT_WHITE}${BOLD}[11]${NC} ${WHITE}Nebula${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[12]${NC} ${WHITE}Recolor${NC}"
     echo " "
+    echo -e "${BRIGHT_RED}${BOLD}--- FULL REPLACEMENT (PROSES TES) ---${NC}"
+    echo -e " ${RED}${BOLD}[r]${NC} ${WHITE}Reviactyl${NC}"
+    echo -e " ${RED}${BOLD}[p]${NC} ${WHITE}Pelican${NC}"
+    echo " "
     echo -e " ${BRIGHT_WHITE}${BOLD}[x]${NC} ${WHITE}Kembali ke Menu Utama${NC}"
     echo " "
     echo -n -e "${BOLD}Masukkan pilihan (1-12 atau x)${NC}${BOLD}: ${NC}"
@@ -200,6 +204,8 @@ install_theme() {
       10) THEME_NAME="Reviactyl"; THEME_URL="https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz"; break;;
       11) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
       12) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
+      r|R) install_full_override "https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz" "Reviactyl" ;;
+      p|P) install_full_override "https://github.com/pelican-dev/panel/releases/latest/download/panel.tar.gz" "Pelican" ;;
       x|X) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
       *) print_error "Pilihan tidak valid, silahkan coba lagi.";;
     esac
@@ -350,6 +356,80 @@ install_theme() {
   return 0
 }
 
+# Override panel
+install_full_override() {
+  local TARGET_URL=$1
+  local TARGET_NAME=$2
+
+  echo " "
+  echo -n -e "${BOLD}Anda memilih tema '$TARGET_NAME'. Lanjutkan? (y/n): ${NC}"
+  read confirmation
+  if [[ "$confirmation" != [yY] ]]; then echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return; fi
+
+  set -e
+  export DEBIAN_FRONTEND=noninteractive
+  export NEEDRESTART_MODE=a
+  
+  TEMP_DIR=$(mktemp -d)
+  trap 'rm -rf -- "$TEMP_DIR"' EXIT
+  
+  print_info "Memulai instalasi tema $TARGET_NAME..."
+
+  print_info "[1/4] Mengunduh file panel..."
+  cd "$TEMP_DIR"
+  wget -q -O panel.tar.gz "$TARGET_URL"
+  
+  print_info "[2/4] Mempersiapkan direktori & Backup Config..."
+  
+  if [ ! -d "/var/www/pterodactyl" ]; then
+    print_error "Direktori Pterodactyl tidak ditemukan."
+    return 1
+  fi
+  
+  cd /var/www/pterodactyl
+  php artisan down > /dev/null 2>&1 || true
+  
+  if [ -f ".env" ]; then 
+    cp .env /tmp/.env.backup
+  fi
+
+  sudo find . -mindepth 1 -delete
+  sudo rm -f /usr/local/bin/blueprint
+
+  print_info "[3/4] Mengekstrak file & Mengembalikan konfigurasi..."
+  tar -xzf "$TEMP_DIR/panel.tar.gz" -C /var/www/pterodactyl/
+  
+  if [ -f "/tmp/.env.backup" ]; then 
+    mv /tmp/.env.backup .env
+  fi
+  
+  sudo chmod -R 755 storage/* bootstrap/cache/
+  sudo chown -R www-data:www-data /var/www/pterodactyl
+
+  print_info "[4/4] Menginstal dependensi & Membangun aset..."
+  if ! command -v composer &> /dev/null; then
+      curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer > /dev/null 2>&1
+  fi
+
+  sudo rm -rf /var/www/.cache
+  sudo mkdir -p /var/www/.cache
+  sudo chown -R www-data:www-data /var/www/.cache
+  sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist > /dev/null 2>&1
+  sudo -u www-data php artisan migrate --seed --force
+  sudo -u www-data php artisan view:clear
+  sudo -u www-data php artisan config:clear
+  sudo -u www-data php artisan up > /dev/null 2>&1
+
+  print_success "Tema '$TARGET_NAME' berhasil diinstall."
+  echo " "
+  print_success "==============================================="
+  print_success "         INSTALASI BERHASIL SELESAI            "
+  print_success "==============================================="
+  echo " "
+  sleep 3
+  return 0
+}
+
 # Uninstall theme
 uninstall_theme() {
   echo " "
@@ -369,7 +449,7 @@ uninstall_theme() {
       [Yy]*)
         set -e
         if [ ! -d "/var/www/pterodactyl" ]; then
-          print_error "Direktori instalasi Pterodactyl tidak ditemukan."
+          print_error "Direktori Pterodactyl tidak ditemukan."
           return 1
         fi
         cd /var/www/pterodactyl || { print_error "Gagal masuk ke direktori Pterodactyl."; return 1; }
