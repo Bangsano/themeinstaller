@@ -182,6 +182,7 @@ install_theme() {
     echo -e "${BG_RED}${BRIGHT_WHITE} (!) WAJIB INSTALL BLUEPRINT DULU (OPSI #2 DI MENU UTAMA) ${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[11]${NC} ${WHITE}Nebula${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[12]${NC} ${WHITE}Recolor${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[13]${NC} ${WHITE}NavySeals${NC}"
     echo " "
     echo -e "${BRIGHT_RED}${BOLD}--- FULL REPLACEMENT (PROSES TES) ---${NC}"
     echo -e " ${RED}${BOLD}[r]${NC} ${WHITE}Reviactyl${NC}"
@@ -204,6 +205,7 @@ install_theme() {
       10) THEME_NAME="Reviactyl"; THEME_URL="https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz"; break;;
       11) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
       12) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
+      13) THEME_NAME="NavySeals"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/navyseals.zip"; break;;
       r|R) install_full_override "https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz" "Reviactyl" ;;
       p|P) install_full_override "https://github.com/pelican-dev/panel/releases/latest/download/panel.tar.gz" "Pelican" ;;
       x|X) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
@@ -245,7 +247,7 @@ install_theme() {
   
   rm -f "$THEME_ZIP_FILE"
 
-  if [ "$SELECT_THEME" -eq 11 ] || [ "$SELECT_THEME" -eq 12 ]; then
+  if [ "$SELECT_THEME" -ge 11 ] && [ "$SELECT_THEME" -le 13 ]; then
     # --- JALUR BLUEPRINT ---
     print_info "[3/4] Menyiapkan Blueprint..."
     if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "Blueprint belum terinstall."; return 1; fi
