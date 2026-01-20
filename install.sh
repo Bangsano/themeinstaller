@@ -1,7 +1,14 @@
 #!/bin/bash
-#
 # Apa? Mau nyolong?? 😹😹
-#
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
 # ============================================================
 # SKRIP INI DIBUAT OLEH SANO OFFICIAL
 # TELEGRAM: @batuofc
@@ -405,9 +412,6 @@ uninstall_theme() {
   log_info "[+] =============================================== [+]"
   log_info "[+]       RESET PANEL (UNINSTALL THEME/TOOLS)       [+]"
   log_info "[+] =============================================== [+]"
-  echo " "
-  echo -e "${BOLD}${YELLOW}PERINGATAN:${NC} ${BOLD}Proses ini akan MENGHAPUS TOTAL semua file panel,${NC}"
-  echo -e "${BOLD}sehingga semua tema kustom atau tools lainnya akan terhapus.${NC}"
   echo " "
 
   while true; do
