@@ -443,7 +443,7 @@ uninstall_theme() {
         if [ -f "$TEMP_BACKUP/.env" ]; then sudo mv "$TEMP_BACKUP"/.env .; fi
         rm -rf "$TEMP_BACKUP"
 
-        echo -e "${BOLD}   - Install ulang dependensi (Composer) & menjalankan migrasi...${NC}"
+        echo -e "${BOLD}   - Install ulang dependensi (Composer)...${NC}"
         sudo chmod -R 755 storage/* bootstrap/cache/
         sudo chown -R www-data:www-data /var/www/pterodactyl
         curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
@@ -451,6 +451,8 @@ uninstall_theme() {
         sudo mkdir -p /var/www/.cache
         sudo chown -R www-data:www-data /var/www/.cache
         sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist > /dev/null 2>&1
+
+        echo -e "${BOLD}   - Menjalankan migrasi...${NC}"
         sudo -u www-data php artisan migrate --seed --force
 
         echo -e "${BOLD}   - Membersihkan cache sistem...${NC}"
