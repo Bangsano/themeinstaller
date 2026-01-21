@@ -443,26 +443,30 @@ uninstall_theme() {
         if [ -f "$TEMP_BACKUP/.env" ]; then sudo mv "$TEMP_BACKUP"/.env .; fi
         rm -rf "$TEMP_BACKUP"
 
-        echo -e "${BOLD}   - Mengatur kepemilikan file ke 'www-data'...${NC}"
+        echo -e "${BOLD}   - Install ulang dependensi (Composer) & menjalankan migrasi...${NC}"
+        sudo chmod -R 755 storage/* bootstrap/cache/
         sudo chown -R www-data:www-data /var/www/pterodactyl
-
-        echo -e "${BOLD}   - Mengupdate Composer...${NC}"
         curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
-        
-        echo -e "${BOLD}   - Membersihkan cache permission...${NC}"
         sudo rm -rf /var/www/.cache
         sudo mkdir -p /var/www/.cache
         sudo chown -R www-data:www-data /var/www/.cache
-
-        echo -e "${BOLD}   - Menginstal dependensi & menjalankan migrasi...${NC}"
-        sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+        sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist > /dev/null 2>&1
         sudo -u www-data php artisan migrate --seed --force
+
+        echo -e "${BOLD}   - Membersihkan cache sistem...${NC}"
+        sudo -u www-data php artisan optimize:clear
         sudo -u www-data php artisan view:clear
         sudo -u www-data php artisan config:clear
-        
-        echo -e "${BOLD}   - Membersihkan shortcut Blueprint (jika ada)...${NC}"
+        sudo -u www-data php artisan route:clear
+        sudo -u www-data php artisan cache:clear
         sudo rm -f /usr/local/bin/blueprint
-        
+
+        echo -e "${BOLD}   - Restart layanan webserver & worker...${NC}"
+        sudo systemctl restart nginx > /dev/null 2>&1 || sudo systemctl restart apache2 > /dev/null 2>&1
+        sudo systemctl restart "php*-fpm" > /dev/null 2>&1 || true
+        sudo systemctl restart pteroq
+        sudo -u www-data php artisan up
+
         break
         ;;
       [Nn]*)
