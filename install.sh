@@ -313,6 +313,7 @@ install_theme() {
 
     print_info "[4/4] Membangun aset panel..."
     print_warning "Proses build sedang berjalan. Mohon bersabar dan JANGAN tutup terminal sampai proses selesai!"
+    RAM_SIZE=$(free -m | awk '/Mem:/ {print $2}')
     if [ "$RAM_SIZE" -lt 4000 ]; then print_warning "Di RAM kecil mungkin proses buildnya akan memakan waktu sedikit lebih lama."; fi
 
     export NODE_OPTIONS=--openssl-legacy-provider
