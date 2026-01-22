@@ -124,8 +124,16 @@ install_jq() {
   
   export DEBIAN_FRONTEND=noninteractive
   export NEEDRESTART_MODE=a
-  (sudo apt update && sudo apt install -y jq)
-  
+
+  if [ -f /etc/needrestart/needrestart.conf ]; then
+    print_info "Mengonfigurasi needrestart ke mode otomatis..."
+    sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+  fi
+
+  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update
+  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y jq
+
   if [ $? -eq 0 ]; then
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
@@ -235,6 +243,12 @@ install_theme() {
     echo -n -e "${BOLD}Masukkan link grup whatsapp (diawali https://): ${NC}"; read LINK_GROUP
   fi
 
+  if [ -f /etc/needrestart/needrestart.conf ]; then
+    print_info "Mengonfigurasi needrestart ke mode otomatis..."
+    sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+  fi
+
   print_info "[1/4] Mengunduh file tema..."
   wget -q "$THEME_URL"
   local THEME_ZIP_FILE=$(basename "$THEME_URL")
@@ -295,8 +309,8 @@ install_theme() {
       sudo mkdir -p /etc/apt/keyrings
       curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
       echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-      sudo apt-get update
-      sudo apt-get install -y nodejs
+      sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update
+      sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y nodejs
     fi
 
     hash -r
@@ -352,6 +366,12 @@ install_timpa() {
   trap 'rm -rf -- "$TEMP_DIR"' EXIT
   
   print_info "Memulai instalasi tema $TARGET_NAME..."
+
+  if [ -f /etc/needrestart/needrestart.conf ]; then
+    print_info "Mengonfigurasi needrestart ke mode otomatis..."
+    sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+  fi
 
   print_info "[1/4] Mengunduh file panel..."
   cd "$TEMP_DIR"
@@ -688,8 +708,8 @@ install_blueprint() {
   fi
 
   print_info "Menginstal dependensi dasar..."
-  sudo DEBIAN_FRONTEND=noninteractive apt-get update
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg zip unzip git wget
+  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update
+  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y ca-certificates curl gnupg zip unzip git wget
 
   if [ -f /etc/needrestart/needrestart.conf ]; then
     print_info "Mengonfigurasi needrestart ke mode otomatis..."
@@ -727,8 +747,8 @@ install_blueprint() {
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-    sudo apt-get update
-    sudo apt-get install -y nodejs
+    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update
+    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y nodejs
   fi
 
   hash -r
@@ -774,7 +794,13 @@ install_auto_suspend() {
     echo -e "${BOLD}Instalasi dibatalkan.${NC}"
     return
   fi
-  
+
+  if [ -f /etc/needrestart/needrestart.conf ]; then
+    print_info "Mengonfigurasi needrestart ke mode otomatis..."
+    sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+  fi
+
   print_info "Memeriksa versi Node.js..."
   CURRENT_NODE_VER=$(node -v 2>/dev/null | cut -d'.' -f1 | sed 's/v//')
   
@@ -795,8 +821,8 @@ install_auto_suspend() {
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-    sudo apt-get update
-    sudo apt-get install -y nodejs
+    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update
+    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y nodejs
   fi
   
   hash -r
