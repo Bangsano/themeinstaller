@@ -115,7 +115,6 @@ display_welcome() {
 
 #Update and install jq
 install_jq() {
-  clear
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${BLUE}[+]             UPDATE & INSTALL JQ                 [+]${NC}"
