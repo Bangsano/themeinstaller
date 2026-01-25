@@ -154,7 +154,7 @@ install_jq() {
 check_token() {
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+]              SANO OFFICIAL LICENSE            [+]${NC}"
+  echo -e "${BOLD}${BLUE}[+]              SANO OFFICIAL LICENSE              [+]${NC}"
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   echo -e "${BOLD}${YELLOW}MASUKKAN AKSES TOKEN: ${NC}"
@@ -178,9 +178,9 @@ install_theme() {
   while true; do
     clear
     echo " "
-    echo -e "${BLUE}${BOLD}[+] ================================================== [+]${NC}"
-    echo -e "${BLUE}${BOLD}[+]${NC} ${BG_BLUE}${BRIGHT_WHITE}${BOLD}                   SELECT THEME                   ${NC} ${BLUE}${BOLD}[+]${NC}"
-    echo -e "${BLUE}${BOLD}[+] ================================================== [+]${NC}"
+    echo -e "${BLUE}${BOLD}[+] =============================================== [+]${NC}"
+    echo -e "${BLUE}${BOLD}[+]${NC} ${BG_BLUE}${BRIGHT_WHITE}${BOLD}                 SELECT THEME                  ${NC} ${BLUE}${BOLD}[+]${NC}"
+    echo -e "${BLUE}${BOLD}[+] =============================================== [+]${NC}"
     echo " "
     echo -e "${BRIGHT_CYAN}${BOLD}--- STANDARD THEME ---${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[1]${NC} ${WHITE}Stellar${NC}"
@@ -339,9 +339,9 @@ install_theme() {
   fi
 
   echo " "
-  log_success "==============================================="
-  log_success "         INSTALASI BERHASIL SELESAI            "
-  log_success "==============================================="
+  log_success "[+] =============================================== [+]"
+  log_success "[+]          INSTALASI BERHASIL SELESAI             [+]"
+  log_success "[+] =============================================== [+]"
   echo " "
   sleep 3
   return 0
@@ -419,9 +419,9 @@ install_timpa() {
 
   print_success "Tema '$TARGET_NAME' berhasil diinstall."
   echo " "
-  log_success "==============================================="
-  log_success "         INSTALASI BERHASIL SELESAI            "
-  log_success "==============================================="
+  log_success "[+] =============================================== [+]"
+  log_success "[+]          INSTALASI BERHASIL SELESAI             [+]"
+  log_success "[+] =============================================== [+]"
   echo " "
   sleep 3
 }
@@ -515,7 +515,7 @@ create_node() {
   set -e
   echo " "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+]             MEMULAI CREATE NODE SCRIPT            [+]${NC}"
+  echo -e "${BOLD}${BLUE}[+]            MEMULAI CREATE NODE SCRIPT           [+]${NC}"
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo " "
 
@@ -528,7 +528,7 @@ create_node() {
 
   echo " "
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]          CREATE NODE & LOCATION SUCCESS          [+]${NC}"
+  echo -e "${BOLD}${GREEN}[+]         CREATE NODE & LOCATION SUCCESS          [+]${NC}"
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo " "
   sleep 3
@@ -539,7 +539,7 @@ uninstall_panel() {
   set -e
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+]                    UNINSTALL PANEL                 [+]${NC}"
+  echo -e "${BOLD}${BLUE}[+]                  UNINSTALL PANEL                [+]${NC}"
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
 
@@ -558,7 +558,7 @@ EOF
 
   echo -e "                                                       "
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]               UNINSTALL PANEL SUKSES               [+]${NC}"
+  echo -e "${BOLD}${GREEN}[+]             UNINSTALL PANEL SUKSES              [+]${NC}"
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   sleep 3
@@ -568,7 +568,7 @@ EOF
 configure_wings() {
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+]                    CONFIGURE WINGS                    [+]${NC}"
+  echo -e "${BOLD}${BLUE}[+]                 CONFIGURE WINGS                 [+]${NC}"
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   read -p "Masukkan token Configure menjalankan wings: " wings
@@ -576,7 +576,7 @@ configure_wings() {
   sudo systemctl start wings
   echo -e "                                                       "
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]               CONFIGURE WINGS SUKSES               [+]${NC}"
+  echo -e "${BOLD}${GREEN}[+]             CONFIGURE WINGS SUKSES              [+]${NC}"
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   sleep 3
@@ -586,7 +586,7 @@ configure_wings() {
 hackback_panel() {
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+]                    HACK BACK PANEL                 [+]${NC}"
+  echo -e "${BOLD}${BLUE}[+]                  HACK BACK PANEL                [+]${NC}"
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
   read -p "Masukkan Username Panel Baru: " user
@@ -629,7 +629,7 @@ hackback_panel() {
 
   echo -e "                                                       "
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]                 AKUN TELAH DITAMBAHKAN            [+]${NC}"
+  echo -e "${BOLD}${GREEN}[+]               AKUN TELAH DITAMBAHKAN            [+]${NC}"
   echo -e "${BOLD}${GREEN}[+] ----------------------------------------------- [+]${NC}"
   echo -e "${BOLD}${GREEN}[+] Username: $user${NC}"
   echo -e "${BOLD}${GREEN}[+] Password: (Password yang Anda masukkan tadi)${NC}"
@@ -643,7 +643,7 @@ hackback_panel() {
 ubahpw_vps() {
   echo -e "                                                       "
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]                  UBAH PASSWORD VPS                    [+]${NC}"
+  echo -e "${BOLD}${GREEN}[+]                UBAH PASSWORD VPS                [+]${NC}"
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "                                                       "
 
@@ -670,7 +670,7 @@ EOF
   if [ $? -eq 0 ]; then
     echo -e "                                                       "
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-    echo -e "${BOLD}${GREEN}[+]              GANTI PASSWORD VPS SUKSES              [+]${NC}"
+    echo -e "${BOLD}${GREEN}[+]            GANTI PASSWORD VPS SUKSES            [+]${NC}"
     echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
     echo -e "                                                       "
     sleep 3
@@ -921,7 +921,7 @@ install_auto_suspend() {
   
   echo " "
   log_success "[+] =============================================== [+]"
-  log_success "[+]        FITUR AUTO SUSPEND BERHASIL DIINSTALL      [+]"
+  log_success "[+]      FITUR AUTO SUSPEND BERHASIL DIINSTALL      [+]"
   log_success "[+] =============================================== [+]"
   echo " "
   sleep 3
