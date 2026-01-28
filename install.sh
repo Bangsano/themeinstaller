@@ -95,8 +95,7 @@ log_error() {
   echo -e "${BOLD}${RED}$1${NC}"
 }
 
-# Display welcome message
-display_welcome() {
+start_script() {
   clear
   echo -e ""
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
@@ -110,17 +109,10 @@ display_welcome() {
   echo -e "Mengalami eror? Lapor ke admin agar diperbaiki."
   echo -e ""
   echo -e "𝗧𝗘𝗟𝗘𝗚𝗥𝗔𝗠: @batuofc"
-  sleep 4
-}
+  sleep 2
 
-#Update and install jq
-install_jq() {
-  echo -e "                                                       "
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+]             UPDATE & INSTALL JQ                 [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
-  
+  print_info "Menginstall dan mengupdate jq..."
+
   export DEBIAN_FRONTEND=noninteractive
   export NEEDRESTART_MODE=a
 
@@ -134,15 +126,9 @@ install_jq() {
   sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y jq
 
   if [ $? -eq 0 ]; then
-    echo -e "                                                       "
-    echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-    echo -e "${BOLD}${GREEN}[+]              INSTALL JQ BERHASIL                [+]${NC}"
-    echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
+    print_success "Install jq berhasil."
   else
-    echo -e "                                                       "
-    echo -e "${BOLD}${RED}[+] =============================================== [+]${NC}"
-    echo -e "${BOLD}${RED}[+]              INSTALL JQ GAGAL                   [+]${NC}"
-    echo -e "${BOLD}${RED}[+] =============================================== [+]${NC}"
+    print_error "Install jq gagal."
     exit 1
   fi
   echo -e "                                                       "
@@ -150,7 +136,6 @@ install_jq() {
   clear
 }
 
-#Check user token
 check_token() {
   echo -e "                                                       "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
@@ -169,7 +154,6 @@ check_token() {
   clear
 }
 
-# Install theme
 install_theme() {
   local SELECT_THEME
   local THEME_NAME
@@ -347,7 +331,6 @@ install_theme() {
   return 0
 }
 
-# Override panel
 install_timpa() {
   local TARGET_URL=$1
   local TARGET_NAME=$2
@@ -426,7 +409,6 @@ install_timpa() {
   sleep 3
 }
 
-# Uninstall theme
 uninstall_theme() {
   echo " "
   log_info "[+] =============================================== [+]"
@@ -510,7 +492,99 @@ uninstall_theme() {
   return 0
 }
 
-# Create Node
+uninstall_panel() {
+  echo " "
+  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
+  echo -e "${BOLD}${BLUE}[+]                  UNINSTALL PANEL                [+]${NC}"
+  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
+  echo " "
+  echo -n -e "${BOLD}Apakah Anda yakin ingin melanjutkan? (y/n): ${NC}"
+  read confirmation
+  if [[ "$confirmation" != [yY] ]]; then echo -e "${BOLD}Uninstall dibatalkan.${NC}"; return; fi
+
+  print_info "Memulai proses uninstall..."
+
+  if [ -f "/var/www/pterodactyl/.env" ]; then
+      print_info "Mencoba menghapus database panel..."
+      DB_NAME=$(grep "^DB_DATABASE=" /var/www/pterodactyl/.env | cut -d'=' -f2)
+      DB_USER=$(grep "^DB_USERNAME=" /var/www/pterodactyl/.env | cut -d'=' -f2)
+      DB_PASS=$(grep "^DB_PASSWORD=" /var/www/pterodactyl/.env | cut -d'=' -f2)
+      mysql -u root -e "DROP DATABASE IF EXISTS $DB_NAME; DROP USER IF EXISTS '$DB_USER'@'127.0.0.1';" > /dev/null 2>&1 || true
+      print_success "Database cleaning selesai."
+  else
+      print_warning "File .env tidak ditemukan, melewati penghapusan database otomatis."
+  fi
+
+  print_info "Menghentikan layanan pterodactyl..."
+  systemctl disable --now wings pteroq > /dev/null 2>&1 || true
+  systemctl disable --now redis-server > /dev/null 2>&1 || true
+  systemctl disable --now redis > /dev/null 2>&1 || true
+  systemctl disable --now "php*-fpm" > /dev/null 2>&1 || true
+  systemctl stop nginx apache2 > /dev/null 2>&1 || true
+
+  print_info "Membersihkan Cronjob..."
+  (crontab -l 2>/dev/null | grep -v "pterodactyl" | crontab -) || true
+
+  print_info "Menghapus file sistem Pterodactyl..."
+  rm -rf /var/www/pterodactyl
+  rm -rf /etc/pterodactyl
+  rm -rf /var/lib/pterodactyl
+  rm -f /usr/local/bin/wings
+  rm -f /usr/local/bin/composer
+  rm -f /usr/local/bin/blueprint
+
+  print_info "Menghapus konfigurasi service..."
+  rm -f /etc/systemd/system/wings.service
+  rm -f /etc/systemd/system/pteroq.service
+  systemctl daemon-reload
+
+  print_info "Menghapus konfigurasi webserver..."
+  rm -f /etc/nginx/sites-enabled/pterodactyl.conf
+  rm -f /etc/nginx/sites-available/pterodactyl.conf
+  rm -f /etc/nginx/conf.d/pterodactyl.conf
+  rm -f /etc/apache2/sites-enabled/pterodactyl.conf
+  rm -f /etc/apache2/sites-available/pterodactyl.conf
+  rm -f /etc/php/*/fpm/pool.d/www-pterodactyl.conf
+  rm -f /etc/php-fpm.d/www-pterodactyl.conf
+  if [ -f /etc/nginx/sites-available/default ] && [ ! -L /etc/nginx/sites-enabled/default ]; then
+      ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default > /dev/null 2>&1 || true
+  fi
+
+  print_info "Membersihkan sisa Docker..."
+  docker rm -f $(docker ps -a -q) > /dev/null 2>&1 || true
+  docker system prune -af > /dev/null 2>&1 || true 
+
+  print_info "Merestart layanan sistem..."
+  systemctl restart nginx > /dev/null 2>&1 || true
+  systemctl restart apache2 > /dev/null 2>&1 || true
+  
+  echo -e "                                                       "
+  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
+  echo -e "${BOLD}${GREEN}[+]             UNINSTALL PANEL SUKSES              [+]${NC}"
+  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
+  echo -e "                                                       "
+  sleep 3
+  return 0
+}
+
+start_wings() {
+  echo -e "                                                       "
+  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
+  echo -e "${BOLD}${BLUE}[+]                 CONFIGURE WINGS                 [+]${NC}"
+  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
+  echo -e "                                                       "
+  read -p "Masukkan token Auto-Deploy untuk menjalankan wings: " wings
+  eval "$wings"
+  sudo systemctl start wings
+  echo -e "                                                       "
+  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
+  echo -e "${BOLD}${GREEN}[+]             CONFIGURE WINGS SUKSES              [+]${NC}"
+  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
+  echo -e "                                                       "
+  sleep 3
+  return 0
+}
+
 create_node() {
   set -e
   echo " "
@@ -531,54 +605,6 @@ create_node() {
   echo -e "${BOLD}${GREEN}[+]         CREATE NODE & LOCATION SUCCESS          [+]${NC}"
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo " "
-  sleep 3
-  return 0
-}
-
-uninstall_panel() {
-  set -e
-  echo -e "                                                       "
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+]                  UNINSTALL PANEL                [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
-
-  echo -n -e "${BOLD}Anda yakin ingin uninstall panel? (y/n): ${NC}"
-  read confirmation
-  if [[ "$confirmation" != [yY] ]]; then echo -e "${BOLD}Uninstall dibatalkan.${NC}"; return; fi
-
-bash <(curl -s https://pterodactyl-installer.se) <<EOF
-6
-y
-y
-y
-
-
-EOF
-
-  echo -e "                                                       "
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]             UNINSTALL PANEL SUKSES              [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
-  sleep 3
-  return 0
-}
-
-configure_wings() {
-  echo -e "                                                       "
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+]                 CONFIGURE WINGS                 [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
-  read -p "Masukkan token Configure menjalankan wings: " wings
-  eval "$wings"
-  sudo systemctl start wings
-  echo -e "                                                       "
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]             CONFIGURE WINGS SUKSES              [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
   sleep 3
   return 0
 }
@@ -682,7 +708,6 @@ EOF
   fi
 }
 
-# Install Dependencies Blueprint
 install_blueprint() {
   unset NVM_DIR
   unset NVM_CD_FLAGS
@@ -775,7 +800,6 @@ install_blueprint() {
   return 0
 }
 
-# install auto suspend
 install_auto_suspend() {
   set -e
   export DEBIAN_FRONTEND=noninteractive
@@ -929,8 +953,7 @@ install_auto_suspend() {
 }
 
 # Main script
-display_welcome
-install_jq
+start_script
 
 while true; do
   echo -e "\n  "
@@ -957,8 +980,8 @@ while true; do
   echo -e "${BOLD}  3. Install Fitur Auto Suspend${NC}"
   echo -e "${BOLD}  4. Reset Panel (menghapus semua modifikasi panel seperti tema kustom atau tools lainnya)${NC}"
   echo -e "${BOLD}  5. Uninstall Panel${NC}"
-  echo -e "${BOLD}  6. Configure Wings${NC}"
-  echo -e "${BOLD}  7. Create Node & Location${NC}"
+  echo -e "${BOLD}  6. Start Wings${NC}"
+  echo -e "${BOLD}  7. Create Node & Location (auto node ijo)${NC}"
   echo -e "${BOLD}  8. Hack Back Panel${NC}"
   echo -e "${BOLD}  9. Ubah Password VPS${NC}"
   echo -e "${BOLD}  x. Exit${NC}"
@@ -972,7 +995,7 @@ while true; do
     3) install_auto_suspend ;;
     4) uninstall_theme ;;
     5) uninstall_panel ;;
-    6) configure_wings ;;
+    6) start_wings ;;
     7) create_node ;;
     8) hackback_panel ;;
     9) ubahpw_vps ;;
