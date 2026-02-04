@@ -9,12 +9,222 @@
 # Apa? Mau nyolong?? 😹😹
 # Apa? Mau nyolong?? 😹😹
 # Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
 # ============================================================
 # SKRIP INI DIBUAT OLEH SANO OFFICIAL
-# TELEGRAM: @batuofc
+# TELEGRAM: @sanoofc
 # DISARANKAN GAK USAH NYOLONG!
 # LEBIH BAIK LANGSUNG PAKE AJA, KALO EROR BIAR GW (SANO) YANG BENERINNYA, LU TINGGAL LAPOR AJA KE TELEGRAM.
 # ============================================================
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
+# Apa? Mau nyolong?? 😹😹
 
 # Reset
 NC='\033[0m'
@@ -108,7 +318,7 @@ start_script() {
   echo -e "Script ini dibuat untuk mempermudah penginstalasian tema pterodactyl."
   echo -e "Mengalami eror? Lapor ke admin agar diperbaiki."
   echo -e ""
-  echo -e "𝗧𝗘𝗟𝗘𝗚𝗥𝗔𝗠: @batuofc"
+  echo -e "𝗧𝗘𝗟𝗘𝗚𝗥𝗔𝗠: @sanoofc"
   sleep 2
 
   print_info "Menginstall dan mengupdate jq..."
@@ -965,7 +1175,7 @@ while true; do
   echo -e "${BOLD}${CYAN}'ggg      ,gg'''  .    ggg${NC}     ${BOLD}${BLUE}Auto Installer Theme Pterodactyl${NC}"
   echo -e "${BOLD}${CYAN}gggg      gg     ,    ggg${NC}      ${BOLD}${BLUE}By Sano Official${NC}"
   echo -e "${BOLD}${CYAN}ggg:     gg.     -   ,ggg${NC}     ${BOLD}${GREEN}----------------------------------${NC}"
-  echo -e "${BOLD}${CYAN} ggg:     ggg._    _,ggg${NC}       ${BOLD}${BLUE}Telegram : @batuofc${NC}"
+  echo -e "${BOLD}${CYAN} ggg:     ggg._    _,ggg${NC}       ${BOLD}${BLUE}Telegram : @sanoofc${NC}"
   echo -e "${BOLD}${CYAN} ggg.    '.'''ggggggp${NC}"
   echo -e "${BOLD}${CYAN}  'ggg    '-.__${NC}"
   echo -e "${BOLD}${CYAN}    ggg${NC}"

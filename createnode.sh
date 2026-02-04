@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================
-# SKRIP INI DI-REMAKE OLEH SANO OFFICIAL (TELEGRAM: @batuofc)
+# SKRIP INI DI-REMAKE OLEH SANO OFFICIAL (TELEGRAM: @sanoofc)
 # DILARANG UNTUK MEMPERJUALBELIKAN SKRIP INI, APALAGI MEMBAGIKANNYA SECARA GRATIS!
 # GAK USAH NGEYEL! NGEYEL? MATI AJA LU, HIDUP LU GAK GUNA, KERJAANNYA CUMA MALING SC, JUAL/SHARE SC HASIL MALING
 # ============================================================

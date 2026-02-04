@@ -65,6 +65,6 @@ Script ini telah diuji dan berjalan optimal pada sistem operasi berikut:
 
 - Github Profile: [SANO OFFICIAL](https://github.com/Bangsano)
 - WhatsApp Channel: [KLIK DI SINI](https://whatsapp.com/channel/0029Vaji4SeLtOj6DEp4CO3G)
-- Telegram Chat: [HUBUNGI ATMIN](https://t.me/batuofc)
+- Telegram Chat: [HUBUNGI ATMIN](https://t.me/sanoofc)
 
 <p align="center">Made with ❤️ by Sano Official</p>
