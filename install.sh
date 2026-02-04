@@ -332,7 +332,7 @@ start_script() {
     sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
   fi
 
-  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update
+  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
   sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y jq
 
   if [ $? -eq 0 ]; then
@@ -502,7 +502,7 @@ install_theme() {
       sudo mkdir -p /etc/apt/keyrings
       curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
       echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-      sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update
+      sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
       sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y nodejs
     fi
 
@@ -942,7 +942,7 @@ install_blueprint() {
   fi
 
   print_info "Menginstal dependensi dasar..."
-  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update
+  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
   sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y ca-certificates curl gnupg zip unzip git wget
 
   if [ -f /etc/needrestart/needrestart.conf ]; then
@@ -981,7 +981,7 @@ install_blueprint() {
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update
+    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
     sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y nodejs
   fi
 
@@ -1054,7 +1054,7 @@ install_auto_suspend() {
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update
+    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
     sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y nodejs
   fi
   
