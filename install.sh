@@ -435,6 +435,9 @@ install_theme() {
   cd "$TEMP_DIR"
   
   print_info "Memulai instalasi tema $THEME_NAME..."
+
+  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
+  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y ca-certificates curl gnupg zip unzip git wget
   
   if [ "$SELECT_THEME" -eq 3 ]; then # Khusus Enigma
     echo -n -e "${BOLD}Masukkan link whatsapp (diawali https://): ${NC}"; read LINK_WA
@@ -571,10 +574,22 @@ install_timpa() {
     sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
   fi
 
-  print_info "[1/4] Mengunduh file panel..."
+  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
+  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y ca-certificates curl gnupg zip unzip git wget
+
+  print_info "[1/4] Mengunduh file panel/tema..."
   cd "$TEMP_DIR"
-  wget -q -O panel.tar.gz "$TARGET_URL"
   
+  if [[ "$TARGET_URL" == *.zip ]]; then
+      FILE_EXT="zip"
+      FILENAME="panel.zip"
+  else
+      FILE_EXT="tar.gz"
+      FILENAME="panel.tar.gz"
+  fi
+  
+  wget -q -O "$FILENAME" "$TARGET_URL"
+
   print_info "[2/4] Mempersiapkan direktori & Backup Config..."
   
   if [ ! -d "/var/www/pterodactyl" ]; then
@@ -593,8 +608,13 @@ install_timpa() {
   sudo rm -f /usr/local/bin/blueprint
 
   print_info "[3/4] Mengekstrak file & Mengembalikan konfigurasi..."
-  tar -xzf "$TEMP_DIR/panel.tar.gz" -C /var/www/pterodactyl/
   
+  if [[ "$FILE_EXT" == "zip" ]]; then
+      unzip -o "$TEMP_DIR/$FILENAME" -d /var/www/pterodactyl/
+  else
+      tar -xzf "$TEMP_DIR/$FILENAME" -C /var/www/pterodactyl/
+  fi
+
   if [ -f "/tmp/.env.backup" ]; then 
     mv /tmp/.env.backup .env
   fi
