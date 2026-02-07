@@ -393,11 +393,6 @@ install_theme() {
     echo -e " ${BRIGHT_WHITE}${BOLD}[11]${NC} ${WHITE}Recolor (Original Style)${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[12]${NC} ${WHITE}NavySeals${NC}"
     echo " "
-    echo -e "${BRIGHT_BLUE}${BOLD}--- ALTERNATIF (FALLBACK) ---${NC}"
-    echo -e "${YELLOW} Jalur ini dibuat untuk VPS dengan spesifikasi kecil.${NC}"
-    echo -e "${YELLOW} Pilih ini HANYA jika jalur instalasi utama gagal.${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[1a]${NC} ${WHITE}Stellar${NC}"
-    echo " "
     echo -e " ${BRIGHT_WHITE}${BOLD}[x]${NC} ${WHITE}Kembali ke Menu Utama${NC}"
     echo " "
     echo -n -e "${BOLD}Masukkan pilihan (1-12 atau x)${NC}${BOLD}: ${NC}"
@@ -415,7 +410,6 @@ install_theme() {
       10) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
       11) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
       12) THEME_NAME="NavySeals"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/navyseals.zip"; break;;
-      1a|1A) install_timpa "https://github.com/Bangsano/themeinstaller/raw/main/theme/alt/stellar_alt.zip" "Stellar"; return;;
       x|X) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
       *) print_error "Pilihan tidak valid, silahkan coba lagi.";;
     esac
