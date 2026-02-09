@@ -389,13 +389,13 @@ install_theme() {
     echo " "
     echo -e "${BRIGHT_MAGENTA}${BOLD}--- BLUEPRINT THEME ---${NC}"
     echo -e "${BG_RED}${BRIGHT_WHITE} (!) WAJIB INSTALL BLUEPRINT DULU (OPSI #2 DI MENU UTAMA) ${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[10]${NC} ${WHITE}Nebula${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[11]${NC} ${WHITE}Recolor (Original Style)${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[12]${NC} ${WHITE}NavySeals${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[b1]${NC} ${WHITE}Nebula${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[b2]${NC} ${WHITE}Recolor (Original Style)${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[b3]${NC} ${WHITE}NavySeals${NC}"
     echo " "
     echo -e " ${BRIGHT_WHITE}${BOLD}[x]${NC} ${WHITE}Kembali ke Menu Utama${NC}"
     echo " "
-    echo -n -e "${BOLD}Masukkan pilihan (1-12 atau x)${NC}${BOLD}: ${NC}"
+    echo -n -e "${BOLD}Masukkan pilihan (1-9/b1-3 atau x)${NC}${BOLD}: ${NC}"
     read SELECT_THEME
     case "$SELECT_THEME" in
       1) THEME_NAME="Stellar"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/stellar.zip"; break;;
@@ -407,9 +407,9 @@ install_theme() {
       7) THEME_NAME="IceMinecraft"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/ice.zip"; break;;
       8) THEME_NAME="Noobe"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/noobe.zip"; break;;
       9) install_timpa "https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz" "Reviactyl"; return;;
-      10) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
-      11) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
-      12) THEME_NAME="NavySeals"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/navyseals.zip"; break;;
+      [bB]1) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
+      [bB]2) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
+      [bB]3) THEME_NAME="NavySeals"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/navyseals.zip"; break;;
       x|X) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
       *) print_error "Pilihan tidak valid, silahkan coba lagi.";;
     esac
@@ -434,7 +434,7 @@ install_theme() {
   sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y ca-certificates curl gnupg zip unzip git wget
   
   if [ "$SELECT_THEME" -eq 3 ]; then # Khusus Enigma
-    echo -n -e "${BOLD}Masukkan link whatsapp (diawali https://): ${NC}"; read LINK_WA
+    echo -n -e "${BOLD}Masukkan link whatsapp (diawali https://): ${NC}"; read LINK_ADMIN
     echo -n -e "${BOLD}Masukkan link channel whatsapp (diawali https://): ${NC}"; read LINK_CHANNEL
     echo -n -e "${BOLD}Masukkan link grup whatsapp (diawali https://): ${NC}"; read LINK_GROUP
   fi
@@ -458,7 +458,7 @@ install_theme() {
   
   rm -f "$THEME_ZIP_FILE"
 
-  if [ "$SELECT_THEME" -ge 10 ] && [ "$SELECT_THEME" -le 12 ]; then
+  if [[ "$SELECT_THEME" == [bB]* ]]; then
     # --- JALUR BLUEPRINT ---
     print_info "[3/4] Menyiapkan Blueprint..."
     if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "Blueprint belum terinstall."; return 1; fi
@@ -476,7 +476,7 @@ install_theme() {
     # --- JALUR MANUAL ---
     if [ "$SELECT_THEME" -eq 3 ]; then
       print_info "Mengkonfigurasi variabel Enigma..."
-      sed -i "s|LINK_WA|$LINK_WA|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
+      sed -i "s|LINK_ADMIN|$LINK_ADMIN|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
       sed -i "s|LINK_CHANNEL|$LINK_CHANNEL|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
       sed -i "s|LINK_GROUP|$LINK_GROUP|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
     fi
