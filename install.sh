@@ -393,6 +393,10 @@ install_theme() {
     echo -e " ${BRIGHT_WHITE}${BOLD}[b2]${NC} ${WHITE}Recolor (Original Style)${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[b3]${NC} ${WHITE}NavySeals${NC}"
     echo " "
+    echo -e " ${BRIGHT_WHITE}${BOLD}[b4]${NC} ${WHITE}Nebula V2.0.1 (Proses Tes)${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[b5]${NC} ${WHITE}LememTheme (Proses Tes)${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[b6]${NC} ${WHITE}Darkenate (Proses Tes)${NC}"
+    echo " "
     echo -e " ${BRIGHT_WHITE}${BOLD}[x]${NC} ${WHITE}Kembali ke Menu Utama${NC}"
     echo " "
     echo -n -e "${BOLD}Masukkan pilihan (1-9/b1-3 atau x)${NC}${BOLD}: ${NC}"
@@ -410,6 +414,9 @@ install_theme() {
       [bB]1) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
       [bB]2) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
       [bB]3) THEME_NAME="NavySeals"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/navyseals.zip"; break;;
+      [bB]4) THEME_NAME="Nebula V2.0.1"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula_v2.0.1.zip"; break;;
+      [bB]5) THEME_NAME="LememTheme"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/lemem.zip"; break;;
+      [bB]6) THEME_NAME="Darkenate"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/darkenate.zip"; break;;
       x|X) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
       *) print_error "Pilihan tidak valid, silahkan coba lagi.";;
     esac
@@ -462,15 +469,24 @@ install_theme() {
     # --- JALUR BLUEPRINT ---
     print_info "[3/4] Menyiapkan Blueprint..."
     if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "Blueprint belum terinstall."; return 1; fi
-    THEME_NAME_LOWER=$(echo "$THEME_NAME" | tr '[:upper:]' '[:lower:]')
-    BLUEPRINT_FILE="${THEME_NAME_LOWER}.blueprint"
-    sudo mv "$BLUEPRINT_FILE" /var/www/pterodactyl/
+    
+    FOUND_FILE=$(find . -maxdepth 1 -name "*.blueprint" -print -quit)
+    
+    if [ -z "$FOUND_FILE" ]; then
+        print_error "File .blueprint tidak ditemukan dalam zip!"
+        return 1
+    fi
+
+    BLUEPRINT_FILENAME=$(basename "$FOUND_FILE")
+    IDENTIFIER="${BLUEPRINT_FILENAME%.*}"
+    sudo mv "$BLUEPRINT_FILENAME" /var/www/pterodactyl/
     
     print_info "[4/4] Menginstall via Blueprint..."
     cd /var/www/pterodactyl
-    sudo blueprint -install "$THEME_NAME_LOWER"
+    sudo blueprint -install "$IDENTIFIER"
     sudo chown -R www-data:www-data /var/www/pterodactyl
-    sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILE"
+    sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILENAME"
+    
     print_success "Tema '$THEME_NAME' berhasil diinstall."
   else
     # --- JALUR MANUAL ---
