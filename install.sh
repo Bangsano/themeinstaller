@@ -389,17 +389,16 @@ install_theme() {
     echo " "
     echo -e "${BRIGHT_MAGENTA}${BOLD}--- BLUEPRINT THEME ---${NC}"
     echo -e "${BG_RED}${BRIGHT_WHITE} (!) WAJIB INSTALL BLUEPRINT DULU (OPSI #2 DI MENU UTAMA) ${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[b1]${NC} ${WHITE}Nebula${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[b2]${NC} ${WHITE}Recolor (Original Style)${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[b3]${NC} ${WHITE}NavySeals${NC}"
-    echo " "
-    echo -e " ${BRIGHT_WHITE}${BOLD}[b4]${NC} ${WHITE}Nebula V2.0.1 (Proses Tes)${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[b5]${NC} ${WHITE}LememTheme (Proses Tes)${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[b6]${NC} ${WHITE}Darkenate (Proses Tes)${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[b1]${NC} ${WHITE}Nebula V1.8-3${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[b2]${NC} ${WHITE}Nebula V2.0-1${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[b3]${NC} ${WHITE}Recolor (Original Style)${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[b4]${NC} ${WHITE}NavySeals${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[b5]${NC} ${WHITE}LememTheme (Original Style)${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[b6]${NC} ${WHITE}Darkenate (Original Style)${NC}"
     echo " "
     echo -e " ${BRIGHT_WHITE}${BOLD}[x]${NC} ${WHITE}Kembali ke Menu Utama${NC}"
     echo " "
-    echo -n -e "${BOLD}Masukkan pilihan (1-9/b1-3 atau x)${NC}${BOLD}: ${NC}"
+    echo -n -e "${BOLD}Masukkan pilihan (1-9/b1-6 atau x)${NC}${BOLD}: ${NC}"
     read SELECT_THEME
     case "$SELECT_THEME" in
       1) THEME_NAME="Stellar"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/stellar.zip"; break;;
@@ -411,10 +410,10 @@ install_theme() {
       7) THEME_NAME="IceMinecraft"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/ice.zip"; break;;
       8) THEME_NAME="Noobe"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/noobe.zip"; break;;
       9) install_timpa "https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz" "Reviactyl"; return;;
-      [bB]1) THEME_NAME="Nebula"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula.zip"; break;;
-      [bB]2) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
-      [bB]3) THEME_NAME="NavySeals"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/navyseals.zip"; break;;
-      [bB]4) THEME_NAME="Nebula V2.0.1"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula_v2.0.1.zip"; break;;
+      [bB]1) THEME_NAME="Nebula V1.8-3"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula_v1.8-3.zip"; break;;
+      [bB]2) THEME_NAME="Nebula V2.0-1"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula_v2.0-1.zip"; break;;
+      [bB]3) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
+      [bB]4) THEME_NAME="NavySeals"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/navyseals.zip"; break;;
       [bB]5) THEME_NAME="LememTheme"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/lemem.zip"; break;;
       [bB]6) THEME_NAME="Darkenate"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/darkenate.zip"; break;;
       x|X) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
@@ -440,7 +439,7 @@ install_theme() {
   sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
   sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y ca-certificates curl gnupg zip unzip git wget
   
-  if [ "$SELECT_THEME" -eq 3 ]; then # Khusus Enigma
+  if [ "$SELECT_THEME" == "3" ]; then # Khusus Enigma
     echo -n -e "${BOLD}Masukkan link whatsapp (diawali https://): ${NC}"; read LINK_ADMIN
     echo -n -e "${BOLD}Masukkan link channel whatsapp (diawali https://): ${NC}"; read LINK_CHANNEL
     echo -n -e "${BOLD}Masukkan link grup whatsapp (diawali https://): ${NC}"; read LINK_GROUP
@@ -490,7 +489,7 @@ install_theme() {
     print_success "Tema '$THEME_NAME' berhasil diinstall."
   else
     # --- JALUR MANUAL ---
-    if [ "$SELECT_THEME" -eq 3 ]; then
+    if [ "$SELECT_THEME" == "3" ]; then
       print_info "Mengkonfigurasi variabel Enigma..."
       sed -i "s|LINK_ADMIN|$LINK_ADMIN|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
       sed -i "s|LINK_CHANNEL|$LINK_CHANNEL|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
@@ -532,7 +531,7 @@ install_theme() {
     yarn add cross-env react-feather
     yarn install
 
-    if [ "$SELECT_THEME" -eq 2 ]; then
+    if [ "$SELECT_THEME" == "2" ]; then
       print_info "Menjalankan instalasi Billing..."
       php artisan billing:install stable
     fi
