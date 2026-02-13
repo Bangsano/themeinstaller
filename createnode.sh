@@ -24,30 +24,26 @@ read disk_space
 cd /var/www/pterodactyl || { echo "Direktori tidak ditemukan"; exit 1; }
 
 echo "Membuat Location..."
-php artisan p:location:make <<EOF
-$location_name
-$description
-EOF
+php artisan p:location:make --short="$location_name" --long="$description"
 
 echo "Membuat Node..."
-php artisan p:node:make <<EOF
-$node_name
-$description
-$locid
-https
-$domain
-yes
-no
-no
-$ram
-$ram
-$disk_space
-$disk_space
-100
-8080
-2022
-/var/lib/pterodactyl/volumes
-EOF
+php artisan p:node:make \
+  --name="$node_name" \
+  --description="$description" \
+  --location_id="$locid" \
+  --scheme="https" \
+  --fqdn="$domain" \
+  --public=1 \
+  --behind_proxy=0 \
+  --maintenance_mode=0 \
+  --memory="$ram" \
+  --memory_overallocate=0 \
+  --disk="$disk_space" \
+  --disk_overallocate=0 \
+  --upload_size=100 \
+  --daemon_listening_port=8080 \
+  --daemon_sftp_port=2022 \
+  --daemon_base="/var/lib/pterodactyl/volumes"
 
 echo " "
 echo "Mengambil konfigurasi otomatis untuk Wings..."
