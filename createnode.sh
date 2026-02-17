@@ -47,11 +47,7 @@ php artisan p:node:make \
 
 echo " "
 echo "Mengambil konfigurasi otomatis untuk Wings..."
-export DB_HOST=$(grep "DB_HOST" .env | cut -d "=" -f2)
-export DB_DATABASE=$(grep "DB_DATABASE" .env | cut -d "=" -f2)
-export DB_USERNAME=$(grep "DB_USERNAME" .env | cut -d "=" -f2)
-export DB_PASSWORD=$(grep "DB_PASSWORD" .env | cut -d "=" -f2)
-NODE_ID=$(mysql -u "$DB_USERNAME" -p"$DB_PASSWORD" -h "$DB_HOST" -D "$DB_DATABASE" -N -e "SELECT id FROM nodes ORDER BY id DESC LIMIT 1;")
+NODE_ID=$(php artisan tinker --execute="echo optional(\Pterodactyl\Models\Node::latest()->first())->id;" | grep -E '^[0-9]+$' | tail -n 1)
 if [ -z "$NODE_ID" ]; then
     echo "❌ Gagal mendapatkan Node ID dari database."
     echo "⚠️  Silakan konfigurasi Wings secara manual."
