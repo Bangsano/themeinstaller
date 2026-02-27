@@ -395,6 +395,7 @@ install_theme() {
     echo -e " ${BRIGHT_WHITE}${BOLD}[b4]${NC} ${WHITE}NavySeals${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[b5]${NC} ${WHITE}LememTheme (Original Style)${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[b6]${NC} ${WHITE}Darkenate (Original Style)${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[b7]${NC} ${WHITE}AbyssPurple (proses testing)${NC}"
     echo " "
     echo -e " ${BRIGHT_WHITE}${BOLD}[x]${NC} ${WHITE}Kembali ke Menu Utama${NC}"
     echo " "
@@ -416,6 +417,7 @@ install_theme() {
       [bB]4) THEME_NAME="NavySeals"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/navyseals.zip"; break;;
       [bB]5) THEME_NAME="LememTheme"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/lemem.zip"; break;;
       [bB]6) THEME_NAME="Darkenate"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/darkenate.zip"; break;;
+      [bB]7) THEME_NAME="AbyssPurple"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/abysspurple.zip"; break;;
       x|X) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
       *) print_error "Pilihan tidak valid, silahkan coba lagi.";;
     esac
