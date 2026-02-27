@@ -41,7 +41,7 @@ php artisan p:node:make \
   --maxDisk="$disk_space" \
   --overallocateDisk=0 \
   --uploadSize=100 \
-  --daemonListeningPort=8080 \
+  --daemonListeningPort=443 \
   --daemonSFTPPort=2022 \
   --daemonBase="/var/lib/pterodactyl/volumes"
 
@@ -56,6 +56,7 @@ else
     echo "Membuat file konfigurasi..."
     mkdir -p /etc/pterodactyl
     php artisan p:node:configuration "$NODE_ID" > /etc/pterodactyl/config.yml
+    sed -i 's/port: 443/port: 8080/g' /etc/pterodactyl/config.yml
 
     echo "Menyalakan Wings..."
     systemctl daemon-reload
