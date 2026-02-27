@@ -395,7 +395,7 @@ install_theme() {
     echo -e " ${BRIGHT_WHITE}${BOLD}[b4]${NC} ${WHITE}NavySeals${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[b5]${NC} ${WHITE}LememTheme (Original Style)${NC}"
     echo -e " ${BRIGHT_WHITE}${BOLD}[b6]${NC} ${WHITE}Darkenate (Original Style)${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[b7]${NC} ${WHITE}AbyssPurple (proses testing)${NC}"
+    echo -e " ${BRIGHT_WHITE}${BOLD}[b7]${NC} ${WHITE}AbyssPurple (Original Style)${NC}"
     echo " "
     echo -e " ${BRIGHT_WHITE}${BOLD}[x]${NC} ${WHITE}Kembali ke Menu Utama${NC}"
     echo " "
