@@ -321,8 +321,6 @@ start_script() {
   echo -e "𝗧𝗘𝗟𝗘𝗚𝗥𝗔𝗠: @sanoofc"
   sleep 2
 
-  print_info "Menginstall dan mengupdate jq..."
-
   export DEBIAN_FRONTEND=noninteractive
   export NEEDRESTART_MODE=a
 
@@ -331,6 +329,8 @@ start_script() {
     sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
     sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
   fi
+
+  print_info "Menginstall dan mengupdate jq..."
 
   sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
   sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y jq
