@@ -587,17 +587,19 @@ install_timpa() {
   PHP_WEB_VERSION=$(systemctl list-units --type=service | grep -oP 'php[0-9\.]+-fpm' | grep -oP '[0-9\.]+' | head -n 1)
   if [ -z "$PHP_WEB_VERSION" ]; then PHP_WEB_VERSION=$PHP_CLI_VERSION; fi
   sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y \
-    ca-certificates curl gnupg zip unzip git wget redis-server php-redis \
+    ca-certificates curl gnupg zip unzip git wget redis-server \
     php${PHP_CLI_VERSION}-common php${PHP_CLI_VERSION}-cli php${PHP_CLI_VERSION}-gd \
     php${PHP_CLI_VERSION}-mbstring php${PHP_CLI_VERSION}-bcmath php${PHP_CLI_VERSION}-xml \
     php${PHP_CLI_VERSION}-curl php${PHP_CLI_VERSION}-zip php${PHP_CLI_VERSION}-intl \
-    php${PHP_CLI_VERSION}-sqlite3 php${PHP_CLI_VERSION}-mysql php${PHP_CLI_VERSION}-fpm \
+    php${PHP_CLI_VERSION}-sqlite3 php${PHP_CLI_VERSION}-mysql php${PHP_CLI_VERSION}-fpm php${PHP_CLI_VERSION}-redis \
     php${PHP_WEB_VERSION}-common php${PHP_WEB_VERSION}-cli php${PHP_WEB_VERSION}-gd \
     php${PHP_WEB_VERSION}-mbstring php${PHP_WEB_VERSION}-bcmath php${PHP_WEB_VERSION}-xml \
     php${PHP_WEB_VERSION}-curl php${PHP_WEB_VERSION}-zip php${PHP_WEB_VERSION}-intl \
-    php${PHP_WEB_VERSION}-sqlite3 php${PHP_WEB_VERSION}-mysql php${PHP_WEB_VERSION}-fpm
-  sudo systemctl enable redis-server >/dev/null 2>&1 || true
-  sudo systemctl start redis-server >/dev/null 2>&1 || true
+    php${PHP_WEB_VERSION}-sqlite3 php${PHP_WEB_VERSION}-mysql php${PHP_WEB_VERSION}-fpm php${PHP_WEB_VERSION}-redis
+  sudo phpenmod -v ${PHP_CLI_VERSION} redis || true
+  sudo phpenmod -v ${PHP_WEB_VERSION} redis || true
+  sudo systemctl enable redis-server || true
+  sudo systemctl start redis-server || true
 
   print_info "[1/4] Mengunduh file panel/tema..."
   cd "$TEMP_DIR"
@@ -708,17 +710,19 @@ uninstall_theme() {
         PHP_WEB_VERSION=$(systemctl list-units --type=service | grep -oP 'php[0-9\.]+-fpm' | grep -oP '[0-9\.]+' | head -n 1)
         if [ -z "$PHP_WEB_VERSION" ]; then PHP_WEB_VERSION=$PHP_CLI_VERSION; fi
         sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y \
-          ca-certificates curl gnupg zip unzip git wget redis-server php-redis \
+          ca-certificates curl gnupg zip unzip git wget redis-server \
           php${PHP_CLI_VERSION}-common php${PHP_CLI_VERSION}-cli php${PHP_CLI_VERSION}-gd \
           php${PHP_CLI_VERSION}-mbstring php${PHP_CLI_VERSION}-bcmath php${PHP_CLI_VERSION}-xml \
           php${PHP_CLI_VERSION}-curl php${PHP_CLI_VERSION}-zip php${PHP_CLI_VERSION}-intl \
-          php${PHP_CLI_VERSION}-sqlite3 php${PHP_CLI_VERSION}-mysql php${PHP_CLI_VERSION}-fpm \
+          php${PHP_CLI_VERSION}-sqlite3 php${PHP_CLI_VERSION}-mysql php${PHP_CLI_VERSION}-fpm php${PHP_CLI_VERSION}-redis \
           php${PHP_WEB_VERSION}-common php${PHP_WEB_VERSION}-cli php${PHP_WEB_VERSION}-gd \
           php${PHP_WEB_VERSION}-mbstring php${PHP_WEB_VERSION}-bcmath php${PHP_WEB_VERSION}-xml \
           php${PHP_WEB_VERSION}-curl php${PHP_WEB_VERSION}-zip php${PHP_WEB_VERSION}-intl \
-          php${PHP_WEB_VERSION}-sqlite3 php${PHP_WEB_VERSION}-mysql php${PHP_WEB_VERSION}-fpm
-        sudo systemctl enable redis-server >/dev/null 2>&1 || true
-        sudo systemctl start redis-server >/dev/null 2>&1 || true
+          php${PHP_WEB_VERSION}-sqlite3 php${PHP_WEB_VERSION}-mysql php${PHP_WEB_VERSION}-fpm php${PHP_WEB_VERSION}-redis
+        sudo phpenmod -v ${PHP_CLI_VERSION} redis || true
+        sudo phpenmod -v ${PHP_WEB_VERSION} redis || true
+        sudo systemctl enable redis-server || true
+        sudo systemctl start redis-server || true
 
         sudo chmod -R 755 storage/* bootstrap/cache/
         sudo chown -R www-data:www-data /var/www/pterodactyl
