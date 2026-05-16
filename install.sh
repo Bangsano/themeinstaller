@@ -325,7 +325,6 @@ start_script() {
   export NEEDRESTART_MODE=a
 
   if [ -f /etc/needrestart/needrestart.conf ]; then
-    print_info "Mengonfigurasi needrestart ke mode otomatis..."
     sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
     sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
   fi
@@ -448,7 +447,6 @@ install_theme() {
   fi
 
   if [ -f /etc/needrestart/needrestart.conf ]; then
-    print_info "Mengonfigurasi needrestart ke mode otomatis..."
     sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
     sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
   fi
@@ -580,15 +578,19 @@ install_timpa() {
   print_info "Memulai instalasi tema $TARGET_NAME..."
 
   if [ -f /etc/needrestart/needrestart.conf ]; then
-    print_info "Mengonfigurasi needrestart ke mode otomatis..."
     sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
     sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
   fi
 
   sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
   PHP_VERSION=$(php -v | head -n 1 | awk '{print $2}' | cut -d. -f1,2)
-  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y ca-certificates curl gnupg zip unzip git wget php${PHP_VERSION}-intl php-redis
-  
+  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y \
+    ca-certificates curl gnupg zip unzip git wget \
+    php${PHP_VERSION}-common php${PHP_VERSION}-cli php${PHP_VERSION}-gd \
+    php${PHP_VERSION}-mbstring php${PHP_VERSION}-bcmath php${PHP_VERSION}-xml \
+    php${PHP_VERSION}-curl php${PHP_VERSION}-zip php${PHP_VERSION}-intl \
+    php${PHP_VERSION}-sqlite3 php${PHP_VERSION}-mysql php-redis
+
   print_info "[1/4] Mengunduh file panel/tema..."
   cd "$TEMP_DIR"
   
@@ -984,7 +986,6 @@ install_blueprint() {
   sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y ca-certificates curl gnupg zip unzip git wget
 
   if [ -f /etc/needrestart/needrestart.conf ]; then
-    print_info "Mengonfigurasi needrestart ke mode otomatis..."
     sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
     sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
   fi
@@ -1067,7 +1068,6 @@ install_auto_suspend() {
   fi
 
   if [ -f /etc/needrestart/needrestart.conf ]; then
-    print_info "Mengonfigurasi needrestart ke mode otomatis..."
     sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
     sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
   fi
