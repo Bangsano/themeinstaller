@@ -690,12 +690,20 @@ uninstall_theme() {
         
         echo -e "${BOLD}   - Mengunduh panel original terbaru...${NC}"
         curl -L https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz | sudo tar -xzf - -C /var/www/pterodactyl
-    
+
         echo -e "${BOLD}   - Mengembalikan file .env...${NC}"
         if [ -f "$TEMP_BACKUP/.env" ]; then sudo mv "$TEMP_BACKUP"/.env .; fi
         rm -rf "$TEMP_BACKUP"
 
         echo -e "${BOLD}   - Install ulang dependensi (Composer)...${NC}"
+        PHP_VERSION=$(php -v | head -n 1 | awk '{print $2}' | cut -d. -f1,2)
+        sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y \
+          ca-certificates curl gnupg zip unzip git wget \
+          php${PHP_VERSION}-common php${PHP_VERSION}-cli php${PHP_VERSION}-gd \
+          php${PHP_VERSION}-mbstring php${PHP_VERSION}-bcmath php${PHP_VERSION}-xml \
+          php${PHP_VERSION}-curl php${PHP_VERSION}-zip php${PHP_VERSION}-intl \
+          php${PHP_VERSION}-sqlite3 php${PHP_VERSION}-mysql php-redis
+
         sudo chmod -R 755 storage/* bootstrap/cache/
         sudo chown -R www-data:www-data /var/www/pterodactyl
         curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
