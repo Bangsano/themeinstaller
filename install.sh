@@ -583,14 +583,19 @@ install_timpa() {
   fi
 
   sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
-  PHP_VERSION=$(php -v | head -n 1 | awk '{print $2}' | cut -d. -f1,2)
+  PHP_CLI_VERSION=$(php -v | head -n 1 | awk '{print $2}' | cut -d. -f1,2)
+  PHP_WEB_VERSION=$(systemctl list-units --type=service | grep -oP 'php[0-9\.]+-fpm' | grep -oP '[0-9\.]+' | head -n 1)
+  if [ -z "$PHP_WEB_VERSION" ]; then PHP_WEB_VERSION=$PHP_CLI_VERSION; fi
   sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y \
-    ca-certificates curl gnupg zip unzip git wget redis-server \
-    php${PHP_VERSION}-common php${PHP_VERSION}-cli php${PHP_VERSION}-gd \
-    php${PHP_VERSION}-mbstring php${PHP_VERSION}-bcmath php${PHP_VERSION}-xml \
-    php${PHP_VERSION}-curl php${PHP_VERSION}-zip php${PHP_VERSION}-intl \
-    php${PHP_VERSION}-sqlite3 php${PHP_VERSION}-mysql php${PHP_VERSION}-redis \
-    php${PHP_VERSION}-fpm
+    ca-certificates curl gnupg zip unzip git wget redis-server php-redis \
+    php${PHP_CLI_VERSION}-common php${PHP_CLI_VERSION}-cli php${PHP_CLI_VERSION}-gd \
+    php${PHP_CLI_VERSION}-mbstring php${PHP_CLI_VERSION}-bcmath php${PHP_CLI_VERSION}-xml \
+    php${PHP_CLI_VERSION}-curl php${PHP_CLI_VERSION}-zip php${PHP_CLI_VERSION}-intl \
+    php${PHP_CLI_VERSION}-sqlite3 php${PHP_CLI_VERSION}-mysql php${PHP_CLI_VERSION}-fpm \
+    php${PHP_WEB_VERSION}-common php${PHP_WEB_VERSION}-cli php${PHP_WEB_VERSION}-gd \
+    php${PHP_WEB_VERSION}-mbstring php${PHP_WEB_VERSION}-bcmath php${PHP_WEB_VERSION}-xml \
+    php${PHP_WEB_VERSION}-curl php${PHP_WEB_VERSION}-zip php${PHP_WEB_VERSION}-intl \
+    php${PHP_WEB_VERSION}-sqlite3 php${PHP_WEB_VERSION}-mysql php${PHP_WEB_VERSION}-fpm
   sudo systemctl enable redis-server >/dev/null 2>&1 || true
   sudo systemctl start redis-server >/dev/null 2>&1 || true
 
@@ -699,14 +704,19 @@ uninstall_theme() {
         rm -rf "$TEMP_BACKUP"
 
         echo -e "${BOLD}   - Install ulang dependensi (Composer)...${NC}"
-        PHP_VERSION=$(php -v | head -n 1 | awk '{print $2}' | cut -d. -f1,2)
+        PHP_CLI_VERSION=$(php -v | head -n 1 | awk '{print $2}' | cut -d. -f1,2)
+        PHP_WEB_VERSION=$(systemctl list-units --type=service | grep -oP 'php[0-9\.]+-fpm' | grep -oP '[0-9\.]+' | head -n 1)
+        if [ -z "$PHP_WEB_VERSION" ]; then PHP_WEB_VERSION=$PHP_CLI_VERSION; fi
         sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y \
-          ca-certificates curl gnupg zip unzip git wget redis-server \
-          php${PHP_VERSION}-common php${PHP_VERSION}-cli php${PHP_VERSION}-gd \
-          php${PHP_VERSION}-mbstring php${PHP_VERSION}-bcmath php${PHP_VERSION}-xml \
-          php${PHP_VERSION}-curl php${PHP_VERSION}-zip php${PHP_VERSION}-intl \
-          php${PHP_VERSION}-sqlite3 php${PHP_VERSION}-mysql php${PHP_VERSION}-redis \
-          php${PHP_VERSION}-fpm
+          ca-certificates curl gnupg zip unzip git wget redis-server php-redis \
+          php${PHP_CLI_VERSION}-common php${PHP_CLI_VERSION}-cli php${PHP_CLI_VERSION}-gd \
+          php${PHP_CLI_VERSION}-mbstring php${PHP_CLI_VERSION}-bcmath php${PHP_CLI_VERSION}-xml \
+          php${PHP_CLI_VERSION}-curl php${PHP_CLI_VERSION}-zip php${PHP_CLI_VERSION}-intl \
+          php${PHP_CLI_VERSION}-sqlite3 php${PHP_CLI_VERSION}-mysql php${PHP_CLI_VERSION}-fpm \
+          php${PHP_WEB_VERSION}-common php${PHP_WEB_VERSION}-cli php${PHP_WEB_VERSION}-gd \
+          php${PHP_WEB_VERSION}-mbstring php${PHP_WEB_VERSION}-bcmath php${PHP_WEB_VERSION}-xml \
+          php${PHP_WEB_VERSION}-curl php${PHP_WEB_VERSION}-zip php${PHP_WEB_VERSION}-intl \
+          php${PHP_WEB_VERSION}-sqlite3 php${PHP_WEB_VERSION}-mysql php${PHP_WEB_VERSION}-fpm
         sudo systemctl enable redis-server >/dev/null 2>&1 || true
         sudo systemctl start redis-server >/dev/null 2>&1 || true
 
@@ -731,7 +741,10 @@ uninstall_theme() {
 
         echo -e "${BOLD}   - Restart layanan webserver & worker...${NC}"
         sudo systemctl restart nginx || sudo systemctl restart apache2
-        sudo systemctl restart "php*-fpm" || true
+        PHP_SERVICES=$(systemctl list-unit-files | grep -oE "php[0-9\.]+-fpm\.service" | tr "\n" " ")
+        if [ ! -z "$PHP_SERVICES" ]; then
+            sudo systemctl restart $PHP_SERVICES || true
+        fi
         sudo systemctl restart pteroq
         sudo -u www-data php artisan up
 
@@ -783,7 +796,10 @@ uninstall_panel() {
   systemctl disable --now wings pteroq > /dev/null 2>&1 || true
   systemctl disable --now redis-server > /dev/null 2>&1 || true
   systemctl disable --now redis > /dev/null 2>&1 || true
-  systemctl disable --now "php*-fpm" > /dev/null 2>&1 || true
+  PHP_SERVICES=$(systemctl list-unit-files | grep -oE "php[0-9\.]+-fpm\.service" | tr "\n" " ")
+  if [ ! -z "$PHP_SERVICES" ]; then
+      systemctl disable --now $PHP_SERVICES > /dev/null 2>&1 || true
+  fi
   systemctl stop nginx apache2 > /dev/null 2>&1 || true
 
   print_info "Membersihkan Cronjob..."
