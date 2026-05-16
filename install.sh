@@ -702,7 +702,7 @@ uninstall_theme() {
         sudo rm -rf /var/www/.cache
         sudo mkdir -p /var/www/.cache
         sudo chown -R www-data:www-data /var/www/.cache
-        sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist > /dev/null 2>&1
+        sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
         echo -e "${BOLD}   - Menjalankan migrasi...${NC}"
         sudo -u www-data php artisan migrate --seed --force
@@ -716,8 +716,8 @@ uninstall_theme() {
         sudo rm -f /usr/local/bin/blueprint
 
         echo -e "${BOLD}   - Restart layanan webserver & worker...${NC}"
-        sudo systemctl restart nginx > /dev/null 2>&1 || sudo systemctl restart apache2 > /dev/null 2>&1
-        sudo systemctl restart "php*-fpm" > /dev/null 2>&1 || true
+        sudo systemctl restart nginx || sudo systemctl restart apache2
+        sudo systemctl restart "php*-fpm" || true
         sudo systemctl restart pteroq
         sudo -u www-data php artisan up
 
