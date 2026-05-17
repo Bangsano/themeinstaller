@@ -660,6 +660,152 @@ install_timpa() {
   sudo -u www-data php artisan config:clear
   sudo -u www-data php artisan up
 
+  if [[ "${TARGET_NAME,,}" == *"reviactyl"* ]]; then
+      print_info "Menginstal Reviactyl Agent untuk Live Monitoring..."
+      
+      curl -L -o /usr/local/bin/agent "https://github.com/reviactyl/agent/releases/latest/download/agent_linux_$([[ "$(uname -m)" == "x86_64" ]] && echo "amd64" || echo "arm64")"
+      sudo chmod u+x /usr/local/bin/agent
+
+      sudo mkdir -p /var/run/agent
+      sudo chown root:root /var/run/agent
+
+      cat << 'EOF_AGENT' | sudo tee /etc/systemd/system/agent.service > /dev/null
+[Unit]
+Description=Reviactyl Agent
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+User=root
+WorkingDirectory=/etc/pterodactyl
+LimitNOFILE=4096
+PIDFile=/var/run/agent/daemon.pid
+ExecStart=/usr/local/bin/agent
+Restart=on-failure
+StartLimitInterval=180
+StartLimitBurst=30
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+EOF_AGENT
+
+      sudo systemctl daemon-reload
+      sudo systemctl enable --now agent >/dev/null 2>&1 || true
+      print_info "Reviactyl Agent berhasil diinstal dan dijalankan."
+  fi
+
+  print_success "Tema '$TARGET_NAME' berhasil diinstall."
+  echo " "
+  log_success "[+] =============================================== [+]"
+  log_success "[+]          INSTALASI BERHASIL SELESAI             [+]"
+  log_success "[+] =============================================== [+]"
+  echo " "
+  sleep 3
+}
+
+install_timpa() {
+  local TARGET_URL=$1
+  local TARGET_NAME=$2
+
+  echo " "
+  echo -n -e "${BOLD}Anda memilih tema '$TARGET_NAME'. Lanjutkan? (y/n): ${NC}"
+  read confirmation
+  if [[ "$confirmation" != [yY] ]]; then echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return; fi
+
+  set -e
+  export DEBIAN_FRONTEND=noninteractive
+  export NEEDRESTART_MODE=a
+  
+  TEMP_DIR=$(mktemp -d)
+  trap 'rm -rf -- "$TEMP_DIR"' EXIT
+  
+  print_info "Memulai instalasi tema $TARGET_NAME..."
+
+  if [ -f /etc/needrestart/needrestart.conf ]; then
+    sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+  fi
+
+  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
+  PHP_CLI_VERSION=$(php -v | head -n 1 | awk '{print $2}' | cut -d. -f1,2)
+  PHP_WEB_VERSION=$(systemctl list-units --type=service | grep -oP 'php[0-9\.]+-fpm' | grep -oP '[0-9\.]+' | head -n 1)
+  if [ -z "$PHP_WEB_VERSION" ]; then PHP_WEB_VERSION=$PHP_CLI_VERSION; fi
+  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y \
+    ca-certificates curl gnupg zip unzip git wget redis-server \
+    php${PHP_CLI_VERSION}-common php${PHP_CLI_VERSION}-cli php${PHP_CLI_VERSION}-gd \
+    php${PHP_CLI_VERSION}-mbstring php${PHP_CLI_VERSION}-bcmath php${PHP_CLI_VERSION}-xml \
+    php${PHP_CLI_VERSION}-curl php${PHP_CLI_VERSION}-zip php${PHP_CLI_VERSION}-intl \
+    php${PHP_CLI_VERSION}-sqlite3 php${PHP_CLI_VERSION}-mysql php${PHP_CLI_VERSION}-fpm php${PHP_CLI_VERSION}-redis \
+    php${PHP_WEB_VERSION}-common php${PHP_WEB_VERSION}-cli php${PHP_WEB_VERSION}-gd \
+    php${PHP_WEB_VERSION}-mbstring php${PHP_WEB_VERSION}-bcmath php${PHP_WEB_VERSION}-xml \
+    php${PHP_WEB_VERSION}-curl php${PHP_WEB_VERSION}-zip php${PHP_WEB_VERSION}-intl \
+    php${PHP_WEB_VERSION}-sqlite3 php${PHP_WEB_VERSION}-mysql php${PHP_WEB_VERSION}-fpm php${PHP_WEB_VERSION}-redis
+  sudo phpenmod -v ${PHP_CLI_VERSION} redis || true
+  sudo phpenmod -v ${PHP_WEB_VERSION} redis || true
+  sudo systemctl enable redis-server || true
+  sudo systemctl start redis-server || true
+
+  print_info "[1/4] Mengunduh file panel/tema..."
+  cd "$TEMP_DIR"
+  
+  if [[ "$TARGET_URL" == *.zip ]]; then
+      FILE_EXT="zip"
+      FILENAME="panel.zip"
+  else
+      FILE_EXT="tar.gz"
+      FILENAME="panel.tar.gz"
+  fi
+  
+  wget -q -O "$FILENAME" "$TARGET_URL"
+
+  print_info "[2/4] Mempersiapkan direktori & Backup Config..."
+  
+  if [ ! -d "/var/www/pterodactyl" ]; then
+    print_error "Direktori Pterodactyl tidak ditemukan."
+    return 1
+  fi
+  
+  cd /var/www/pterodactyl
+  php artisan down || true
+  
+  if [ -f ".env" ]; then 
+    cp .env /tmp/.env.backup
+  fi
+
+  sudo find . -mindepth 1 -delete
+  sudo rm -f /usr/local/bin/blueprint
+
+  print_info "[3/4] Mengekstrak file & Mengembalikan konfigurasi..."
+  
+  if [[ "$FILE_EXT" == "zip" ]]; then
+      unzip -o "$TEMP_DIR/$FILENAME" -d /var/www/pterodactyl/
+  else
+      tar -xzf "$TEMP_DIR/$FILENAME" -C /var/www/pterodactyl/
+  fi
+
+  if [ -f "/tmp/.env.backup" ]; then 
+    mv /tmp/.env.backup .env
+  fi
+  
+  sudo chmod -R 755 storage/* bootstrap/cache/
+  sudo chown -R www-data:www-data /var/www/pterodactyl
+
+  print_info "[4/4] Menginstal dependensi & Membangun aset..."
+  if ! command -v composer; then
+      curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
+  fi
+
+  sudo rm -rf /var/www/.cache
+  sudo mkdir -p /var/www/.cache
+  sudo chown -R www-data:www-data /var/www/.cache
+  sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+  sudo -u www-data php artisan migrate --seed --force
+  sudo -u www-data php artisan view:clear
+  sudo -u www-data php artisan config:clear
+  sudo -u www-data php artisan up
+
   print_success "Tema '$TARGET_NAME' berhasil diinstall."
   echo " "
   log_success "[+] =============================================== [+]"
