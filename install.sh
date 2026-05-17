@@ -663,6 +663,8 @@ install_timpa() {
   if [[ "${TARGET_NAME,,}" == *"reviactyl"* ]]; then
       print_info "Menginstal Reviactyl Agent untuk Live Monitoring..."
       
+      sudo systemctl stop agent >/dev/null 2>&1 || true
+      
       curl -L -o /usr/local/bin/agent "https://github.com/reviactyl/agent/releases/latest/download/agent_linux_$([[ "$(uname -m)" == "x86_64" ]] && echo "amd64" || echo "arm64")"
       sudo chmod u+x /usr/local/bin/agent
 
@@ -673,8 +675,20 @@ install_timpa() {
       sudo rm -f /etc/reviactyl/config.yml >/dev/null 2>&1 || true
       sudo cp /etc/pterodactyl/config.yml /etc/reviactyl/config.yml
       
-      sudo sed -i -E 's/  port: [0-9]+/  port: 48080/g' /etc/reviactyl/config.yml
-      sudo sed -i -E 's/bind_port: [0-9]+/bind_port: 42022/g' /etc/reviactyl/config.yml
+      AGENT_API_PORT=48080
+      while ss -tuln | grep -qE ":${AGENT_API_PORT}\b"; do
+          ((AGENT_API_PORT++))
+      done
+
+      AGENT_SFTP_PORT=42022
+      while ss -tuln | grep -qE ":${AGENT_SFTP_PORT}\b"; do
+          ((AGENT_SFTP_PORT++))
+      done
+      
+      echo -e "${BOLD}   - Port Agent dialokasikan otomatis ke -> API: ${AGENT_API_PORT} | SFTP: ${AGENT_SFTP_PORT}${NC}"
+
+      sudo sed -i -E "s/  port: [0-9]+/  port: ${AGENT_API_PORT}/g" /etc/reviactyl/config.yml
+      sudo sed -i -E "s/bind_port: [0-9]+/bind_port: ${AGENT_SFTP_PORT}/g" /etc/reviactyl/config.yml
 
       cat << 'EOF_AGENT' | sudo tee /etc/systemd/system/agent.service > /dev/null
 [Unit]
@@ -700,7 +714,7 @@ EOF_AGENT
 
       sudo systemctl daemon-reload
       sudo systemctl enable --now agent >/dev/null 2>&1 || true
-      print_info "Reviactyl Agent berhasil diinstal dan dijalankan pada port langka (48080 & 42022)."
+      print_info "Reviactyl Agent berhasil diinstal dan dijalankan."
   fi
 
   print_success "Tema '$TARGET_NAME' berhasil diinstall."
