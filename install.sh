@@ -661,8 +661,10 @@ install_timpa() {
   sudo -u www-data php artisan up
 
   if [[ "${TARGET_NAME,,}" == *"reviactyl"* ]]; then
-      print_info "Menginstal Reviactyl Agent untuk Live Monitoring..."
+      print_info "Mengalihkan backend dari Wings ke Reviactyl Agent..."
       
+      sudo systemctl stop wings >/dev/null 2>&1 || true
+      sudo systemctl disable wings >/dev/null 2>&1 || true
       sudo systemctl stop agent >/dev/null 2>&1 || true
       
       curl -L -o /usr/local/bin/agent "https://github.com/reviactyl/agent/releases/latest/download/agent_linux_$([[ "$(uname -m)" == "x86_64" ]] && echo "amd64" || echo "arm64")"
@@ -672,23 +674,7 @@ install_timpa() {
       sudo chown root:root /var/run/agent
 
       sudo mkdir -p /etc/reviactyl >/dev/null 2>&1 || true
-      sudo rm -f /etc/reviactyl/config.yml >/dev/null 2>&1 || true
       sudo cp /etc/pterodactyl/config.yml /etc/reviactyl/config.yml
-      
-      AGENT_API_PORT=48080
-      while ss -tuln | grep -qE ":${AGENT_API_PORT}\b"; do
-          ((AGENT_API_PORT++))
-      done
-
-      AGENT_SFTP_PORT=42022
-      while ss -tuln | grep -qE ":${AGENT_SFTP_PORT}\b"; do
-          ((AGENT_SFTP_PORT++))
-      done
-      
-      echo -e "${BOLD}   - Port Agent dialokasikan otomatis ke -> API: ${AGENT_API_PORT} | SFTP: ${AGENT_SFTP_PORT}${NC}"
-
-      sudo sed -i -E "s/  port: [0-9]+/  port: ${AGENT_API_PORT}/g" /etc/reviactyl/config.yml
-      sudo sed -i -E "s/bind_port: [0-9]+/bind_port: ${AGENT_SFTP_PORT}/g" /etc/reviactyl/config.yml
 
       cat << 'EOF_AGENT' | sudo tee /etc/systemd/system/agent.service > /dev/null
 [Unit]
@@ -799,6 +785,20 @@ uninstall_theme() {
         sudo -u www-data php artisan route:clear
         sudo -u www-data php artisan cache:clear
         sudo rm -f /usr/local/bin/blueprint
+
+        if systemctl list-unit-files | grep -q "agent.service"; then
+            echo -e "${BOLD}   - Membersihkan Reviactyl Agent & Mengembalikan Wings...${NC}"
+            sudo systemctl stop agent >/dev/null 2>&1 || true
+            sudo systemctl disable agent >/dev/null 2>&1 || true
+            sudo rm -f /etc/systemd/system/agent.service
+            sudo rm -f /usr/local/bin/agent
+            sudo rm -rf /etc/reviactyl
+            sudo systemctl daemon-reload
+        fi
+
+        if systemctl list-unit-files | grep -q "wings.service"; then
+            sudo systemctl enable --now wings >/dev/null 2>&1 || true
+        fi
 
         echo -e "${BOLD}   - Restart layanan webserver & worker...${NC}"
         sudo systemctl restart nginx || sudo systemctl restart apache2
