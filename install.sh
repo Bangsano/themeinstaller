@@ -670,7 +670,11 @@ install_timpa() {
       sudo chown root:root /var/run/agent
 
       sudo mkdir -p /etc/reviactyl >/dev/null 2>&1 || true
-      sudo ln -sf /etc/pterodactyl/config.yml /etc/reviactyl/config.yml
+      sudo rm -f /etc/reviactyl/config.yml >/dev/null 2>&1 || true
+      sudo cp /etc/pterodactyl/config.yml /etc/reviactyl/config.yml
+      
+      sudo sed -i -E 's/  port: [0-9]+/  port: 48080/g' /etc/reviactyl/config.yml
+      sudo sed -i -E 's/bind_port: [0-9]+/bind_port: 42022/g' /etc/reviactyl/config.yml
 
       cat << 'EOF_AGENT' | sudo tee /etc/systemd/system/agent.service > /dev/null
 [Unit]
@@ -696,7 +700,7 @@ EOF_AGENT
 
       sudo systemctl daemon-reload
       sudo systemctl enable --now agent >/dev/null 2>&1 || true
-      print_info "Reviactyl Agent berhasil diinstal dan dijalankan."
+      print_info "Reviactyl Agent berhasil diinstal dan dijalankan pada port langka (48080 & 42022)."
   fi
 
   print_success "Tema '$TARGET_NAME' berhasil diinstall."
