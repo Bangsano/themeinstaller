@@ -669,6 +669,9 @@ install_timpa() {
       sudo mkdir -p /var/run/agent
       sudo chown root:root /var/run/agent
 
+      sudo mkdir -p /etc/reviactyl >/dev/null 2>&1 || true
+      sudo ln -sf /etc/pterodactyl/config.yml /etc/reviactyl/config.yml
+
       cat << 'EOF_AGENT' | sudo tee /etc/systemd/system/agent.service > /dev/null
 [Unit]
 Description=Reviactyl Agent
@@ -678,7 +681,7 @@ PartOf=docker.service
 
 [Service]
 User=root
-WorkingDirectory=/etc/pterodactyl
+WorkingDirectory=/etc/reviactyl
 LimitNOFILE=4096
 PIDFile=/var/run/agent/daemon.pid
 ExecStart=/usr/local/bin/agent
