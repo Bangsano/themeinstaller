@@ -407,7 +407,7 @@ install_theme() {
       4) THEME_NAME="Elysium"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/elysium.zip"; break;;
       5) THEME_NAME="Frostcore"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/frostcore.zip"; break;;
       6) THEME_NAME="Nightcore"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nightcore.zip"; break;;
-      7) THEME_NAME="IceMinecraft"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/ice.zip"; break;;
+      7) THEME_NAME="IceMinecraft"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/iceMinecraft.zip"; break;;
       8) THEME_NAME="Noobe"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/noobe.zip"; break;;
       9) install_timpa "https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz" "Reviactyl"; return;;
       [bB]1) THEME_NAME="Nebula V1.8-3"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula_v1.8-3.zip"; break;;
@@ -427,6 +427,12 @@ install_theme() {
   read confirmation
   if [[ "$confirmation" != [yY] ]]; then echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return; fi
   
+  if [ "$SELECT_THEME" == "3" ]; then # Khusus Enigma
+    echo -n -e "${BOLD}Masukkan link kontak admin (diawali https://): ${NC}"; read LINK_ADMIN
+    echo -n -e "${BOLD}Masukkan link channel whatsapp/telegram/lainnya (diawali https://): ${NC}"; read LINK_CHANNEL
+    echo -n -e "${BOLD}Masukkan link grup whatsapp/telegram/lainnya (diawali https://): ${NC}"; read LINK_GROUP
+  fi
+
   set -e
   export DEBIAN_FRONTEND=noninteractive
   export NEEDRESTART_MODE=a
@@ -440,12 +446,6 @@ install_theme() {
   sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
   sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y ca-certificates curl gnupg zip unzip git wget
   
-  if [ "$SELECT_THEME" == "3" ]; then # Khusus Enigma
-    echo -n -e "${BOLD}Masukkan link whatsapp (diawali https://): ${NC}"; read LINK_ADMIN
-    echo -n -e "${BOLD}Masukkan link channel whatsapp (diawali https://): ${NC}"; read LINK_CHANNEL
-    echo -n -e "${BOLD}Masukkan link grup whatsapp (diawali https://): ${NC}"; read LINK_GROUP
-  fi
-
   if [ -f /etc/needrestart/needrestart.conf ]; then
     sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
     sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
@@ -977,22 +977,39 @@ hackback_panel() {
     return 1
   fi
 
-  local panel_url="URL Panel tidak ditemukan"
-  local env_file="/var/www/pterodactyl/.env"
-  if [[ -f "$env_file" ]]; then
-    local app_url_line=$(grep '^APP_URL=' "$env_file")
-    if [[ -n "$app_url_line" ]]; then
-      panel_url=${app_url_line#APP_URL=}
-      panel_url=$(echo "$panel_url" | tr -d '"')
-      if [[ ! "$panel_url" =~ ^https?:// ]]; then
-        panel_url="https://$panel_url"
-      fi
+    local panel_url="URL Panel tidak ditemukan"
+    local env_file="/var/www/pterodactyl/.env"
+    
+    if [[ -r "$env_file" ]]; then
+        local app_url_line
+        app_url_line="$(grep -m1 -E '^[[:space:]]*(export[[:space:]]+)?APP_URL=' "$env_file" || true)"
+    
+        if [[ -n "$app_url_line" ]]; then
+            panel_url="${app_url_line#*=}"
+            panel_url="${panel_url%$'\r'}"
+            panel_url="${panel_url#\"}"
+            panel_url="${panel_url%\"}"
+            panel_url="${panel_url#\'}"
+            panel_url="${panel_url%\'}"
+            panel_url="${panel_url#"${panel_url%%[![:space:]]*}"}"
+            panel_url="${panel_url%"${panel_url##*[![:space:]]}"}"
+    
+            if [[ ! "$panel_url" =~ ^https?:// ]]; then
+                panel_url="https://${panel_url#//}"
+            fi
+    
+            panel_url="${panel_url%/}"
+    
+            if [[ ! "$panel_url" =~ ^https?://[^[:space:]]+$ ]]; then
+                print_warning "Nilai APP_URL tidak valid di $env_file."
+                panel_url="URL Panel tidak ditemukan"
+            fi
+        else
+            print_warning "Baris APP_URL tidak ditemukan di $env_file."
+        fi
     else
-      print_warning "Baris APP_URL tidak ditemukan di $env_file."
+        print_warning "File $env_file tidak ditemukan atau tidak bisa dibaca."
     fi
-  else
-    print_warning "File $env_file tidak ditemukan."
-  fi
 
   echo -e "                                                       "
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
