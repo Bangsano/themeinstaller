@@ -401,22 +401,22 @@ install_theme() {
     echo -n -e "${BOLD}Masukkan pilihan (1-9/b1-6 atau x)${NC}${BOLD}: ${NC}"
     read SELECT_THEME
     case "$SELECT_THEME" in
-      1) THEME_NAME="Stellar"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/stellar.zip"; break;;
-      2) THEME_NAME="Billing"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/billing.zip"; break;;
-      3) THEME_NAME="Enigma"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/enigma.zip"; break;;
-      4) THEME_NAME="Elysium"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/elysium.zip"; break;;
-      5) THEME_NAME="Frostcore"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/frostcore.zip"; break;;
-      6) THEME_NAME="Nightcore"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nightcore.zip"; break;;
-      7) THEME_NAME="IceMinecraft"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/iceMinecraft.zip"; break;;
-      8) THEME_NAME="Noobe"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/noobe.zip"; break;;
+      1) THEME_NAME="Stellar"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/stellar.zip"; break;;
+      2) THEME_NAME="Billing"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/billing.zip"; break;;
+      3) THEME_NAME="Enigma"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/enigma.zip"; break;;
+      4) THEME_NAME="Elysium"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/elysium.zip"; break;;
+      5) THEME_NAME="Frostcore"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/frostcore.zip"; break;;
+      6) THEME_NAME="Nightcore"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/nightcore.zip"; break;;
+      7) THEME_NAME="IceMinecraft"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/iceMinecraft.zip"; break;;
+      8) THEME_NAME="Noobe"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/noobe.zip"; break;;
       9) install_timpa "https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz" "Reviactyl"; return;;
-      [bB]1) THEME_NAME="Nebula V1.8-3"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula_v1.8-3.zip"; break;;
-      [bB]2) THEME_NAME="Nebula V2.0-1"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/nebula_v2.0-1.zip"; break;;
-      [bB]3) THEME_NAME="Recolor"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/recolor.zip"; break;;
-      [bB]4) THEME_NAME="NavySeals"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/navyseals.zip"; break;;
-      [bB]5) THEME_NAME="LememTheme"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/lemem.zip"; break;;
-      [bB]6) THEME_NAME="Darkenate"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/darkenate.zip"; break;;
-      [bB]7) THEME_NAME="AbyssPurple"; THEME_URL="https://github.com/Bangsano/themeinstaller/raw/main/theme/abysspurple.zip"; break;;
+      [bB]1) THEME_NAME="Nebula V1.8-3"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/nebula_v1.8-3.zip"; break;;
+      [bB]2) THEME_NAME="Nebula V2.0-1"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/nebula_v2.0-1.zip"; break;;
+      [bB]3) THEME_NAME="Recolor"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/recolor.zip"; break;;
+      [bB]4) THEME_NAME="NavySeals"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/navyseals.zip"; break;;
+      [bB]5) THEME_NAME="LememTheme"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/lemem.zip"; break;;
+      [bB]6) THEME_NAME="Darkenate"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/darkenate.zip"; break;;
+      [bB]7) THEME_NAME="AbyssPurple"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/abysspurple.zip"; break;;
       x|X) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
       *) print_error "Pilihan tidak valid, silahkan coba lagi.";;
     esac
@@ -934,7 +934,7 @@ create_node() {
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo " "
 
-  bash <(curl -s https://raw.githubusercontent.com/Bangsano/themeinstaller/main/createnode.sh)
+  bash <(curl -s https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/createnode.sh)
 
   if [ $? -ne 0 ]; then
     print_error "🚨 TERJADI ERROR saat menjalankan skrip 'createnode.sh'."
@@ -1205,7 +1205,7 @@ install_auto_suspend() {
   cd "$TEMP_DIR"
   
   print_info "Mengunduh file autosuspend.zip..."
-  wget -q https://github.com/Bangsano/themeinstaller/raw/main/autosuspend.zip
+  wget -q https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/autosuspend.zip
   
   print_info "Mengekstrak file..."
   unzip -oq autosuspend.zip || true
