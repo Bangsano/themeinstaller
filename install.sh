@@ -323,6 +323,8 @@ start_script() {
 
   export DEBIAN_FRONTEND=noninteractive
   export NEEDRESTART_MODE=a
+  export NEEDRESTART_SUSPEND=1
+  export DEBCONF_NONINTERACTIVE_SEEN=true
 
   if [ -f /etc/needrestart/needrestart.conf ]; then
     sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
@@ -331,8 +333,8 @@ start_script() {
 
   print_info "Menginstall dan mengupdate jq..."
 
-  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
-  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y jq
+  sudo apt-get update --allow-releaseinfo-change -y
+  sudo apt-get install -y jq
 
   if [ $? -eq 0 ]; then
     print_success "Install jq berhasil."
@@ -436,15 +438,17 @@ install_theme() {
   set -e
   export DEBIAN_FRONTEND=noninteractive
   export NEEDRESTART_MODE=a
-  
+  export NEEDRESTART_SUSPEND=1
+  export DEBCONF_NONINTERACTIVE_SEEN=true
+
   TEMP_DIR=$(mktemp -d)
   trap 'rm -rf -- "$TEMP_DIR"' EXIT
   cd "$TEMP_DIR"
   
   print_info "Memulai instalasi tema $THEME_NAME..."
 
-  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
-  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y ca-certificates curl gnupg zip unzip git wget
+  sudo apt-get update --allow-releaseinfo-change -y
+  sudo apt-get install -y ca-certificates curl gnupg zip unzip git wget
   
   if [ -f /etc/needrestart/needrestart.conf ]; then
     sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
@@ -520,8 +524,8 @@ install_theme() {
       sudo mkdir -p /etc/apt/keyrings
       curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
       echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-      sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
-      sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y nodejs
+      sudo apt-get update --allow-releaseinfo-change -y
+      sudo apt-get install -y nodejs
     fi
 
     hash -r
@@ -571,7 +575,9 @@ install_timpa() {
   set -e
   export DEBIAN_FRONTEND=noninteractive
   export NEEDRESTART_MODE=a
-  
+  export NEEDRESTART_SUSPEND=1
+  export DEBCONF_NONINTERACTIVE_SEEN=true
+
   TEMP_DIR=$(mktemp -d)
   trap 'rm -rf -- "$TEMP_DIR"' EXIT
   
@@ -582,11 +588,11 @@ install_timpa() {
     sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
   fi
 
-  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
+  sudo apt-get update --allow-releaseinfo-change -y
   PHP_CLI_VERSION=$(php -v | head -n 1 | awk '{print $2}' | cut -d. -f1,2)
   PHP_WEB_VERSION=$(systemctl list-units --type=service | grep -oP 'php[0-9\.]+-fpm' | grep -oP '[0-9\.]+' | head -n 1)
   if [ -z "$PHP_WEB_VERSION" ]; then PHP_WEB_VERSION=$PHP_CLI_VERSION; fi
-  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y \
+  sudo apt-get install -y \
     ca-certificates curl gnupg zip unzip git wget redis-server \
     php${PHP_CLI_VERSION}-common php${PHP_CLI_VERSION}-cli php${PHP_CLI_VERSION}-gd \
     php${PHP_CLI_VERSION}-mbstring php${PHP_CLI_VERSION}-bcmath php${PHP_CLI_VERSION}-xml \
@@ -719,6 +725,11 @@ uninstall_theme() {
   log_info "[+] =============================================== [+]"
   echo " "
 
+  export DEBIAN_FRONTEND=noninteractive
+  export NEEDRESTART_MODE=a
+  export NEEDRESTART_SUSPEND=1
+  export DEBCONF_NONINTERACTIVE_SEEN=true
+
   while true; do
     echo -n -e "${BOLD}Apakah Anda benar-benar yakin ingin melanjutkan? (y/n): ${NC}"
     read yn
@@ -752,7 +763,7 @@ uninstall_theme() {
         PHP_CLI_VERSION=$(php -v | head -n 1 | awk '{print $2}' | cut -d. -f1,2)
         PHP_WEB_VERSION=$(systemctl list-units --type=service | grep -oP 'php[0-9\.]+-fpm' | grep -oP '[0-9\.]+' | head -n 1)
         if [ -z "$PHP_WEB_VERSION" ]; then PHP_WEB_VERSION=$PHP_CLI_VERSION; fi
-        sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y \
+        sudo apt-get install -y \
           ca-certificates curl gnupg zip unzip git wget redis-server \
           php${PHP_CLI_VERSION}-common php${PHP_CLI_VERSION}-cli php${PHP_CLI_VERSION}-gd \
           php${PHP_CLI_VERSION}-mbstring php${PHP_CLI_VERSION}-bcmath php${PHP_CLI_VERSION}-xml \
@@ -1067,6 +1078,8 @@ install_blueprint() {
   export PATH=$(echo $PATH | tr ":" "\n" | grep -v "nvm" | tr "\n" ":")
   export DEBIAN_FRONTEND=noninteractive
   export NEEDRESTART_MODE=a
+  export NEEDRESTART_SUSPEND=1
+  export DEBCONF_NONINTERACTIVE_SEEN=true
 
   set -e
   echo -e "                                                       "
@@ -1083,8 +1096,8 @@ install_blueprint() {
   fi
 
   print_info "Menginstal dependensi dasar..."
-  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
-  sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y ca-certificates curl gnupg zip unzip git wget
+  sudo apt-get update --allow-releaseinfo-change -y
+  sudo apt-get install -y ca-certificates curl gnupg zip unzip git wget
 
   if [ -f /etc/needrestart/needrestart.conf ]; then
     sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
@@ -1121,8 +1134,8 @@ install_blueprint() {
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
-    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y nodejs
+    sudo apt-get update --allow-releaseinfo-change -y
+    sudo apt-get install -y nodejs
   fi
 
   hash -r
@@ -1154,7 +1167,9 @@ install_auto_suspend() {
   set -e
   export DEBIAN_FRONTEND=noninteractive
   export NEEDRESTART_MODE=a
-  
+  export NEEDRESTART_SUSPEND=1
+  export DEBCONF_NONINTERACTIVE_SEEN=true
+
   echo " "
   log_info "[+] =============================================== [+]"
   log_info "[+]            INSTALL FITUR AUTO SUSPEND           [+]"
@@ -1193,8 +1208,8 @@ install_auto_suspend() {
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y
-    sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y nodejs
+    sudo apt-get update --allow-releaseinfo-change -y
+    sudo apt-get install -y nodejs
   fi
   
   hash -r
