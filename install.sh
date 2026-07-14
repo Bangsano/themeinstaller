@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Apa? Mau nyolong?? 😹😹
 # Apa? Mau nyolong?? 😹😹
 # Apa? Mau nyolong?? 😹😹
@@ -435,7 +436,6 @@ install_theme() {
     echo -n -e "${BOLD}Masukkan link grup whatsapp/telegram/lainnya (diawali https://): ${NC}"; read LINK_GROUP
   fi
 
-  set -e
   export DEBIAN_FRONTEND=noninteractive
   export NEEDRESTART_MODE=a
   export NEEDRESTART_SUSPEND=1
@@ -572,7 +572,6 @@ install_timpa() {
   read confirmation
   if [[ "$confirmation" != [yY] ]]; then echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return; fi
 
-  set -e
   export DEBIAN_FRONTEND=noninteractive
   export NEEDRESTART_MODE=a
   export NEEDRESTART_SUSPEND=1
@@ -736,8 +735,7 @@ uninstall_theme() {
     
     case $yn in
       [Yy]*)
-        set -e
-        if [ ! -d "/var/www/pterodactyl" ]; then
+              if [ ! -d "/var/www/pterodactyl" ]; then
           print_error "Direktori Pterodactyl tidak ditemukan."
           return 1
         fi
@@ -938,7 +936,6 @@ start_wings() {
 }
 
 create_node() {
-  set -e
   echo " "
   echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${BLUE}[+]            MEMULAI CREATE NODE SCRIPT           [+]${NC}"
@@ -1081,7 +1078,6 @@ install_blueprint() {
   export NEEDRESTART_SUSPEND=1
   export DEBCONF_NONINTERACTIVE_SEEN=true
 
-  set -e
   echo -e "                                                       "
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${GREEN}[+]                INSTALL BLUEPRINT                [+]${NC}"
@@ -1164,7 +1160,6 @@ install_blueprint() {
 }
 
 install_auto_suspend() {
-  set -e
   export DEBIAN_FRONTEND=noninteractive
   export NEEDRESTART_MODE=a
   export NEEDRESTART_SUSPEND=1
