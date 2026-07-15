@@ -306,6 +306,11 @@ log_error() {
   echo -e "${BOLD}${RED}$1${NC}"
 }
 
+if [ "$EUID" -ne 0 ]; then
+  print_error "Akses Ditolak! Skrip ini wajib dijalankan sebagai root."
+  return 1
+fi
+
 start_script() {
   clear
   echo -e ""
@@ -328,14 +333,14 @@ start_script() {
   export DEBCONF_NONINTERACTIVE_SEEN=true
 
   if [ -f /etc/needrestart/needrestart.conf ]; then
-    sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-    sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
   fi
 
   print_info "Menginstall dan mengupdate jq..."
 
-  sudo apt-get update --allow-releaseinfo-change -y
-  sudo apt-get install -y jq
+  apt-get update --allow-releaseinfo-change -y
+  apt-get install -y jq
 
   if [ $? -eq 0 ]; then
     print_success "Install jq berhasil."
@@ -447,12 +452,12 @@ install_theme() {
   
   print_info "Memulai instalasi tema $THEME_NAME..."
 
-  sudo apt-get update --allow-releaseinfo-change -y
-  sudo apt-get install -y ca-certificates curl gnupg zip unzip git wget
+  apt-get update --allow-releaseinfo-change -y
+  apt-get install -y ca-certificates curl gnupg zip unzip git wget
   
   if [ -f /etc/needrestart/needrestart.conf ]; then
-    sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-    sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
   fi
 
   print_info "[1/4] Mengunduh file tema..."
@@ -482,13 +487,13 @@ install_theme() {
 
     BLUEPRINT_FILENAME=$(basename "$FOUND_FILE")
     IDENTIFIER="${BLUEPRINT_FILENAME%.*}"
-    sudo mv "$BLUEPRINT_FILENAME" /var/www/pterodactyl/
+    mv "$BLUEPRINT_FILENAME" /var/www/pterodactyl/
     
     print_info "[4/4] Menginstall via Blueprint..."
     cd /var/www/pterodactyl
-    sudo blueprint -install "$IDENTIFIER"
-    sudo chown -R www-data:www-data /var/www/pterodactyl
-    sudo rm "/var/www/pterodactyl/$BLUEPRINT_FILENAME"
+    blueprint -install "$IDENTIFIER"
+    chown -R www-data:www-data /var/www/pterodactyl
+    rm "/var/www/pterodactyl/$BLUEPRINT_FILENAME"
     
     print_success "Tema '$THEME_NAME' berhasil diinstall."
   else
@@ -501,7 +506,7 @@ install_theme() {
     fi
 
     print_info "[3/4] Menyalin file..."
-    sudo cp -rfT pterodactyl /var/www/pterodactyl
+    cp -rfT pterodactyl /var/www/pterodactyl
     cd /var/www/pterodactyl
 
     print_info "Memeriksa versi Node.js..."
@@ -516,20 +521,20 @@ install_theme() {
         print_warning "Versi Node.js tidak sesuai (Terdeteksi: v$CURRENT_NODE_VER). Menginstall Node.js v22..."
       fi
       unset NVM_DIR
-      sudo apt-get remove -y nodejs npm > /dev/null 2>&1 || true
-      sudo apt-get purge -y nodejs > /dev/null 2>&1 || true
-      sudo rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
-      sudo rm -rf /etc/apt/sources.list.d/nodesource.list
-      sudo rm -rf "$HOME/.nvm"
-      sudo mkdir -p /etc/apt/keyrings
-      curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
-      echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-      sudo apt-get update --allow-releaseinfo-change -y
-      sudo apt-get install -y nodejs
+      apt-get remove -y nodejs npm > /dev/null 2>&1 || true
+      apt-get purge -y nodejs > /dev/null 2>&1 || true
+      rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
+      rm -rf /etc/apt/sources.list.d/nodesource.list
+      rm -rf "$HOME/.nvm"
+      mkdir -p /etc/apt/keyrings
+      curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes | tee /etc/apt/keyrings/nodesource.gpg > /dev/null
+      echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list > /dev/null
+      apt-get update --allow-releaseinfo-change -y
+      apt-get install -y nodejs
     fi
 
     hash -r
-    sudo npm i -g yarn
+    npm i -g yarn
     
     print_info "Menginstal dependensi build..."
     yarn add cross-env react-feather
@@ -583,15 +588,15 @@ install_timpa() {
   print_info "Memulai instalasi tema $TARGET_NAME..."
 
   if [ -f /etc/needrestart/needrestart.conf ]; then
-    sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-    sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
   fi
 
-  sudo apt-get update --allow-releaseinfo-change -y
+  apt-get update --allow-releaseinfo-change -y
   PHP_CLI_VERSION=$(php -v | head -n 1 | awk '{print $2}' | cut -d. -f1,2)
   PHP_WEB_VERSION=$(systemctl list-units --type=service | grep -oP 'php[0-9\.]+-fpm' | grep -oP '[0-9\.]+' | head -n 1)
   if [ -z "$PHP_WEB_VERSION" ]; then PHP_WEB_VERSION=$PHP_CLI_VERSION; fi
-  sudo apt-get install -y \
+  apt-get install -y \
     ca-certificates curl gnupg zip unzip git wget redis-server \
     php${PHP_CLI_VERSION}-common php${PHP_CLI_VERSION}-cli php${PHP_CLI_VERSION}-gd \
     php${PHP_CLI_VERSION}-mbstring php${PHP_CLI_VERSION}-bcmath php${PHP_CLI_VERSION}-xml \
@@ -601,10 +606,10 @@ install_timpa() {
     php${PHP_WEB_VERSION}-mbstring php${PHP_WEB_VERSION}-bcmath php${PHP_WEB_VERSION}-xml \
     php${PHP_WEB_VERSION}-curl php${PHP_WEB_VERSION}-zip php${PHP_WEB_VERSION}-intl \
     php${PHP_WEB_VERSION}-sqlite3 php${PHP_WEB_VERSION}-mysql php${PHP_WEB_VERSION}-fpm php${PHP_WEB_VERSION}-redis
-  sudo phpenmod -v ${PHP_CLI_VERSION} redis || true
-  sudo phpenmod -v ${PHP_WEB_VERSION} redis || true
-  sudo systemctl enable redis-server || true
-  sudo systemctl start redis-server || true
+  phpenmod -v ${PHP_CLI_VERSION} redis || true
+  phpenmod -v ${PHP_WEB_VERSION} redis || true
+  systemctl enable redis-server || true
+  systemctl start redis-server || true
 
   print_info "[1/4] Mengunduh file panel/tema..."
   cd "$TEMP_DIR"
@@ -633,8 +638,8 @@ install_timpa() {
     cp .env /tmp/.env.backup
   fi
 
-  sudo find . -mindepth 1 -delete
-  sudo rm -f /usr/local/bin/blueprint
+  find . -mindepth 1 -delete
+  rm -f /usr/local/bin/blueprint
 
   print_info "[3/4] Mengekstrak file & Mengembalikan konfigurasi..."
   
@@ -648,17 +653,17 @@ install_timpa() {
     mv /tmp/.env.backup .env
   fi
   
-  sudo chmod -R 755 storage/* bootstrap/cache/
-  sudo chown -R www-data:www-data /var/www/pterodactyl
+  chmod -R 755 storage/* bootstrap/cache/
+  chown -R www-data:www-data /var/www/pterodactyl
 
   print_info "[4/4] Menginstal dependensi & Membangun aset..."
   if ! command -v composer; then
-      curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
+      curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
   fi
 
-  sudo rm -rf /var/www/.cache
-  sudo mkdir -p /var/www/.cache
-  sudo chown -R www-data:www-data /var/www/.cache
+  rm -rf /var/www/.cache
+  mkdir -p /var/www/.cache
+  chown -R www-data:www-data /var/www/.cache
   sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
   sudo -u www-data php artisan migrate --seed --force
   sudo -u www-data php artisan view:clear
@@ -668,20 +673,20 @@ install_timpa() {
   if [[ "${TARGET_NAME,,}" == *"reviactyl"* ]]; then
       print_info "Mengalihkan backend dari Wings ke Reviactyl Agent..."
       
-      sudo systemctl stop wings >/dev/null 2>&1 || true
-      sudo systemctl disable wings >/dev/null 2>&1 || true
-      sudo systemctl stop agent >/dev/null 2>&1 || true
+      systemctl stop wings >/dev/null 2>&1 || true
+      systemctl disable wings >/dev/null 2>&1 || true
+      systemctl stop agent >/dev/null 2>&1 || true
       
       curl -L -o /usr/local/bin/agent "https://github.com/reviactyl/agent/releases/latest/download/agent_linux_$([[ "$(uname -m)" == "x86_64" ]] && echo "amd64" || echo "arm64")"
-      sudo chmod u+x /usr/local/bin/agent
+      chmod u+x /usr/local/bin/agent
 
-      sudo mkdir -p /var/run/agent
-      sudo chown root:root /var/run/agent
+      mkdir -p /var/run/agent
+      chown root:root /var/run/agent
 
-      sudo mkdir -p /etc/reviactyl >/dev/null 2>&1 || true
-      sudo cp /etc/pterodactyl/config.yml /etc/reviactyl/config.yml
+      mkdir -p /etc/reviactyl >/dev/null 2>&1 || true
+      cp /etc/pterodactyl/config.yml /etc/reviactyl/config.yml
 
-      cat << 'EOF_AGENT' | sudo tee /etc/systemd/system/agent.service > /dev/null
+      cat << 'EOF_AGENT' | tee /etc/systemd/system/agent.service > /dev/null
 [Unit]
 Description=Reviactyl Agent
 After=docker.service
@@ -703,8 +708,8 @@ RestartSec=5s
 WantedBy=multi-user.target
 EOF_AGENT
 
-      sudo systemctl daemon-reload
-      sudo systemctl enable --now agent >/dev/null 2>&1 || true
+      systemctl daemon-reload
+      systemctl enable --now agent >/dev/null 2>&1 || true
       print_info "Reviactyl Agent berhasil diinstal dan dijalankan."
   fi
 
@@ -745,23 +750,23 @@ uninstall_theme() {
 
         echo -e "${BOLD}   - Mem-backup file .env...${NC}"
         TEMP_BACKUP=$(mktemp -d)
-        if [ -f ".env" ]; then sudo mv .env "$TEMP_BACKUP/"; fi
+        if [ -f ".env" ]; then mv .env "$TEMP_BACKUP/"; fi
 
         echo -e "${BOLD}   - Menghapus semua file panel lama...${NC}"
-        sudo find . -mindepth 1 -delete
+        find . -mindepth 1 -delete
         
         echo -e "${BOLD}   - Mengunduh panel original terbaru...${NC}"
-        curl -L https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz | sudo tar -xzf - -C /var/www/pterodactyl
+        curl -L https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz | tar -xzf - -C /var/www/pterodactyl
 
         echo -e "${BOLD}   - Mengembalikan file .env...${NC}"
-        if [ -f "$TEMP_BACKUP/.env" ]; then sudo mv "$TEMP_BACKUP"/.env .; fi
+        if [ -f "$TEMP_BACKUP/.env" ]; then mv "$TEMP_BACKUP"/.env .; fi
         rm -rf "$TEMP_BACKUP"
 
         echo -e "${BOLD}   - Install ulang dependensi (Composer)...${NC}"
         PHP_CLI_VERSION=$(php -v | head -n 1 | awk '{print $2}' | cut -d. -f1,2)
         PHP_WEB_VERSION=$(systemctl list-units --type=service | grep -oP 'php[0-9\.]+-fpm' | grep -oP '[0-9\.]+' | head -n 1)
         if [ -z "$PHP_WEB_VERSION" ]; then PHP_WEB_VERSION=$PHP_CLI_VERSION; fi
-        sudo apt-get install -y \
+        apt-get install -y \
           ca-certificates curl gnupg zip unzip git wget redis-server \
           php${PHP_CLI_VERSION}-common php${PHP_CLI_VERSION}-cli php${PHP_CLI_VERSION}-gd \
           php${PHP_CLI_VERSION}-mbstring php${PHP_CLI_VERSION}-bcmath php${PHP_CLI_VERSION}-xml \
@@ -771,17 +776,17 @@ uninstall_theme() {
           php${PHP_WEB_VERSION}-mbstring php${PHP_WEB_VERSION}-bcmath php${PHP_WEB_VERSION}-xml \
           php${PHP_WEB_VERSION}-curl php${PHP_WEB_VERSION}-zip php${PHP_WEB_VERSION}-intl \
           php${PHP_WEB_VERSION}-sqlite3 php${PHP_WEB_VERSION}-mysql php${PHP_WEB_VERSION}-fpm php${PHP_WEB_VERSION}-redis
-        sudo phpenmod -v ${PHP_CLI_VERSION} redis || true
-        sudo phpenmod -v ${PHP_WEB_VERSION} redis || true
-        sudo systemctl enable redis-server || true
-        sudo systemctl start redis-server || true
+        phpenmod -v ${PHP_CLI_VERSION} redis || true
+        phpenmod -v ${PHP_WEB_VERSION} redis || true
+        systemctl enable redis-server || true
+        systemctl start redis-server || true
 
-        sudo chmod -R 755 storage/* bootstrap/cache/
-        sudo chown -R www-data:www-data /var/www/pterodactyl
-        curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
-        sudo rm -rf /var/www/.cache
-        sudo mkdir -p /var/www/.cache
-        sudo chown -R www-data:www-data /var/www/.cache
+        chmod -R 755 storage/* bootstrap/cache/
+        chown -R www-data:www-data /var/www/pterodactyl
+        curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+        rm -rf /var/www/.cache
+        mkdir -p /var/www/.cache
+        chown -R www-data:www-data /var/www/.cache
         sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
         echo -e "${BOLD}   - Menjalankan migrasi...${NC}"
@@ -793,29 +798,29 @@ uninstall_theme() {
         sudo -u www-data php artisan config:clear
         sudo -u www-data php artisan route:clear
         sudo -u www-data php artisan cache:clear
-        sudo rm -f /usr/local/bin/blueprint
+        rm -f /usr/local/bin/blueprint
 
         if systemctl list-unit-files | grep -q "agent.service"; then
             echo -e "${BOLD}   - Membersihkan Reviactyl Agent & Mengembalikan Wings...${NC}"
-            sudo systemctl stop agent >/dev/null 2>&1 || true
-            sudo systemctl disable agent >/dev/null 2>&1 || true
-            sudo rm -f /etc/systemd/system/agent.service
-            sudo rm -f /usr/local/bin/agent
-            sudo rm -rf /etc/reviactyl
-            sudo systemctl daemon-reload
+            systemctl stop agent >/dev/null 2>&1 || true
+            systemctl disable agent >/dev/null 2>&1 || true
+            rm -f /etc/systemd/system/agent.service
+            rm -f /usr/local/bin/agent
+            rm -rf /etc/reviactyl
+            systemctl daemon-reload
         fi
 
         if systemctl list-unit-files | grep -q "wings.service"; then
-            sudo systemctl enable --now wings >/dev/null 2>&1 || true
+            systemctl enable --now wings >/dev/null 2>&1 || true
         fi
 
         echo -e "${BOLD}   - Restart layanan webserver & worker...${NC}"
-        sudo systemctl restart nginx || sudo systemctl restart apache2
+        systemctl restart nginx || systemctl restart apache2
         PHP_SERVICES=$(systemctl list-unit-files | grep -oE "php[0-9\.]+-fpm\.service" | tr "\n" " ")
         if [ ! -z "$PHP_SERVICES" ]; then
-            sudo systemctl restart $PHP_SERVICES || true
+            systemctl restart $PHP_SERVICES || true
         fi
-        sudo systemctl restart pteroq
+        systemctl restart pteroq
         sudo -u www-data php artisan up
 
         break
@@ -925,7 +930,7 @@ start_wings() {
   echo -e "                                                       "
   read -p "Masukkan token Auto-Deploy untuk menjalankan wings: " wings
   eval "$wings"
-  sudo systemctl start wings
+  systemctl start wings
   echo -e "                                                       "
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
   echo -e "${BOLD}${GREEN}[+]             CONFIGURE WINGS SUKSES              [+]${NC}"
@@ -1092,12 +1097,12 @@ install_blueprint() {
   fi
 
   print_info "Menginstal dependensi dasar..."
-  sudo apt-get update --allow-releaseinfo-change -y
-  sudo apt-get install -y ca-certificates curl gnupg zip unzip git wget
+  apt-get update --allow-releaseinfo-change -y
+  apt-get install -y ca-certificates curl gnupg zip unzip git wget
 
   if [ -f /etc/needrestart/needrestart.conf ]; then
-    sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-    sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
   fi
 
   print_info "Mengunduh dan mengekstrak Blueprint Framework..."
@@ -1122,20 +1127,20 @@ install_blueprint() {
       print_warning "Versi Node.js tidak sesuai (Terdeteksi: v$CURRENT_NODE_VER). Menginstall Node.js v22..."
     fi
     unset NVM_DIR
-    sudo apt-get remove -y nodejs npm > /dev/null 2>&1 || true
-    sudo apt-get purge -y nodejs > /dev/null 2>&1 || true
-    sudo rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
-    sudo rm -rf /etc/apt/sources.list.d/nodesource.list
-    sudo rm -rf "$HOME/.nvm"
-    sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-    sudo apt-get update --allow-releaseinfo-change -y
-    sudo apt-get install -y nodejs
+    apt-get remove -y nodejs npm > /dev/null 2>&1 || true
+    apt-get purge -y nodejs > /dev/null 2>&1 || true
+    rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
+    rm -rf /etc/apt/sources.list.d/nodesource.list
+    rm -rf "$HOME/.nvm"
+    mkdir -p /etc/apt/keyrings
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes | tee /etc/apt/keyrings/nodesource.gpg > /dev/null
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list > /dev/null
+    apt-get update --allow-releaseinfo-change -y
+    apt-get install -y nodejs
   fi
 
   hash -r
-  sudo npm i -g yarn
+  npm i -g yarn
 
   print_info "Menginstal dependensi Pterodactyl..."
   cd /var/www/pterodactyl
@@ -1148,7 +1153,7 @@ install_blueprint() {
              -e "s|USERSHELL=\"/bin/bash\" #;|USERSHELL=\"/bin/bash\" #;|g" \
              -e "s|OWNERSHIP=\"www-data:www-data\" #;|OWNERSHIP=\"www-data:www-data\" #;|g" blueprint.sh
   chmod +x blueprint.sh
-  yes | sudo bash blueprint.sh
+  yes | bash blueprint.sh
 
   echo -e "                                                       "
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
@@ -1179,8 +1184,8 @@ install_auto_suspend() {
   fi
 
   if [ -f /etc/needrestart/needrestart.conf ]; then
-    sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-    sudo sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
   fi
 
   print_info "Memeriksa versi Node.js..."
@@ -1195,20 +1200,20 @@ install_auto_suspend() {
       print_warning "Versi Node.js tidak sesuai (Terdeteksi: v$CURRENT_NODE_VER). Menginstall Node.js v22..."
     fi
     unset NVM_DIR
-    sudo apt-get remove -y nodejs npm > /dev/null 2>&1 || true
-    sudo apt-get purge -y nodejs > /dev/null 2>&1 || true
-    sudo rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
-    sudo rm -rf /etc/apt/sources.list.d/nodesource.list
-    sudo rm -rf "$HOME/.nvm"
-    sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor --yes | sudo tee /etc/apt/keyrings/nodesource.gpg > /dev/null
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list > /dev/null
-    sudo apt-get update --allow-releaseinfo-change -y
-    sudo apt-get install -y nodejs
+    apt-get remove -y nodejs npm > /dev/null 2>&1 || true
+    apt-get purge -y nodejs > /dev/null 2>&1 || true
+    rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
+    rm -rf /etc/apt/sources.list.d/nodesource.list
+    rm -rf "$HOME/.nvm"
+    mkdir -p /etc/apt/keyrings
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes | tee /etc/apt/keyrings/nodesource.gpg > /dev/null
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list > /dev/null
+    apt-get update --allow-releaseinfo-change -y
+    apt-get install -y nodejs
   fi
   
   hash -r
-  sudo npm i -g yarn
+  npm i -g yarn
   
   TEMP_DIR=$(mktemp -d)
   trap 'rm -rf -- "$TEMP_DIR"' EXIT
@@ -1221,7 +1226,7 @@ install_auto_suspend() {
   unzip -oq autosuspend.zip || true
   
   print_info "Menyalin file migrasi database..."
-  sudo cp -rf pterodactyl/* /var/www/pterodactyl/
+  cp -rf pterodactyl/* /var/www/pterodactyl/
   
   print_info "Menerapkan modifikasi sistem..."
   cd /var/www/pterodactyl
