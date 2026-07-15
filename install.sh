@@ -542,7 +542,7 @@ install_theme() {
 
     if [ "$SELECT_THEME" == "2" ]; then
       print_info "Menjalankan instalasi Billing..."
-      php artisan billing:install stable
+      sudo -u www-data php artisan billing:install stable
     fi
 
     print_info "[4/4] Membangun aset panel..."
@@ -551,10 +551,14 @@ install_theme() {
     if [ "$RAM_SIZE" -lt 4000 ]; then print_warning "Di RAM kecil mungkin proses buildnya akan memakan waktu sedikit lebih lama."; fi
 
     export NODE_OPTIONS=--openssl-legacy-provider
-    php artisan migrate --force
+    sudo -u www-data php artisan migrate --force
     yarn build:production
-    php artisan view:clear
-    php artisan optimize:clear
+    sudo -u www-data php artisan optimize:clear
+    sudo -u www-data php artisan view:clear
+    sudo -u www-data php artisan config:clear
+    sudo -u www-data php artisan route:clear
+    sudo -u www-data php artisan cache:clear
+    chown -R www-data:www-data /var/www/pterodactyl
     
     print_success "Tema '$THEME_NAME' berhasil diinstall."
   fi
@@ -632,7 +636,7 @@ install_timpa() {
   fi
   
   cd /var/www/pterodactyl
-  php artisan down || true
+  sudo -u www-data php artisan down || true
   
   if [ -f ".env" ]; then 
     cp .env /tmp/.env.backup
@@ -666,8 +670,11 @@ install_timpa() {
   chown -R www-data:www-data /var/www/.cache
   sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
   sudo -u www-data php artisan migrate --seed --force
+  sudo -u www-data php artisan optimize:clear
   sudo -u www-data php artisan view:clear
   sudo -u www-data php artisan config:clear
+  sudo -u www-data php artisan route:clear
+  sudo -u www-data php artisan cache:clear
   sudo -u www-data php artisan up
 
   if [[ "${TARGET_NAME,,}" == *"reviactyl"* ]]; then
@@ -1290,7 +1297,7 @@ install_auto_suspend() {
   fi
   
   print_info "Menjalankan migrasi database..."
-  php artisan migrate --force
+  sudo -u www-data php artisan migrate --force
   
   print_info "Menginstal dependensi build..."
   yarn add cross-env
@@ -1301,12 +1308,13 @@ install_auto_suspend() {
   yarn run build:production
   
   print_info "Membersihkan cache..."
-  php artisan optimize:clear
-  php artisan view:clear
-  php artisan cache:clear
-  php artisan route:clear
-  chown -R www-data:www-data /var/www/pterodactyl/*
-  
+  sudo -u www-data php artisan optimize:clear
+  sudo -u www-data php artisan view:clear
+  sudo -u www-data php artisan config:clear
+  sudo -u www-data php artisan route:clear
+  sudo -u www-data php artisan cache:clear
+  chown -R www-data:www-data /var/www/pterodactyl
+
   echo " "
   log_success "[+] =============================================== [+]"
   log_success "[+]      FITUR AUTO SUSPEND BERHASIL DIINSTALL      [+]"
