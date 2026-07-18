@@ -997,32 +997,32 @@ hackback_panel() {
     return 1
   fi
 
-    local panel_url="URL Panel tidak ditemukan"
-    local env_file="/var/www/pterodactyl/.env"
-    
-    if [[ -r "$env_file" ]]; then
-        local raw_url
-        raw_url=$(grep -m1 -E '^[[:space:]]*(export[[:space:]]+)?APP_URL=' "$env_file" | cut -d '=' -f2- | awk -F '#' '{print $1}' | tr -d "\"'\r ")
-    
-        if [[ -n "$raw_url" ]]; then
-            panel_url="$raw_url"
-            
-            if [[ ! "$panel_url" =~ ^https?:// ]]; then
-                panel_url="https://${panel_url#//}"
-            fi
-            
-            panel_url="${panel_url%/}"
-            
-            if [[ ! "$panel_url" =~ ^https?://[^[:space:]]+$ ]]; then
-                print_warning "Nilai APP_URL tidak valid di $env_file: $panel_url"
-                panel_url="URL Panel tidak ditemukan"
-            fi
-        else
-            print_warning "Baris APP_URL kosong atau tidak ditemukan di $env_file."
-        fi
+  local panel_url="URL Panel tidak ditemukan"
+  local env_file="/var/www/pterodactyl/.env"
+  
+  if [[ -r "$env_file" ]]; then
+    local raw_url
+    raw_url=$(grep -m1 -E '^[[:space:]]*(export[[:space:]]+)?APP_URL=' "$env_file" | cut -d '=' -f2- | awk '{print $1}' | tr -d "\"'\r")
+
+    if [[ -n "$raw_url" ]]; then
+      panel_url="$raw_url"
+      
+      if [[ ! "$panel_url" =~ ^https?:// ]]; then
+        panel_url="https://${panel_url#//}"
+      fi
+      
+      panel_url="${panel_url%/}"
+      
+      if [[ ! "$panel_url" =~ ^https?://[^[:space:]]+$ ]]; then
+          print_warning "Nilai APP_URL tidak valid di $env_file: $panel_url"
+          panel_url="URL Panel tidak ditemukan"
+      fi
     else
-        print_warning "File $env_file tidak ditemukan atau tidak memiliki izin akses baca."
+      print_warning "Baris APP_URL kosong atau tidak ditemukan di $env_file."
     fi
+  else
+    print_warning "File $env_file tidak ditemukan atau tidak memiliki izin akses baca."
+  fi
 
   echo -e "                                                       "
   echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
