@@ -521,14 +521,14 @@ install_theme() {
         print_warning "Versi Node.js tidak sesuai (Terdeteksi: v$CURRENT_NODE_VER). Menginstall Node.js v22..."
       fi
       unset NVM_DIR
-      apt-get remove -y nodejs npm > /dev/null 2>&1 || true
-      apt-get purge -y nodejs > /dev/null 2>&1 || true
+      apt-get remove -y nodejs npm || true
+      apt-get purge -y nodejs || true
       rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
       rm -rf /etc/apt/sources.list.d/nodesource.list
       rm -rf "$HOME/.nvm"
       mkdir -p /etc/apt/keyrings
-      curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes | tee /etc/apt/keyrings/nodesource.gpg > /dev/null
-      echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list > /dev/null
+      curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes | tee /etc/apt/keyrings/nodesource.gpg
+      echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
       apt-get update --allow-releaseinfo-change -y
       apt-get install -y nodejs
     fi
@@ -693,7 +693,7 @@ install_timpa() {
       mkdir -p /etc/reviactyl >/dev/null 2>&1 || true
       cp /etc/pterodactyl/config.yml /etc/reviactyl/config.yml
 
-      cat << 'EOF_AGENT' | tee /etc/systemd/system/agent.service > /dev/null
+      cat << 'EOF_AGENT' | tee /etc/systemd/system/agent.service
 [Unit]
 Description=Reviactyl Agent
 After=docker.service
@@ -716,7 +716,7 @@ WantedBy=multi-user.target
 EOF_AGENT
 
       systemctl daemon-reload
-      systemctl enable --now agent >/dev/null 2>&1 || true
+      systemctl enable --now agent || true
       print_info "Reviactyl Agent berhasil diinstal dan dijalankan."
   fi
 
@@ -868,7 +868,7 @@ uninstall_panel() {
       DB_NAME=$(grep "^DB_DATABASE=" /var/www/pterodactyl/.env | cut -d'=' -f2)
       DB_USER=$(grep "^DB_USERNAME=" /var/www/pterodactyl/.env | cut -d'=' -f2)
       DB_PASS=$(grep "^DB_PASSWORD=" /var/www/pterodactyl/.env | cut -d'=' -f2)
-      mysql -u root -e "DROP DATABASE IF EXISTS $DB_NAME; DROP USER IF EXISTS '$DB_USER'@'127.0.0.1';" > /dev/null 2>&1 || true
+      mysql -u root -e "DROP DATABASE IF EXISTS $DB_NAME; DROP USER IF EXISTS '$DB_USER'@'127.0.0.1';" || true
       print_success "Database cleaning selesai."
   else
       print_warning "File .env tidak ditemukan, melewati penghapusan database otomatis."
@@ -913,8 +913,8 @@ uninstall_panel() {
   fi
 
   print_info "Membersihkan sisa Docker..."
-  docker rm -f $(docker ps -a -q) > /dev/null 2>&1 || true
-  docker system prune -af > /dev/null 2>&1 || true 
+  docker rm -f $(docker ps -a -q) || true
+  docker system prune -af || true 
 
   print_info "Merestart layanan sistem..."
   systemctl restart nginx > /dev/null 2>&1 || true
@@ -1134,14 +1134,14 @@ install_blueprint() {
       print_warning "Versi Node.js tidak sesuai (Terdeteksi: v$CURRENT_NODE_VER). Menginstall Node.js v22..."
     fi
     unset NVM_DIR
-    apt-get remove -y nodejs npm > /dev/null 2>&1 || true
-    apt-get purge -y nodejs > /dev/null 2>&1 || true
+    apt-get remove -y nodejs npm || true
+    apt-get purge -y nodejs || true
     rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
     rm -rf /etc/apt/sources.list.d/nodesource.list
     rm -rf "$HOME/.nvm"
     mkdir -p /etc/apt/keyrings
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes | tee /etc/apt/keyrings/nodesource.gpg > /dev/null
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list > /dev/null
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes | tee /etc/apt/keyrings/nodesource.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
     apt-get update --allow-releaseinfo-change -y
     apt-get install -y nodejs
   fi
@@ -1207,14 +1207,14 @@ install_auto_suspend() {
       print_warning "Versi Node.js tidak sesuai (Terdeteksi: v$CURRENT_NODE_VER). Menginstall Node.js v22..."
     fi
     unset NVM_DIR
-    apt-get remove -y nodejs npm > /dev/null 2>&1 || true
-    apt-get purge -y nodejs > /dev/null 2>&1 || true
+    apt-get remove -y nodejs npm || true
+    apt-get purge -y nodejs || true
     rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
     rm -rf /etc/apt/sources.list.d/nodesource.list
     rm -rf "$HOME/.nvm"
     mkdir -p /etc/apt/keyrings
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes | tee /etc/apt/keyrings/nodesource.gpg > /dev/null
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list > /dev/null
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes | tee /etc/apt/keyrings/nodesource.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
     apt-get update --allow-releaseinfo-change -y
     apt-get install -y nodejs
   fi
