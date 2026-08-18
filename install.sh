@@ -492,7 +492,6 @@ install_theme() {
     print_info "[4/4] Menginstall via Blueprint..."
     cd /var/www/pterodactyl
     blueprint -install "$IDENTIFIER"
-    chown -R www-data:www-data /var/www/pterodactyl
     rm "/var/www/pterodactyl/$BLUEPRINT_FILENAME"
     
     print_success "Tema '$THEME_NAME' berhasil diinstall."
@@ -542,7 +541,7 @@ install_theme() {
 
     if [ "$SELECT_THEME" == "2" ]; then
       print_info "Menjalankan instalasi Billing..."
-      sudo -u www-data php artisan billing:install stable
+      php artisan billing:install stable
     fi
 
     print_info "[4/4] Membangun aset panel..."
@@ -551,17 +550,18 @@ install_theme() {
     if [ "$RAM_SIZE" -lt 4000 ]; then print_warning "Di RAM kecil mungkin proses buildnya akan memakan waktu sedikit lebih lama."; fi
 
     export NODE_OPTIONS=--openssl-legacy-provider
-    sudo -u www-data php artisan migrate --force
+    php artisan migrate --force
     yarn build:production
-    sudo -u www-data php artisan optimize:clear
-    sudo -u www-data php artisan view:clear
-    sudo -u www-data php artisan config:clear
-    sudo -u www-data php artisan route:clear
-    sudo -u www-data php artisan cache:clear
-    chown -R www-data:www-data /var/www/pterodactyl
+    php artisan optimize:clear
+    php artisan view:clear
+    php artisan config:clear
+    php artisan route:clear
+    php artisan cache:clear
     
     print_success "Tema '$THEME_NAME' berhasil diinstall."
   fi
+
+  chown -R www-data:www-data /var/www/pterodactyl
 
   echo " "
   log_success "[+] =============================================== [+]"
@@ -636,7 +636,7 @@ install_timpa() {
   fi
   
   cd /var/www/pterodactyl
-  sudo -u www-data php artisan down || true
+  php artisan down || true
   
   if [ -f ".env" ]; then 
     cp .env /tmp/.env.backup
@@ -658,8 +658,7 @@ install_timpa() {
   fi
   
   chmod -R 755 storage/* bootstrap/cache/
-  chown -R www-data:www-data /var/www/pterodactyl
-
+  
   print_info "[4/4] Menginstal dependensi & Membangun aset..."
   if ! command -v composer; then
       curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
@@ -668,14 +667,17 @@ install_timpa() {
   rm -rf /var/www/.cache
   mkdir -p /var/www/.cache
   chown -R www-data:www-data /var/www/.cache
-  sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
-  sudo -u www-data php artisan migrate --seed --force
-  sudo -u www-data php artisan optimize:clear
-  sudo -u www-data php artisan view:clear
-  sudo -u www-data php artisan config:clear
-  sudo -u www-data php artisan route:clear
-  sudo -u www-data php artisan cache:clear
-  sudo -u www-data php artisan up
+  export COMPOSER_ALLOW_SUPERUSER=1
+  composer clear-cache || true
+  export COMPOSER_PROCESS_TIMEOUT=2000
+  composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+  php artisan migrate --seed --force
+  php artisan optimize:clear
+  php artisan view:clear
+  php artisan config:clear
+  php artisan route:clear
+  php artisan cache:clear
+  php artisan up
 
   if [[ "${TARGET_NAME,,}" == *"reviactyl"* ]]; then
       print_info "Mengalihkan backend dari Wings ke Reviactyl Agent..."
@@ -719,6 +721,8 @@ EOF_AGENT
       systemctl enable --now agent || true
       print_info "Reviactyl Agent berhasil diinstal dan dijalankan."
   fi
+
+  chown -R www-data:www-data /var/www/pterodactyl
 
   print_success "Tema '$TARGET_NAME' berhasil diinstall."
   echo " "
@@ -789,22 +793,24 @@ uninstall_theme() {
         systemctl start redis-server || true
 
         chmod -R 755 storage/* bootstrap/cache/
-        chown -R www-data:www-data /var/www/pterodactyl
         curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
         rm -rf /var/www/.cache
         mkdir -p /var/www/.cache
         chown -R www-data:www-data /var/www/.cache
-        sudo -u www-data env COMPOSER_PROCESS_TIMEOUT=2000 composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+        export COMPOSER_ALLOW_SUPERUSER=1
+        composer clear-cache || true
+        export COMPOSER_PROCESS_TIMEOUT=2000
+        composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
         echo -e "${BOLD}   - Menjalankan migrasi...${NC}"
-        sudo -u www-data php artisan migrate --seed --force
+        php artisan migrate --seed --force
 
         echo -e "${BOLD}   - Membersihkan cache sistem...${NC}"
-        sudo -u www-data php artisan optimize:clear
-        sudo -u www-data php artisan view:clear
-        sudo -u www-data php artisan config:clear
-        sudo -u www-data php artisan route:clear
-        sudo -u www-data php artisan cache:clear
+        php artisan optimize:clear
+        php artisan view:clear
+        php artisan config:clear
+        php artisan route:clear
+        php artisan cache:clear
         rm -f /usr/local/bin/blueprint
 
         if systemctl list-unit-files | grep -q "agent.service"; then
@@ -827,8 +833,9 @@ uninstall_theme() {
         if [ ! -z "$PHP_SERVICES" ]; then
             systemctl restart $PHP_SERVICES || true
         fi
+        chown -R www-data:www-data /var/www/pterodactyl
         systemctl restart pteroq
-        sudo -u www-data php artisan up
+        php artisan up
 
         break
         ;;
@@ -1155,7 +1162,6 @@ install_blueprint() {
   yarn install
 
   print_info "Menjalankan blueprint.sh..."
-  cd /var/www/pterodactyl
   sed -i -E -e "s|WEBUSER=\"www-data\" #;|WEBUSER=\"www-data\" #;|g" \
              -e "s|USERSHELL=\"/bin/bash\" #;|USERSHELL=\"/bin/bash\" #;|g" \
              -e "s|OWNERSHIP=\"www-data:www-data\" #;|OWNERSHIP=\"www-data:www-data\" #;|g" blueprint.sh
@@ -1297,7 +1303,7 @@ install_auto_suspend() {
   fi
   
   print_info "Menjalankan migrasi database..."
-  sudo -u www-data php artisan migrate --force
+  php artisan migrate --force
   
   print_info "Menginstal dependensi build..."
   yarn add cross-env
@@ -1308,11 +1314,11 @@ install_auto_suspend() {
   yarn run build:production
   
   print_info "Membersihkan cache..."
-  sudo -u www-data php artisan optimize:clear
-  sudo -u www-data php artisan view:clear
-  sudo -u www-data php artisan config:clear
-  sudo -u www-data php artisan route:clear
-  sudo -u www-data php artisan cache:clear
+  php artisan optimize:clear
+  php artisan view:clear
+  php artisan config:clear
+  php artisan route:clear
+  php artisan cache:clear
   chown -R www-data:www-data /var/www/pterodactyl
 
   echo " "
