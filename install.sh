@@ -278,6 +278,30 @@ BG_BRIGHT_MAGENTA='\033[105m'
 BG_BRIGHT_CYAN='\033[106m'
 BG_BRIGHT_WHITE='\033[107m'
 
+if [ "$EUID" -ne 0 ]; then
+  print_error "Akses Ditolak! Skrip ini wajib dijalankan sebagai root."
+  return 1
+fi
+
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a
+export NEEDRESTART_SUSPEND=1
+export DEBCONF_NONINTERACTIVE_SEEN=true
+
+[ -f /etc/needrestart/needrestart.conf ] && sed -i -E "s/#?\$nrconf\{restart\} = 'i';/\$nrconf{restart} = 'a';/g" /etc/needrestart/needrestart.conf
+
+log_info() {
+  echo -e "${BOLD}${CYAN}$1${NC}"
+}
+
+log_success() {
+  echo -e "${BOLD}${GREEN}$1${NC}"
+}
+
+log_error() {
+  echo -e "${BOLD}${RED}$1${NC}"
+}
+
 print_info() {
   echo -e "\n  ${BG_BLUE}${BRIGHT_WHITE}${BOLD} INFO ${NC} ${BOLD}$1${NC}\n"
 }
@@ -294,22 +318,24 @@ print_error() {
   echo -e "\n  ${BG_RED}${BRIGHT_WHITE}${BOLD} ERROR ${NC} ${BOLD}$1${NC}\n"
 }
 
-log_info() {
-  echo -e "${BOLD}${CYAN}$1${NC}"
-}
+print_banner() {
+  local title="$1"
+  local border_color="${2:-$BLUE}" # Parameter 2: Warna bingkai (default biru)
+  local text_style="${3:-$border_color}" # Parameter 3: Style teks tengah (default ikuti bingkai)
+  local width=50 # Panjang banner
+  local char="=" # Simbol garis
 
-log_success() {
-  echo -e "${BOLD}${GREEN}$1${NC}"
-}
+  local border=$(printf '%*s' "$width" "")
+  border=${border// /$char}
+  local title_len=${#title}
+  local pad_len=$(( (width - title_len) / 2 ))
+  local pad_left=$(printf '%*s' "$pad_len" "")
+  local pad_right=$(printf '%*s' $((width - title_len - pad_len)) "")
 
-log_error() {
-  echo -e "${BOLD}${RED}$1${NC}"
+  echo -e "\n${BOLD}${border_color}[+] ${border} [+]${NC}"
+  echo -e "${BOLD}${border_color}[+]${NC} ${text_style}${pad_left}${title}${pad_right}${NC} ${BOLD}${border_color}[+]${NC}"
+  echo -e "${BOLD}${border_color}[+] ${border} [+]\n${NC}"
 }
-
-if [ "$EUID" -ne 0 ]; then
-  print_error "Akses Ditolak! Skrip ini wajib dijalankan sebagai root."
-  return 1
-fi
 
 start_script() {
   clear
@@ -326,16 +352,6 @@ start_script() {
   echo -e ""
   echo -e "𝗧𝗘𝗟𝗘𝗚𝗥𝗔𝗠: @sanoofc"
   sleep 2
-
-  export DEBIAN_FRONTEND=noninteractive
-  export NEEDRESTART_MODE=a
-  export NEEDRESTART_SUSPEND=1
-  export DEBCONF_NONINTERACTIVE_SEEN=true
-
-  if [ -f /etc/needrestart/needrestart.conf ]; then
-    sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-    sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-  fi
 
   print_info "Menginstall dan mengupdate jq..."
 
@@ -354,11 +370,7 @@ start_script() {
 }
 
 check_token() {
-  echo -e "                                                       "
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+]              SANO OFFICIAL LICENSE              [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
+  print_banner "SANO OFFICIAL LICENSE"
   echo -e "${BOLD}${YELLOW}MASUKKAN AKSES TOKEN: ${NC}"
   read -r USER_TOKEN
 
@@ -371,94 +383,141 @@ check_token() {
   clear
 }
 
+install_base_dependencies() {
+  local CLI_VER=$1
+  local WEB_VER=$2
+
+  apt-get install -y \
+    ca-certificates curl gnupg zip unzip git wget redis-server \
+    php${CLI_VER}-{common,cli,gd,mbstring,bcmath,xml,curl,zip,intl,sqlite3,mysql,fpm,redis} \
+    php${WEB_VER}-{common,cli,gd,mbstring,bcmath,xml,curl,zip,intl,sqlite3,mysql,fpm,redis}
+}
+
+setup_nodejs() {
+  print_info "Memeriksa versi Node.js..."
+  local NODE_VER=$(node -v 2>/dev/null | cut -d'.' -f1 | sed 's/v//')
+
+  if [ "$NODE_VER" == "22" ]; then
+    print_success "Node.js v22 sudah terinstall."
+  else
+    [ -z "$NODE_VER" ] && print_warning "Node.js tidak terdeteksi. Memulai instalasi Node.js v22..." || print_warning "Versi Node.js tidak sesuai (Terdeteksi: v$NODE_VER). Menginstall Node.js v22..."
+
+    unset NVM_DIR
+    apt-get remove -y nodejs npm || true
+    apt-get purge -y nodejs || true
+    rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
+    rm -rf /etc/apt/sources.list.d/nodesource.list "$HOME/.nvm"
+
+    mkdir -p /etc/apt/keyrings
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes | tee /etc/apt/keyrings/nodesource.gpg >/dev/null
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
+
+    apt-get update --allow-releaseinfo-change -y
+    apt-get install -y nodejs
+  fi
+
+  hash -r
+  npm i -g yarn
+}
+
+clear_artisan_cache() {
+  print_info "Membersihkan cache sistem..."
+  for cmd in optimize view config route cache; do php artisan $cmd:clear; done
+}
+
 install_theme() {
+  # Format: "Nama Tema;URL Tema;Tipe Aksi (normal/timpa)"
+  local STANDARD_THEMES=(
+    "Stellar;https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/stellar.zip;normal"
+    "Billing;https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/billing.zip;normal"
+    "Enigma;https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/enigma.zip;normal"
+    "Elysium;https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/elysium.zip;normal"
+    "Frostcore (Original Style);https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/frostcore.zip;normal"
+    "Nightcore (Original Style);https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/nightcore.zip;normal"
+    "IceMinecraft (Original Style);https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/iceMinecraft.zip;normal"
+    "Noobe (Original Style);https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/noobe.zip;normal"
+    "Reviactyl;https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz;timpa"
+    "NookTheme;https://github.com/Nookure/NookTheme/releases/latest/download/panel.tar.gz;timpa"
+  )
+
+  local BLUEPRINT_THEMES=(
+    "Nebula V1.8-3;https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/nebula_v1.8-3.zip;normal"
+    "Nebula V2.0-1;https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/nebula_v2.0-1.zip;normal"
+    "Recolor (Original Style);https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/recolor.zip;normal"
+    "NavySeals;https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/navyseals.zip;normal"
+    "LememTheme (Original Style);https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/lemem.zip;normal"
+    "Darkenate (Original Style);https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/darkenate.zip;normal"
+    "AbyssPurple (Original Style);https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/abysspurple.zip;normal"
+  )
+
   local SELECT_THEME
   local THEME_NAME
   local THEME_URL
 
   while true; do
     clear
-    echo " "
-    echo -e "${BLUE}${BOLD}[+] =============================================== [+]${NC}"
-    echo -e "${BLUE}${BOLD}[+]${NC} ${BG_BLUE}${BRIGHT_WHITE}${BOLD}                 SELECT THEME                  ${NC} ${BLUE}${BOLD}[+]${NC}"
-    echo -e "${BLUE}${BOLD}[+] =============================================== [+]${NC}"
-    echo " "
+    print_banner "SELECT THEME" "$BLUE" "${BG_BLUE}${BRIGHT_WHITE}${BOLD}"
     echo -e "${BRIGHT_CYAN}${BOLD}--- STANDARD THEME ---${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[1]${NC} ${WHITE}Stellar${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[2]${NC} ${WHITE}Billing${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[3]${NC} ${WHITE}Enigma${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[4]${NC} ${WHITE}Elysium${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[5]${NC} ${WHITE}Frostcore (Original Style)${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[6]${NC} ${WHITE}Nightcore (Original Style)${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[7]${NC} ${WHITE}IceMinecraft (Original Style)${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[8]${NC} ${WHITE}Noobe (Original Style)${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[9]${NC} ${WHITE}Reviactyl${NC}"
+    for i in "${!STANDARD_THEMES[@]}"; do
+      IFS=';' read -r name url type <<< "${STANDARD_THEMES[$i]}"
+      echo -e " ${BRIGHT_WHITE}${BOLD}[$((i+1))]${NC} ${WHITE}$name${NC}"
+    done
     echo " "
     echo -e "${BRIGHT_MAGENTA}${BOLD}--- BLUEPRINT THEME ---${NC}"
     echo -e "${BG_RED}${BRIGHT_WHITE} (!) WAJIB INSTALL BLUEPRINT DULU (OPSI #2 DI MENU UTAMA) ${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[b1]${NC} ${WHITE}Nebula V1.8-3${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[b2]${NC} ${WHITE}Nebula V2.0-1${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[b3]${NC} ${WHITE}Recolor (Original Style)${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[b4]${NC} ${WHITE}NavySeals${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[b5]${NC} ${WHITE}LememTheme (Original Style)${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[b6]${NC} ${WHITE}Darkenate (Original Style)${NC}"
-    echo -e " ${BRIGHT_WHITE}${BOLD}[b7]${NC} ${WHITE}AbyssPurple (Original Style)${NC}"
+    for i in "${!BLUEPRINT_THEMES[@]}"; do
+      IFS=';' read -r name url type <<< "${BLUEPRINT_THEMES[$i]}"
+      echo -e " ${BRIGHT_WHITE}${BOLD}[b$((i+1))]${NC} ${WHITE}$name${NC}"
+    done
     echo " "
     echo -e " ${BRIGHT_WHITE}${BOLD}[x]${NC} ${WHITE}Kembali ke Menu Utama${NC}"
     echo " "
-    echo -n -e "${BOLD}Masukkan pilihan (1-9/b1-6 atau x)${NC}${BOLD}: ${NC}"
+    echo -n -e "${BOLD}Masukkan pilihan (1-${#STANDARD_THEMES[@]}/b1-${#BLUEPRINT_THEMES[@]} atau x)${NC}${BOLD}: ${NC}"
     read SELECT_THEME
-    case "$SELECT_THEME" in
-      1) THEME_NAME="Stellar"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/stellar.zip"; break;;
-      2) THEME_NAME="Billing"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/billing.zip"; break;;
-      3) THEME_NAME="Enigma"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/enigma.zip"; break;;
-      4) THEME_NAME="Elysium"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/elysium.zip"; break;;
-      5) THEME_NAME="Frostcore"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/frostcore.zip"; break;;
-      6) THEME_NAME="Nightcore"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/nightcore.zip"; break;;
-      7) THEME_NAME="IceMinecraft"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/iceMinecraft.zip"; break;;
-      8) THEME_NAME="Noobe"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/noobe.zip"; break;;
-      9) install_timpa "https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz" "Reviactyl"; return;;
-      [bB]1) THEME_NAME="Nebula V1.8-3"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/nebula_v1.8-3.zip"; break;;
-      [bB]2) THEME_NAME="Nebula V2.0-1"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/nebula_v2.0-1.zip"; break;;
-      [bB]3) THEME_NAME="Recolor"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/recolor.zip"; break;;
-      [bB]4) THEME_NAME="NavySeals"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/navyseals.zip"; break;;
-      [bB]5) THEME_NAME="LememTheme"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/lemem.zip"; break;;
-      [bB]6) THEME_NAME="Darkenate"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/darkenate.zip"; break;;
-      [bB]7) THEME_NAME="AbyssPurple"; THEME_URL="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme/abysspurple.zip"; break;;
-      x|X) echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return;;
-      *) print_error "Pilihan tidak valid, silahkan coba lagi.";;
-    esac
+
+    if [[ "$SELECT_THEME" =~ ^[0-9]+$ ]] && [ "$SELECT_THEME" -ge 1 ] && [ "$SELECT_THEME" -le "${#STANDARD_THEMES[@]}" ]; then
+      IFS=';' read -r THEME_NAME THEME_URL type <<< "${STANDARD_THEMES[$((SELECT_THEME-1))]}"
+      if [ "$type" == "timpa" ]; then
+        install_timpa "$THEME_URL" "$THEME_NAME"
+        return
+      else
+        break
+      fi
+    elif [[ "$SELECT_THEME" =~ ^[bB]([0-9]+)$ ]]; then
+      local b_idx="${BASH_REMATCH[1]}"
+      if [ "$b_idx" -ge 1 ] && [ "$b_idx" -le "${#BLUEPRINT_THEMES[@]}" ]; then
+        IFS=';' read -r THEME_NAME THEME_URL type <<< "${BLUEPRINT_THEMES[$((b_idx-1))]}"
+        break
+      else
+        print_error "Pilihan Blueprint tidak valid. Silakan coba lagi."
+      fi
+    elif [[ "${SELECT_THEME,,}" == "x" ]]; then
+      echo -e "${BOLD}Instalasi dibatalkan.${NC}"
+      return
+    else
+      print_error "Pilihan tidak valid. Silakan coba lagi."
+    fi
   done
 
   echo " "
   echo -n -e "${BOLD}Anda memilih tema '$THEME_NAME'. Lanjutkan? (y/n): ${NC}"
   read confirmation
   if [[ "$confirmation" != [yY] ]]; then echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return; fi
-  
+
   if [ "$SELECT_THEME" == "3" ]; then # Khusus Enigma
     echo -n -e "${BOLD}Masukkan link kontak admin (diawali https://): ${NC}"; read LINK_ADMIN
     echo -n -e "${BOLD}Masukkan link channel whatsapp/telegram/lainnya (diawali https://): ${NC}"; read LINK_CHANNEL
     echo -n -e "${BOLD}Masukkan link grup whatsapp/telegram/lainnya (diawali https://): ${NC}"; read LINK_GROUP
   fi
 
-  export DEBIAN_FRONTEND=noninteractive
-  export NEEDRESTART_MODE=a
-  export NEEDRESTART_SUSPEND=1
-  export DEBCONF_NONINTERACTIVE_SEEN=true
-
   TEMP_DIR=$(mktemp -d)
   trap 'rm -rf -- "$TEMP_DIR"' EXIT
   cd "$TEMP_DIR"
-  
+
   print_info "Memulai instalasi tema $THEME_NAME..."
 
   apt-get update --allow-releaseinfo-change -y
   apt-get install -y ca-certificates curl gnupg zip unzip git wget
-  
-  if [ -f /etc/needrestart/needrestart.conf ]; then
-    sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-    sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-  fi
 
   print_info "[1/4] Mengunduh file tema..."
   wget -q "$THEME_URL"
@@ -470,16 +529,16 @@ install_theme() {
   else
     unzip -oq "$THEME_ZIP_FILE" || true
   fi
-  
+
   rm -f "$THEME_ZIP_FILE"
 
   if [[ "$SELECT_THEME" == [bB]* ]]; then
     # --- JALUR BLUEPRINT ---
     print_info "[3/4] Menyiapkan Blueprint..."
     if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "Blueprint belum terinstall."; return 1; fi
-    
+
     FOUND_FILE=$(find . -maxdepth 1 -name "*.blueprint" -print -quit)
-    
+
     if [ -z "$FOUND_FILE" ]; then
         print_error "File .blueprint tidak ditemukan dalam zip!"
         return 1
@@ -488,12 +547,12 @@ install_theme() {
     BLUEPRINT_FILENAME=$(basename "$FOUND_FILE")
     IDENTIFIER="${BLUEPRINT_FILENAME%.*}"
     mv "$BLUEPRINT_FILENAME" /var/www/pterodactyl/
-    
+
     print_info "[4/4] Menginstall via Blueprint..."
     cd /var/www/pterodactyl
     blueprint -install "$IDENTIFIER"
     rm "/var/www/pterodactyl/$BLUEPRINT_FILENAME"
-    
+
     print_success "Tema '$THEME_NAME' berhasil diinstall."
   else
     # --- JALUR MANUAL ---
@@ -508,35 +567,14 @@ install_theme() {
     cp -rfT pterodactyl /var/www/pterodactyl
     cd /var/www/pterodactyl
 
-    print_info "Memeriksa versi Node.js..."
-    CURRENT_NODE_VER=$(node -v 2>/dev/null | cut -d'.' -f1 | sed 's/v//')
-    
-    if [[ "$CURRENT_NODE_VER" == "22" ]]; then
-      print_success "Node.js v22 sudah terinstall. Instalasi ulang dilewati."
-    else
-      if [[ -z "$CURRENT_NODE_VER" ]]; then
-        print_warning "Node.js tidak terdeteksi di sistem. Memulai instalasi Node.js v22..."
-      else
-        print_warning "Versi Node.js tidak sesuai (Terdeteksi: v$CURRENT_NODE_VER). Menginstall Node.js v22..."
-      fi
-      unset NVM_DIR
-      apt-get remove -y nodejs npm || true
-      apt-get purge -y nodejs || true
-      rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
-      rm -rf /etc/apt/sources.list.d/nodesource.list
-      rm -rf "$HOME/.nvm"
-      mkdir -p /etc/apt/keyrings
-      curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes | tee /etc/apt/keyrings/nodesource.gpg
-      echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
-      apt-get update --allow-releaseinfo-change -y
-      apt-get install -y nodejs
-    fi
+    setup_nodejs
 
-    hash -r
-    npm i -g yarn
-    
     print_info "Menginstal dependensi build..."
-    yarn add cross-env react-feather
+    MISSING_PKGS=""
+    for pkg in cross-env react-feather; do
+      jq -e ".dependencies[\"$pkg\"] or .devDependencies[\"$pkg\"]" package.json > /dev/null || MISSING_PKGS="$MISSING_PKGS $pkg"
+    done
+    [ -n "$MISSING_PKGS" ] && yarn add $MISSING_PKGS
     yarn install
 
     if [ "$SELECT_THEME" == "2" ]; then
@@ -552,22 +590,13 @@ install_theme() {
     export NODE_OPTIONS=--openssl-legacy-provider
     php artisan migrate --force
     yarn build:production
-    php artisan optimize:clear
-    php artisan view:clear
-    php artisan config:clear
-    php artisan route:clear
-    php artisan cache:clear
-    
+    clear_artisan_cache
     print_success "Tema '$THEME_NAME' berhasil diinstall."
   fi
 
   chown -R www-data:www-data /var/www/pterodactyl
 
-  echo " "
-  log_success "[+] =============================================== [+]"
-  log_success "[+]          INSTALASI BERHASIL SELESAI             [+]"
-  log_success "[+] =============================================== [+]"
-  echo " "
+  print_banner "INSTALASI TEMA SELESAI" "$GREEN"
   sleep 3
   return 0
 }
@@ -581,35 +610,16 @@ install_timpa() {
   read confirmation
   if [[ "$confirmation" != [yY] ]]; then echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return; fi
 
-  export DEBIAN_FRONTEND=noninteractive
-  export NEEDRESTART_MODE=a
-  export NEEDRESTART_SUSPEND=1
-  export DEBCONF_NONINTERACTIVE_SEEN=true
-
   TEMP_DIR=$(mktemp -d)
   trap 'rm -rf -- "$TEMP_DIR"' EXIT
-  
-  print_info "Memulai instalasi tema $TARGET_NAME..."
 
-  if [ -f /etc/needrestart/needrestart.conf ]; then
-    sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-    sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-  fi
+  print_info "Memulai instalasi tema $TARGET_NAME..."
 
   apt-get update --allow-releaseinfo-change -y
   PHP_CLI_VERSION=$(php -v | head -n 1 | awk '{print $2}' | cut -d. -f1,2)
   PHP_WEB_VERSION=$(systemctl list-units --type=service | grep -oP 'php[0-9\.]+-fpm' | grep -oP '[0-9\.]+' | head -n 1)
   if [ -z "$PHP_WEB_VERSION" ]; then PHP_WEB_VERSION=$PHP_CLI_VERSION; fi
-  apt-get install -y \
-    ca-certificates curl gnupg zip unzip git wget redis-server \
-    php${PHP_CLI_VERSION}-common php${PHP_CLI_VERSION}-cli php${PHP_CLI_VERSION}-gd \
-    php${PHP_CLI_VERSION}-mbstring php${PHP_CLI_VERSION}-bcmath php${PHP_CLI_VERSION}-xml \
-    php${PHP_CLI_VERSION}-curl php${PHP_CLI_VERSION}-zip php${PHP_CLI_VERSION}-intl \
-    php${PHP_CLI_VERSION}-sqlite3 php${PHP_CLI_VERSION}-mysql php${PHP_CLI_VERSION}-fpm php${PHP_CLI_VERSION}-redis \
-    php${PHP_WEB_VERSION}-common php${PHP_WEB_VERSION}-cli php${PHP_WEB_VERSION}-gd \
-    php${PHP_WEB_VERSION}-mbstring php${PHP_WEB_VERSION}-bcmath php${PHP_WEB_VERSION}-xml \
-    php${PHP_WEB_VERSION}-curl php${PHP_WEB_VERSION}-zip php${PHP_WEB_VERSION}-intl \
-    php${PHP_WEB_VERSION}-sqlite3 php${PHP_WEB_VERSION}-mysql php${PHP_WEB_VERSION}-fpm php${PHP_WEB_VERSION}-redis
+  install_base_dependencies "$PHP_CLI_VERSION" "$PHP_WEB_VERSION"
   phpenmod -v ${PHP_CLI_VERSION} redis || true
   phpenmod -v ${PHP_WEB_VERSION} redis || true
   systemctl enable redis-server || true
@@ -617,7 +627,7 @@ install_timpa() {
 
   print_info "[1/4] Mengunduh file panel/tema..."
   cd "$TEMP_DIR"
-  
+
   if [[ "$TARGET_URL" == *.zip ]]; then
       FILE_EXT="zip"
       FILENAME="panel.zip"
@@ -625,19 +635,19 @@ install_timpa() {
       FILE_EXT="tar.gz"
       FILENAME="panel.tar.gz"
   fi
-  
+
   wget -q -O "$FILENAME" "$TARGET_URL"
 
   print_info "[2/4] Mempersiapkan direktori & Backup Config..."
-  
+
   if [ ! -d "/var/www/pterodactyl" ]; then
     print_error "Direktori Pterodactyl tidak ditemukan."
     return 1
   fi
-  
+
   cd /var/www/pterodactyl
   php artisan down || true
-  
+
   if [ -f ".env" ]; then 
     cp .env /tmp/.env.backup
   fi
@@ -646,7 +656,7 @@ install_timpa() {
   rm -f /usr/local/bin/blueprint
 
   print_info "[3/4] Mengekstrak file & Mengembalikan konfigurasi..."
-  
+
   if [[ "$FILE_EXT" == "zip" ]]; then
       unzip -o "$TEMP_DIR/$FILENAME" -d /var/www/pterodactyl/
   else
@@ -656,9 +666,9 @@ install_timpa() {
   if [ -f "/tmp/.env.backup" ]; then 
     mv /tmp/.env.backup .env
   fi
-  
+
   chmod -R 755 storage/* bootstrap/cache/
-  
+
   print_info "[4/4] Menginstal dependensi & Membangun aset..."
   if ! command -v composer; then
       curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
@@ -672,20 +682,16 @@ install_timpa() {
   export COMPOSER_PROCESS_TIMEOUT=2000
   composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
   php artisan migrate --seed --force
-  php artisan optimize:clear
-  php artisan view:clear
-  php artisan config:clear
-  php artisan route:clear
-  php artisan cache:clear
+  clear_artisan_cache
   php artisan up
 
   if [[ "${TARGET_NAME,,}" == *"reviactyl"* ]]; then
       print_info "Mengalihkan backend dari Wings ke Reviactyl Agent..."
-      
+
       systemctl stop wings >/dev/null 2>&1 || true
       systemctl disable wings >/dev/null 2>&1 || true
       systemctl stop agent >/dev/null 2>&1 || true
-      
+
       curl -L -o /usr/local/bin/agent "https://github.com/reviactyl/agent/releases/latest/download/agent_linux_$([[ "$(uname -m)" == "x86_64" ]] && echo "amd64" || echo "arm64")"
       chmod u+x /usr/local/bin/agent
 
@@ -725,30 +731,17 @@ EOF_AGENT
   chown -R www-data:www-data /var/www/pterodactyl
 
   print_success "Tema '$TARGET_NAME' berhasil diinstall."
-  echo " "
-  log_success "[+] =============================================== [+]"
-  log_success "[+]          INSTALASI BERHASIL SELESAI             [+]"
-  log_success "[+] =============================================== [+]"
-  echo " "
+  print_banner "INSTALASI TEMA SELESAI" "$GREEN"
   sleep 3
 }
 
 uninstall_theme() {
-  echo " "
-  log_info "[+] =============================================== [+]"
-  log_info "[+]       RESET PANEL (UNINSTALL THEME/TOOLS)       [+]"
-  log_info "[+] =============================================== [+]"
-  echo " "
-
-  export DEBIAN_FRONTEND=noninteractive
-  export NEEDRESTART_MODE=a
-  export NEEDRESTART_SUSPEND=1
-  export DEBCONF_NONINTERACTIVE_SEEN=true
+  print_banner "RESET PANEL (UNINSTALL THEME/TOOLS)" "$CYAN"
 
   while true; do
     echo -n -e "${BOLD}Apakah Anda benar-benar yakin ingin melanjutkan? (y/n): ${NC}"
     read yn
-    
+
     case $yn in
       [Yy]*)
               if [ ! -d "/var/www/pterodactyl" ]; then
@@ -765,7 +758,7 @@ uninstall_theme() {
 
         echo -e "${BOLD}   - Menghapus semua file panel lama...${NC}"
         find . -mindepth 1 -delete
-        
+
         echo -e "${BOLD}   - Mengunduh panel original terbaru...${NC}"
         curl -L https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz | tar -xzf - -C /var/www/pterodactyl
 
@@ -777,16 +770,7 @@ uninstall_theme() {
         PHP_CLI_VERSION=$(php -v | head -n 1 | awk '{print $2}' | cut -d. -f1,2)
         PHP_WEB_VERSION=$(systemctl list-units --type=service | grep -oP 'php[0-9\.]+-fpm' | grep -oP '[0-9\.]+' | head -n 1)
         if [ -z "$PHP_WEB_VERSION" ]; then PHP_WEB_VERSION=$PHP_CLI_VERSION; fi
-        apt-get install -y \
-          ca-certificates curl gnupg zip unzip git wget redis-server \
-          php${PHP_CLI_VERSION}-common php${PHP_CLI_VERSION}-cli php${PHP_CLI_VERSION}-gd \
-          php${PHP_CLI_VERSION}-mbstring php${PHP_CLI_VERSION}-bcmath php${PHP_CLI_VERSION}-xml \
-          php${PHP_CLI_VERSION}-curl php${PHP_CLI_VERSION}-zip php${PHP_CLI_VERSION}-intl \
-          php${PHP_CLI_VERSION}-sqlite3 php${PHP_CLI_VERSION}-mysql php${PHP_CLI_VERSION}-fpm php${PHP_CLI_VERSION}-redis \
-          php${PHP_WEB_VERSION}-common php${PHP_WEB_VERSION}-cli php${PHP_WEB_VERSION}-gd \
-          php${PHP_WEB_VERSION}-mbstring php${PHP_WEB_VERSION}-bcmath php${PHP_WEB_VERSION}-xml \
-          php${PHP_WEB_VERSION}-curl php${PHP_WEB_VERSION}-zip php${PHP_WEB_VERSION}-intl \
-          php${PHP_WEB_VERSION}-sqlite3 php${PHP_WEB_VERSION}-mysql php${PHP_WEB_VERSION}-fpm php${PHP_WEB_VERSION}-redis
+        install_base_dependencies "$PHP_CLI_VERSION" "$PHP_WEB_VERSION"
         phpenmod -v ${PHP_CLI_VERSION} redis || true
         phpenmod -v ${PHP_WEB_VERSION} redis || true
         systemctl enable redis-server || true
@@ -805,12 +789,7 @@ uninstall_theme() {
         echo -e "${BOLD}   - Menjalankan migrasi...${NC}"
         php artisan migrate --seed --force
 
-        echo -e "${BOLD}   - Membersihkan cache sistem...${NC}"
-        php artisan optimize:clear
-        php artisan view:clear
-        php artisan config:clear
-        php artisan route:clear
-        php artisan cache:clear
+        clear_artisan_cache
         rm -f /usr/local/bin/blueprint
 
         if systemctl list-unit-files | grep -q "agent.service"; then
@@ -849,21 +828,13 @@ uninstall_theme() {
     esac
   done
 
-  echo " "
-  log_success "[+] =============================================== [+]"
-  log_success "[+]             PANEL BERHASIL DI-RESET             [+]"
-  log_success "[+] =============================================== [+]"
-  echo " "
+  print_banner "TEMA PANEL BERHASIL DI-RESET" "$GREEN"
   sleep 3
   return 0
 }
 
 uninstall_panel() {
-  echo " "
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+]                  UNINSTALL PANEL                [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo " "
+  print_banner "UNINSTALL PANEL" "$CYAN"
   echo -n -e "${BOLD}Apakah Anda yakin ingin melanjutkan? (y/n): ${NC}"
   read confirmation
   if [[ "$confirmation" != [yY] ]]; then echo -e "${BOLD}Uninstall dibatalkan.${NC}"; return; fi
@@ -926,41 +897,24 @@ uninstall_panel() {
   print_info "Merestart layanan sistem..."
   systemctl restart nginx > /dev/null 2>&1 || true
   systemctl restart apache2 > /dev/null 2>&1 || true
-  
-  echo -e "                                                       "
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]             UNINSTALL PANEL SUKSES              [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
+
+  print_banner "UNINSTALL PANEL SELESAI" "$GREEN"
   sleep 3
   return 0
 }
 
 start_wings() {
-  echo -e "                                                       "
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+]                 CONFIGURE WINGS                 [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
+  print_banner "CONFIGURE WINGS" "$CYAN"
   read -p "Masukkan token Auto-Deploy untuk menjalankan wings: " wings
   eval "$wings"
   systemctl start wings
-  echo -e "                                                       "
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]             CONFIGURE WINGS SUKSES              [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
+  print_banner "CONFIGURE WINGS SUCCESS" "$GREEN"
   sleep 3
   return 0
 }
 
 create_node() {
-  echo " "
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+]            MEMULAI CREATE NODE SCRIPT           [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo " "
-
+  print_banner "MENJALANKAN SCRIPT CREATE NODE" "$CYAN"
   bash <(curl -s https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/createnode.sh)
 
   if [ $? -ne 0 ]; then
@@ -968,21 +922,13 @@ create_node() {
     return 1
   fi
 
-  echo " "
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]         CREATE NODE & LOCATION SUCCESS          [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo " "
+  print_banner "CREATE NODE & LOCATION SUCCESS" "$GREEN"
   sleep 3
   return 0
 }
 
 hackback_panel() {
-  echo -e "                                                       "
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+]                  HACK BACK PANEL                [+]${NC}"
-  echo -e "${BOLD}${BLUE}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
+  print_banner "HACK BACK PANEL" "$CYAN"
   read -p "Masukkan Username Panel Baru: " user
   read -sp "Masukkan Password Baru (password tidak akan ditampilkan): " pwhb
   echo
@@ -1006,20 +952,20 @@ hackback_panel() {
 
   local panel_url="URL Panel tidak ditemukan"
   local env_file="/var/www/pterodactyl/.env"
-  
+
   if [[ -r "$env_file" ]]; then
     local raw_url
     raw_url=$(grep -m1 -E '^[[:space:]]*(export[[:space:]]+)?APP_URL=' "$env_file" | cut -d '=' -f2- | awk '{print $1}' | tr -d "\"'\r")
 
     if [[ -n "$raw_url" ]]; then
       panel_url="$raw_url"
-      
+
       if [[ ! "$panel_url" =~ ^https?:// ]]; then
         panel_url="https://${panel_url#//}"
       fi
-      
+
       panel_url="${panel_url%/}"
-      
+
       if [[ ! "$panel_url" =~ ^https?://[^[:space:]]+$ ]]; then
           print_warning "Nilai APP_URL tidak valid di $env_file: $panel_url"
           panel_url="URL Panel tidak ditemukan"
@@ -1045,11 +991,7 @@ hackback_panel() {
 }
 
 ubahpw_vps() {
-  echo -e "                                                       "
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]                UBAH PASSWORD VPS                [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
+  print_banner "UBAH PASSWORD VPS" "$CYAN"
 
   while true; do
     read -p "Masukkan Password Baru: " pw1
@@ -1072,15 +1014,11 @@ $pw1
 EOF
 
   if [ $? -eq 0 ]; then
-    echo -e "                                                       "
-    echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-    echo -e "${BOLD}${GREEN}[+]            GANTI PASSWORD VPS SUKSES            [+]${NC}"
-    echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-    echo -e "                                                       "
+    print_banner "GANTI PASSWORD VPS SUKSES" "$GREEN"
     sleep 3
     return 0
   else
-    print_error "Gagal mengubah password. Silakan periksa log sistem."
+    print_error "Gagal mengubah password VPS."
     sleep 3
     return 1
   fi
@@ -1092,17 +1030,8 @@ install_blueprint() {
   unset NVM_BIN
   unset NVM_INC
   export PATH=$(echo $PATH | tr ":" "\n" | grep -v "nvm" | tr "\n" ":")
-  export DEBIAN_FRONTEND=noninteractive
-  export NEEDRESTART_MODE=a
-  export NEEDRESTART_SUSPEND=1
-  export DEBCONF_NONINTERACTIVE_SEEN=true
 
-  echo -e "                                                       "
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]                INSTALL BLUEPRINT                [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
-  
+  print_banner "INSTALL BLUEPRINT" "$CYAN"
   echo -n -e "${BOLD}Apakah anda yakin ingin melanjutkannya? (y/n): ${NC}"
   read confirmation
   if [[ "$confirmation" != [yY] ]]; then
@@ -1114,11 +1043,6 @@ install_blueprint() {
   apt-get update --allow-releaseinfo-change -y
   apt-get install -y ca-certificates curl gnupg zip unzip git wget
 
-  if [ -f /etc/needrestart/needrestart.conf ]; then
-    sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-    sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-  fi
-
   print_info "Mengunduh dan mengekstrak Blueprint Framework..."
   DOWNLOAD_URL=$(curl -s https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | grep 'release.zip' | cut -d '"' -f 4)
   if [ -z "$DOWNLOAD_URL" ]; then
@@ -1129,36 +1053,15 @@ install_blueprint() {
   unzip -oq /tmp/blueprint.zip -d /var/www/pterodactyl
   rm /tmp/blueprint.zip
 
-  print_info "Memeriksa versi Node.js..."
-  CURRENT_NODE_VER=$(node -v 2>/dev/null | cut -d'.' -f1 | sed 's/v//')
-  
-  if [[ "$CURRENT_NODE_VER" == "22" ]]; then
-    print_success "Node.js v22 sudah terinstall. Instalasi ulang dilewati."
-  else
-    if [[ -z "$CURRENT_NODE_VER" ]]; then
-      print_warning "Node.js tidak terdeteksi di sistem. Memulai instalasi Node.js v22..."
-    else
-      print_warning "Versi Node.js tidak sesuai (Terdeteksi: v$CURRENT_NODE_VER). Menginstall Node.js v22..."
-    fi
-    unset NVM_DIR
-    apt-get remove -y nodejs npm || true
-    apt-get purge -y nodejs || true
-    rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
-    rm -rf /etc/apt/sources.list.d/nodesource.list
-    rm -rf "$HOME/.nvm"
-    mkdir -p /etc/apt/keyrings
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes | tee /etc/apt/keyrings/nodesource.gpg
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
-    apt-get update --allow-releaseinfo-change -y
-    apt-get install -y nodejs
-  fi
-
-  hash -r
-  npm i -g yarn
+  setup_nodejs
 
   print_info "Menginstal dependensi Pterodactyl..."
   cd /var/www/pterodactyl
-  yarn add cross-env
+  MISSING_PKGS=""
+  for pkg in cross-env react-feather; do
+    jq -e ".dependencies[\"$pkg\"] or .devDependencies[\"$pkg\"]" package.json > /dev/null || MISSING_PKGS="$MISSING_PKGS $pkg"
+  done
+  [ -n "$MISSING_PKGS" ] && yarn add $MISSING_PKGS
   yarn install
 
   print_info "Menjalankan blueprint.sh..."
@@ -1166,28 +1069,20 @@ install_blueprint() {
              -e "s|USERSHELL=\"/bin/bash\" #;|USERSHELL=\"/bin/bash\" #;|g" \
              -e "s|OWNERSHIP=\"www-data:www-data\" #;|OWNERSHIP=\"www-data:www-data\" #;|g" blueprint.sh
   chmod +x blueprint.sh
-  yes | bash blueprint.sh
 
-  echo -e "                                                       "
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+]          INSTALLASI BLUEPRINT SELESAI           [+]${NC}"
-  echo -e "${BOLD}${GREEN}[+] =============================================== [+]${NC}"
-  echo -e "                                                       "
+  if ! command -v blueprint &> /dev/null; then
+    yes | bash blueprint.sh
+  else
+    print_warning "Blueprint sudah terpasang, melewati tahap instalasi awal."
+  fi
+
+  print_banner "INSTALASI BLUEPRINT SELESAI" "$GREEN"
   sleep 3
   return 0
 }
 
 install_auto_suspend() {
-  export DEBIAN_FRONTEND=noninteractive
-  export NEEDRESTART_MODE=a
-  export NEEDRESTART_SUSPEND=1
-  export DEBCONF_NONINTERACTIVE_SEEN=true
-
-  echo " "
-  log_info "[+] =============================================== [+]"
-  log_info "[+]            INSTALL FITUR AUTO SUSPEND           [+]"
-  log_info "[+] =============================================== [+]"
-  echo " "
+  print_banner "INSTALL FITUR AUTO SUSPEND" "$CYAN"
   echo -e "${BOLD}Fitur ini akan menambahkan fungsionalitas auto-suspend server.${NC}"
   echo -n -e "${BOLD}Lanjutkan instalasi? (y/n): ${NC}"
   read confirmation
@@ -1196,54 +1091,24 @@ install_auto_suspend() {
     return
   fi
 
-  if [ -f /etc/needrestart/needrestart.conf ]; then
-    sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-    sed -i "s/\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
-  fi
+  setup_nodejs
 
-  print_info "Memeriksa versi Node.js..."
-  CURRENT_NODE_VER=$(node -v 2>/dev/null | cut -d'.' -f1 | sed 's/v//')
-  
-  if [[ "$CURRENT_NODE_VER" == "22" ]]; then
-    print_success "Node.js v22 sudah terinstall. Instalasi ulang dilewati."
-  else
-    if [[ -z "$CURRENT_NODE_VER" ]]; then
-      print_warning "Node.js tidak terdeteksi di sistem. Memulai instalasi Node.js v22..."
-    else
-      print_warning "Versi Node.js tidak sesuai (Terdeteksi: v$CURRENT_NODE_VER). Menginstall Node.js v22..."
-    fi
-    unset NVM_DIR
-    apt-get remove -y nodejs npm || true
-    apt-get purge -y nodejs || true
-    rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
-    rm -rf /etc/apt/sources.list.d/nodesource.list
-    rm -rf "$HOME/.nvm"
-    mkdir -p /etc/apt/keyrings
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes | tee /etc/apt/keyrings/nodesource.gpg
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
-    apt-get update --allow-releaseinfo-change -y
-    apt-get install -y nodejs
-  fi
-  
-  hash -r
-  npm i -g yarn
-  
   TEMP_DIR=$(mktemp -d)
   trap 'rm -rf -- "$TEMP_DIR"' EXIT
   cd "$TEMP_DIR"
-  
+
   print_info "Mengunduh file autosuspend.zip..."
   wget -q https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/autosuspend.zip
-  
+
   print_info "Mengekstrak file..."
   unzip -oq autosuspend.zip || true
-  
+
   print_info "Menyalin file migrasi database..."
   cp -rf pterodactyl/* /var/www/pterodactyl/
-  
+
   print_info "Menerapkan modifikasi sistem..."
   cd /var/www/pterodactyl
-  
+
   sed -i "/use Ramsey\\\\Uuid\\\\Uuid;/a use Pterodactyl\\\\Models\\\\Server;" app/Console/Kernel.php
   if ! grep -q "Server::where('exp_date'" app/Console/Kernel.php; then
     sed -i "/\\\$schedule->command(CleanServiceBackupFilesCommand::class)->daily();/a \\
@@ -1262,7 +1127,7 @@ install_auto_suspend() {
             } \\
         })->dailyAt('23:55');" app/Console/Kernel.php
   fi
-  
+
   sed -i "/'owner_id', 'external_id', 'name', 'description',/a \\\t\t\t'exp_date'," app/Http/Controllers/Admin/ServersController.php
   sed -i "/'oom_disabled' => 'sometimes|boolean',/a \\            'exp_date' => \$rules['exp_date']," app/Http/Requests/Api/Application/Servers/StoreServerRequest.php
   sed -i "/'oom_disabled' => array_get(\$data, 'oom_disabled'),/a \\            'exp_date' => array_get(\$data, 'exp_date')," app/Http/Requests/Api/Application/Servers/StoreServerRequest.php
@@ -1270,20 +1135,20 @@ install_auto_suspend() {
   sed -i "/'description' => Arr::get(\$data, 'description') ?? '',/a \                'exp_date' => Arr::get(\$data, 'exp_date') ?? null," app/Services/Servers/DetailsModificationService.php
   sed -i "/'backup_limit' => Arr::get(\$data, 'backup_limit') ?? 0,/a \\                'exp_date' => Arr::get(\$data, 'exp_date') ?? null," app/Services/Servers/ServerCreationService.php
   sed -i "/'name' => \$server->name,/a \\                'exp_date' => \$server->exp_date," app/Transformers/Api/Client/ServerTransformer.php
-  
+
   if [ -f "resources/scripts/api/server/getServer.ts" ]; then
     sed -i "/name: string;/a \\        expDate: string;" resources/scripts/api/server/getServer.ts
     sed -i "/name: data.name,/a \\        expDate: data.exp_date," resources/scripts/api/server/getServer.ts
   fi
-  
+
   if [ -f "resources/scripts/components/server/console/ServerDetailsBlock.tsx" ]; then
     sed -i "/faMicrochip,/a \\        faCalendarDay," resources/scripts/components/server/console/ServerDetailsBlock.tsx
     sed -i "/const limits = ServerContext.useStoreState((state) => state.server.data!.limits);/a \\        const expDate = ServerContext.useStoreState((state) => state.server.data!.expDate);" resources/scripts/components/server/console/ServerDetailsBlock.tsx
-    
+
     sed -i -e '/<StatBlock icon={faMicrochip} title={'\''CPU Load'\''} color={getBackgroundColor(stats.cpu, limits.cpu)}>/{x;p;x;}' \
            -e '\%<StatBlock icon={faMicrochip} title={'\''CPU Load'\''} color={getBackgroundColor(stats.cpu, limits.cpu)}>%'"{s%^%\t\t\t<StatBlock icon={faCalendarDay} title={'Expiration Date'}>\n\t\t\t\t{expDate ? expDate : 'Unlimited'}\n\t\t\t<\/StatBlock>\n%}" resources/scripts/components/server/console/ServerDetailsBlock.tsx
   fi
-  
+
   TARGET_BLADE="resources/views/admin/servers/view/details.blade.php"
   if [ -f "$TARGET_BLADE" ] && ! grep -q "exp_date" "$TARGET_BLADE"; then
     sed -i "/<p class=\"text-muted small\">Character limits: <code>a-zA-Z0-9_-<\/code> and <code>\[Space\]<\/code>.<\/p>/,/<\/div>/ {
@@ -1292,7 +1157,7 @@ install_auto_suspend() {
       }
     }" "$TARGET_BLADE"
   fi
-  
+
   TARGET_NEW="resources/views/admin/servers/new.blade.php"
   if [ -f "$TARGET_NEW" ] && ! grep -q "exp_date" "$TARGET_NEW"; then
     sed -i "/<p class=\"small text-muted no-margin\">Email address of the Server Owner.<\/p>/,/<\/div>/ {
@@ -1301,49 +1166,41 @@ install_auto_suspend() {
       }
     }" "$TARGET_NEW"
   fi
-  
+
   print_info "Menjalankan migrasi database..."
   php artisan migrate --force
-  
+
   print_info "Menginstal dependensi build..."
-  yarn add cross-env
+  MISSING_PKGS=""
+  for pkg in cross-env; do
+    jq -e ".dependencies[\"$pkg\"] or .devDependencies[\"$pkg\"]" package.json > /dev/null || MISSING_PKGS="$MISSING_PKGS $pkg"
+  done
+  [ -n "$MISSING_PKGS" ] && yarn add $MISSING_PKGS
   yarn install
-  
+
   print_info "Membangun ulang aset panel..."
   export NODE_OPTIONS=--openssl-legacy-provider
   yarn run build:production
-  
-  print_info "Membersihkan cache..."
-  php artisan optimize:clear
-  php artisan view:clear
-  php artisan config:clear
-  php artisan route:clear
-  php artisan cache:clear
+
+  clear_artisan_cache
   chown -R www-data:www-data /var/www/pterodactyl
 
-  echo " "
-  log_success "[+] =============================================== [+]"
-  log_success "[+]      FITUR AUTO SUSPEND BERHASIL DIINSTALL      [+]"
-  log_success "[+] =============================================== [+]"
-  echo " "
+  print_banner "FITUR AUTO SUSPEND BERHASIL DIPASANG" "$GREEN"
   sleep 3
   return 0
 }
 
-# Main script
-start_script
-
-while true; do
+print_logo() {
   echo -e "\n  "
   echo -e "${BOLD}${CYAN}        _,gggggggggg.${NC}"
   echo -e "${BOLD}${CYAN}    ,ggggggggggggggggg.${NC}"
   echo -e "${BOLD}${CYAN}  ,ggggg        gggggggg.${NC}"
   echo -e "${BOLD}${CYAN} ,ggg'               'ggg.${NC}"
   echo -e "${BOLD}${CYAN}',gg       ,ggg.      'ggg:${NC}"
-  echo -e "${BOLD}${CYAN}'ggg      ,gg'''  .    ggg${NC}     ${BOLD}${BLUE}Auto Installer Theme Pterodactyl${NC}"
+  echo -e "${BOLD}${CYAN}'ggg      ,gg'''  .    ggg${NC}     ${BOLD}${BLUE}Auto Installer Pterodactyl Theme${NC}"
   echo -e "${BOLD}${CYAN}gggg      gg     ,    ggg${NC}      ${BOLD}${BLUE}By Sano Official${NC}"
   echo -e "${BOLD}${CYAN}ggg:     gg.     -   ,ggg${NC}     ${BOLD}${GREEN}----------------------------------${NC}"
-  echo -e "${BOLD}${CYAN} ggg:     ggg._    _,ggg${NC}       ${BOLD}${BLUE}Telegram : @sanoofc${NC}"
+  echo -e "${BOLD}${CYAN} ggg:     ggg._    _,ggg${NC}       ${BOLD}${BLUE}Telegram: @sanoofc${NC}"
   echo -e "${BOLD}${CYAN} ggg.    '.'''ggggggp${NC}"
   echo -e "${BOLD}${CYAN}  'ggg    '-.__${NC}"
   echo -e "${BOLD}${CYAN}    ggg${NC}"
@@ -1352,38 +1209,44 @@ while true; do
   echo -e "${BOLD}${CYAN}          ggg.${NC}"
   echo -e "${BOLD}${CYAN}             b.${NC}"
   echo -e "  "
+}
+
+# Format: "Nama Menu;nama_fungsi"
+MAIN_MENU=(
+  "Install Themes;install_theme"
+  "Install Blueprint;install_blueprint"
+  "Install Fitur Auto Suspend;install_auto_suspend"
+  "Reset Panel (menghapus semua modifikasi panel seperti tema kustom atau tools lainnya);uninstall_theme"
+  "Uninstall Panel;uninstall_panel"
+  "Start Wings;start_wings"
+  "Create Node & Location (auto node ijo);create_node"
+  "Hack Back Panel;hackback_panel"
+  "Ubah Password VPS;ubahpw_vps"
+)
+
+# Main script execution
+start_script
+
+while true; do
+  print_logo
   echo -e "${BOLD} BERIKUT ADALAH LIST FITUR:${NC}"
-  echo -e "${BOLD}  1. Install Themes${NC}"
-  echo -e "${BOLD}  2. Install Blueprint${NC}"
-  echo -e "${BOLD}  3. Install Fitur Auto Suspend${NC}"
-  echo -e "${BOLD}  4. Reset Panel (menghapus semua modifikasi panel seperti tema kustom atau tools lainnya)${NC}"
-  echo -e "${BOLD}  5. Uninstall Panel${NC}"
-  echo -e "${BOLD}  6. Start Wings${NC}"
-  echo -e "${BOLD}  7. Create Node & Location (auto node ijo)${NC}"
-  echo -e "${BOLD}  8. Hack Back Panel${NC}"
-  echo -e "${BOLD}  9. Ubah Password VPS${NC}"
+  for i in "${!MAIN_MENU[@]}"; do
+    IFS=';' read -r title func <<< "${MAIN_MENU[$i]}"
+    echo -e "${BOLD}  $((i+1)). $title${NC}"
+  done
   echo -e "${BOLD}  x. Exit${NC}"
   print_info "Jika panel mengalami eror setelah menginstall tema atau tools lainnya, silakan jalankan fitur reset panel."
-  echo -n -e "${BOLD}Masukkan pilihan (1-9 atau x): ${NC}"
+  echo -n -e "${BOLD}Masukkan pilihan (1-${#MAIN_MENU[@]} atau x): ${NC}"
   read -r MENU_CHOICE
 
-  case "$MENU_CHOICE" in
-    1) install_theme ;;
-    2) install_blueprint ;;
-    3) install_auto_suspend ;;
-    4) uninstall_theme ;;
-    5) uninstall_panel ;;
-    6) start_wings ;;
-    7) create_node ;;
-    8) hackback_panel ;;
-    9) ubahpw_vps ;;
-    x|X) 
-      echo -e "${BOLD}${YELLOW}Keluar dari skrip. Terima kasih!${NC}"
-      exit 0 
-      ;;
-    *) 
-      print_error "Pilihan tidak valid, silahkan coba lagi."
-      sleep 2 
-      ;;
-  esac
+  if [[ "$MENU_CHOICE" =~ ^[0-9]+$ ]] && [ "$MENU_CHOICE" -ge 1 ] && [ "$MENU_CHOICE" -le "${#MAIN_MENU[@]}" ]; then
+    IFS=';' read -r title func <<< "${MAIN_MENU[$((MENU_CHOICE-1))]}"
+    $func
+  elif [[ "${MENU_CHOICE,,}" == "x" ]]; then
+    echo -e "${BOLD}${YELLOW}Keluar dari skrip. Terima kasih!${NC}"
+    exit 0 
+  else
+    print_error "Pilihan tidak valid. Silakan coba lagi."
+    sleep 2 
+  fi
 done
