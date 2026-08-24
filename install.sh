@@ -680,7 +680,8 @@ install_timpa() {
   export COMPOSER_ALLOW_SUPERUSER=1
   composer clear-cache || true
   export COMPOSER_PROCESS_TIMEOUT=2000
-  composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+  composer config -g preferred-install source || true
+  composer install --no-dev --optimize-autoloader --no-interaction --prefer-source
   php artisan migrate --seed --force
   clear_artisan_cache
   php artisan up
@@ -784,7 +785,8 @@ uninstall_theme() {
         export COMPOSER_ALLOW_SUPERUSER=1
         composer clear-cache || true
         export COMPOSER_PROCESS_TIMEOUT=2000
-        composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+        composer config -g preferred-install source || true
+        composer install --no-dev --optimize-autoloader --no-interaction --prefer-source
 
         echo -e "${BOLD}   - Menjalankan migrasi...${NC}"
         php artisan migrate --seed --force
