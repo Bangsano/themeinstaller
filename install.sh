@@ -290,6 +290,8 @@ export DEBCONF_NONINTERACTIVE_SEEN=true
 
 [ -f /etc/needrestart/needrestart.conf ] && sed -i -E "s/#?\$nrconf\{restart\} = 'i';/\$nrconf{restart} = 'a';/g" /etc/needrestart/needrestart.conf
 
+unset DATABASE_URL DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD
+
 log_info() {
   echo -e "${BOLD}${CYAN}$1${NC}"
 }
