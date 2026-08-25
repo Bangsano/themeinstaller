@@ -810,13 +810,16 @@ uninstall_theme() {
             systemctl enable --now wings >/dev/null 2>&1 || true
         fi
 
+        chown -R www-data:www-data /var/www/pterodactyl
+
         echo -e "${BOLD}   - Restart layanan webserver & worker...${NC}"
-        systemctl restart nginx || systemctl restart apache2
+        systemctl restart nginx || systemctl restart apache2 || true
+        
         PHP_SERVICES=$(systemctl list-unit-files | grep -oE "php[0-9\.]+-fpm\.service" | tr "\n" " ")
         if [ ! -z "$PHP_SERVICES" ]; then
             systemctl restart $PHP_SERVICES || true
         fi
-        chown -R www-data:www-data /var/www/pterodactyl
+        
         systemctl restart pteroq
         php artisan up
 
