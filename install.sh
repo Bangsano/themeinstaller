@@ -339,6 +339,16 @@ print_banner() {
   echo -e "${BOLD}${border_color}[+] ${border} [+]\n${NC}"
 }
 
+safe_apt_update() {
+    local UPDATE_LOG=$(apt-get update --allow-releaseinfo-change -y 2>&1)
+    if echo "$UPDATE_LOG" | grep -q "NO_PUBKEY"; then
+        print_warning "Terdeteksi GPG Key yang hilang! Mencoba memperbaiki otomatis..."
+        echo "$UPDATE_LOG" | grep -o 'NO_PUBKEY [0-9A-F]*' | awk '{print $2}' | sort -u | xargs -r -I {} apt-key adv --keyserver keyserver.ubuntu.com --recv-keys {} >/dev/null 2>&1
+        apt-get update --allow-releaseinfo-change -y || true
+        print_success "GPG Key berhasil dipulihkan."
+    fi
+}
+
 start_script() {
   clear
   echo -e ""
@@ -357,7 +367,7 @@ start_script() {
 
   print_info "Menginstall dan mengupdate jq..."
 
-  apt-get update --allow-releaseinfo-change -y
+  safe_apt_update
   apt-get install -y jq
 
   if [ $? -eq 0 ]; then
@@ -414,7 +424,7 @@ setup_nodejs() {
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes | tee /etc/apt/keyrings/nodesource.gpg >/dev/null
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
 
-    apt-get update --allow-releaseinfo-change -y
+    safe_apt_update
     apt-get install -y nodejs
   fi
 
@@ -518,7 +528,7 @@ install_theme() {
 
   print_info "Memulai instalasi tema $THEME_NAME..."
 
-  apt-get update --allow-releaseinfo-change -y
+  safe_apt_update
   apt-get install -y ca-certificates curl gnupg zip unzip git wget
 
   print_info "[1/4] Mengunduh file tema..."
@@ -617,7 +627,7 @@ install_timpa() {
 
   print_info "Memulai instalasi tema $TARGET_NAME..."
 
-  apt-get update --allow-releaseinfo-change -y
+  safe_apt_update
   PHP_CLI_VERSION=$(php -v | head -n 1 | awk '{print $2}' | cut -d. -f1,2)
   PHP_WEB_VERSION=$(systemctl list-units --type=service | grep -oP 'php[0-9\.]+-fpm' | grep -oP '[0-9\.]+' | head -n 1)
   if [ -z "$PHP_WEB_VERSION" ]; then PHP_WEB_VERSION=$PHP_CLI_VERSION; fi
@@ -1047,7 +1057,7 @@ install_blueprint() {
   fi
 
   print_info "Menginstal dependensi dasar..."
-  apt-get update --allow-releaseinfo-change -y
+  safe_apt_update
   apt-get install -y ca-certificates curl gnupg zip unzip git wget
 
   print_info "Mengunduh dan mengekstrak Blueprint Framework..."
