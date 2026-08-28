@@ -581,6 +581,10 @@ install_theme() {
 
     setup_nodejs
 
+    print_info "Mengaktifkan Corepack untuk kompatibilitas Yarn..."
+    export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+    corepack enable || true
+
     print_info "Menginstal dependensi build..."
     MISSING_PKGS=""
     for pkg in cross-env react-feather; do
