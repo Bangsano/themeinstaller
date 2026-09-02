@@ -547,7 +547,11 @@ install_theme() {
   if [[ "$SELECT_THEME" == [bB]* ]]; then
     # --- JALUR BLUEPRINT ---
     print_info "[3/4] Menyiapkan Blueprint..."
-    if [ ! -f "/var/www/pterodactyl/blueprint.sh" ]; then print_error "Blueprint belum terinstall."; return 1; fi
+
+    if ! command -v blueprint >/dev/null 2>&1 && [ ! -f "/var/www/pterodactyl/blueprint.sh" ] && [ ! -f "/var/www/pterodactyl/blueprint/blueprint.sh" ]; then
+      print_error "Blueprint belum terinstall."
+      return 1
+    fi
 
     FOUND_FILE=$(find . -maxdepth 1 -name "*.blueprint" -print -quit)
 
@@ -562,8 +566,16 @@ install_theme() {
 
     print_info "[4/4] Menginstall via Blueprint..."
     cd /var/www/pterodactyl
-    blueprint -install "$IDENTIFIER"
-    rm "/var/www/pterodactyl/$BLUEPRINT_FILENAME"
+
+    if command -v blueprint >/dev/null 2>&1; then
+      blueprint -i "$IDENTIFIER" || blueprint install "$IDENTIFIER" || bash blueprint.sh -install "$IDENTIFIER" || true
+    elif [ -f "blueprint.sh" ]; then
+      bash blueprint.sh -i "$IDENTIFIER" || true
+    elif [ -f "blueprint/blueprint.sh" ]; then
+      bash blueprint/blueprint.sh -i "$IDENTIFIER" || true
+    fi
+
+    rm -f "/var/www/pterodactyl/$BLUEPRINT_FILENAME"
 
     print_success "Tema '$THEME_NAME' berhasil diinstall."
   else
