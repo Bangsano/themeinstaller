@@ -415,8 +415,10 @@ setup_nodejs() {
     [ -z "$NODE_VER" ] && print_warning "Node.js tidak terdeteksi. Memulai instalasi Node.js v22..." || print_warning "Versi Node.js tidak sesuai (Terdeteksi: v$NODE_VER). Menginstall Node.js v22..."
 
     unset NVM_DIR
-    apt-get remove -y nodejs npm || true
-    apt-get purge -y nodejs || true
+    apt-get remove -y nodejs npm libnode-dev nodejs-doc || true
+    apt-get purge -y nodejs npm libnode-dev nodejs-doc || true
+    apt-get autoremove -y || true
+
     rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
     rm -rf /etc/apt/sources.list.d/nodesource.list "$HOME/.nvm"
 
