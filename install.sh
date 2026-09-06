@@ -712,6 +712,17 @@ install_timpa() {
   export COMPOSER_PROCESS_TIMEOUT=2000
   composer config -g preferred-install source || true
   composer install --no-dev --optimize-autoloader --no-interaction --prefer-source
+
+  if [[ "${TARGET_NAME,,}" == *"reviactyl"* ]]; then
+    print_info "Menyesuaikan konfigurasi database agar migrasi berjalan aman..."
+    if grep -q "^DB_STRICT_MODE=" .env; then
+      sed -i "s/^DB_STRICT_MODE=.*/DB_STRICT_MODE=false/g" .env
+    else
+      echo "DB_STRICT_MODE=false" >> .env
+    fi
+    php artisan config:clear || true
+  fi
+
   php artisan migrate --seed --force
   clear_artisan_cache
   php artisan up
