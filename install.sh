@@ -599,6 +599,9 @@ install_theme() {
     export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
     corepack enable || true
 
+    print_info "Mengatur toleransi jaringan Yarn..."
+    yarn config set network-timeout 300000 -g
+
     print_info "Menginstal dependensi build..."
     MISSING_PKGS=""
     for pkg in cross-env react-feather; do
@@ -1101,6 +1104,13 @@ install_blueprint() {
 
   setup_nodejs
 
+  print_info "Mengaktifkan Corepack untuk kompatibilitas Yarn..."
+  export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+  corepack enable || true
+
+  print_info "Mengatur toleransi jaringan Yarn..."
+  yarn config set network-timeout 300000 -g
+
   print_info "Menginstal dependensi Pterodactyl..."
   cd /var/www/pterodactyl
   MISSING_PKGS=""
@@ -1215,6 +1225,13 @@ install_auto_suspend() {
 
   print_info "Menjalankan migrasi database..."
   php artisan migrate --force
+
+  print_info "Mengaktifkan Corepack untuk kompatibilitas Yarn..."
+  export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+  corepack enable || true
+
+  print_info "Mengatur toleransi jaringan Yarn..."
+  yarn config set network-timeout 300000 -g
 
   print_info "Menginstal dependensi build..."
   MISSING_PKGS=""
