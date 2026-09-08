@@ -287,6 +287,7 @@ export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_MODE=a
 export NEEDRESTART_SUSPEND=1
 export DEBCONF_NONINTERACTIVE_SEEN=true
+export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
 
 [ -f /etc/needrestart/needrestart.conf ] && sed -i -E "s/#?\$nrconf\{restart\} = 'i';/\$nrconf{restart} = 'a';/g" /etc/needrestart/needrestart.conf
 
