@@ -718,13 +718,52 @@ install_timpa() {
   composer install --no-dev --optimize-autoloader --no-interaction --prefer-source
 
   if [[ "${TARGET_NAME,,}" == *"reviactyl"* ]]; then
-    print_info "Menyesuaikan konfigurasi database agar migrasi berjalan aman..."
-    if grep -q "^DB_STRICT_MODE=" .env; then
-      sed -i "s/^DB_STRICT_MODE=.*/DB_STRICT_MODE=false/g" .env
-    else
-      echo "DB_STRICT_MODE=false" >> .env
-    fi
-    php artisan config:clear || true
+      print_info "Menginjeksi skema database Reviactyl secara manual..."
+      php <<'EOF_PHP'
+<?php
+require __DIR__.'/vendor/autoload.php';
+$app = require __DIR__.'/bootstrap/app.php';
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+
+try {
+    if (!Schema::hasTable('subuser_preview_sessions')) {
+        Schema::create('subuser_preview_sessions', function (Blueprint $t) {
+            $t->id();
+            $t->char('uuid', 36);
+            $t->unsignedInteger('owner_id');
+            $t->unsignedInteger('server_id');
+            $t->unsignedInteger('subuser_id');
+            $t->string('token_hash', 64);
+            $t->json('state')->nullable();
+            $t->timestamp('last_seen_at')->useCurrent();
+            $t->timestamp('expires_at')->nullable();
+            $t->timestamps();
+        });
+
+        echo "   [DB INFO] Tabel subuser_preview_sessions berhasil diinjeksi.\n";
+    }
+
+    $migrationName = '2026_08_21_000000_create_subuser_preview_sessions_table';
+    $migrationExists = DB::table('migrations')->where('migration', $migrationName)->exists();
+
+    if (!$migrationExists) {
+        $maxBatch = DB::table('migrations')->max('batch') ?? 0;
+        DB::table('migrations')->insert([
+            'migration' => $migrationName,
+            'batch' => $maxBatch + 1
+        ]);
+        echo "   [DB INFO] Status migrasi Reviactyl di-bypass.\n";
+    }
+
+} catch (\Exception $e) {
+    echo "   [DB ERROR] " . $e->getMessage() . "\n";
+    exit(1);
+}
+EOF_PHP
   fi
 
   php artisan migrate --seed --force
