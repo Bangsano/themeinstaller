@@ -421,7 +421,9 @@ setup_nodejs() {
     apt-get autoremove -y || true
 
     rm -f /usr/bin/node /usr/local/bin/node /usr/bin/npm /usr/local/bin/npm
-    rm -rf /etc/apt/sources.list.d/nodesource.list "$HOME/.nvm"
+    rm -f /etc/apt/sources.list.d/nodesource*.list
+    rm -f /usr/share/keyrings/nodesource*.gpg /etc/apt/keyrings/nodesource*.gpg
+    rm -rf "$HOME/.nvm"
 
     mkdir -p /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes | tee /etc/apt/keyrings/nodesource.gpg >/dev/null
