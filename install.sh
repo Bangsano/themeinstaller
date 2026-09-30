@@ -600,6 +600,7 @@ install_theme() {
 
     print_info "Mengaktifkan Corepack untuk kompatibilitas Yarn..."
     export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+    export COREPACK_ENABLE_STRICT=0
     corepack enable || true
 
     print_info "Mengatur toleransi jaringan Yarn..."
@@ -1148,6 +1149,7 @@ install_blueprint() {
 
   print_info "Mengaktifkan Corepack untuk kompatibilitas Yarn..."
   export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+  export COREPACK_ENABLE_STRICT=0
   corepack enable || true
 
   print_info "Mengatur toleransi jaringan Yarn..."
@@ -1270,6 +1272,7 @@ install_auto_suspend() {
 
   print_info "Mengaktifkan Corepack untuk kompatibilitas Yarn..."
   export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+  export COREPACK_ENABLE_STRICT=0
   corepack enable || true
 
   print_info "Mengatur toleransi jaringan Yarn..."
