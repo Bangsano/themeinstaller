@@ -1,5 +1,5 @@
 #!/bin/bash
-set -Ee -o pipefail
+set -e
 # Apa? Mau nyolong?? 😹😹
 # Apa? Mau nyolong?? 😹😹
 # Apa? Mau nyolong?? 😹😹
