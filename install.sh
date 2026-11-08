@@ -1222,6 +1222,11 @@ install_neobrutalism() {
         export COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_PROCESS_TIMEOUT=2000 COMPOSER_CACHE_DIR="$TEMP_DIR/composer-cache"
         composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
         yarn install --frozen-lockfile
+        if [[ -L public/assets || ( -e public/assets && ! -d public/assets ) ]]; then
+            print_error "public/assets bukan direktori biasa; build dibatalkan untuk menghindari penulisan melalui path yang tidak aman."
+            exit 1
+        fi
+        mkdir -p -- public/assets
         touch "$backup_dir/database_migration_started"
         php artisan migrate --force
         export NODE_OPTIONS=--openssl-legacy-provider
