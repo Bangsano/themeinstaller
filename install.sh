@@ -326,6 +326,11 @@ MIN_FREE_SPACE_KIB=$((2 * 1024 * 1024))
 TEMP_DIR=""
 LOG_FILE=""
 
+NEOBRUTALISM_ARCHIVE_URL="https://github.com/firllyfikaa/NEOBRUTALIS-Pterodactyl/archive/refs/heads/main.zip"
+NEOBRUTALISM_BACKUP_ROOT="/var/backups/pterodactyl-theme-installer"
+NEOBRUTALISM_STATE_FILE="/var/lib/pterodactyl-theme-installer/neobrutalism.active"
+NEOBRUTALISM_PANEL_MARKER="$PANEL_DIR/.neobrutalism-installer"
+
 print_banner() {
     local title="$1"
     local border_color="${2:-$BLUE}" # Parameter 2: Warna bingkai (default biru)
@@ -644,7 +649,697 @@ clear_artisan_cache() {
     for cmd in optimize view config route cache; do php artisan $cmd:clear; done
 }
 
+neobrutalism_create_mysql_defaults() {
+    local output_file="$1"
+    local database_file="$2"
+
+    php -- "$PANEL_DIR" "$output_file" "$database_file" <<'PHP'
+<?php
+$base = $argv[1] ?? '';
+$output = $argv[2] ?? '';
+$databaseOutput = $argv[3] ?? '';
+if ($base === '' || $output === '' || $databaseOutput === '' || !is_file($base . '/vendor/autoload.php')) {
+    fwrite(STDERR, "Bootstrap panel/database tidak tersedia.\n");
+    exit(1);
+}
+
+require $base . '/vendor/autoload.php';
+$app = require $base . '/bootstrap/app.php';
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+$connection = config('database.default');
+$config = is_string($connection) ? config("database.connections.{$connection}") : null;
+if (!is_array($config) || ($config['driver'] ?? null) !== 'mysql' || !empty($config['url'])) {
+    fwrite(STDERR, "Backup otomatis hanya mendukung koneksi MySQL/MariaDB standar tanpa DATABASE_URL.\n");
+    exit(1);
+}
+
+$host = $config['host'] ?? '127.0.0.1';
+$port = $config['port'] ?? 3306;
+$user = $config['username'] ?? '';
+$password = $config['password'] ?? '';
+$database = $config['database'] ?? '';
+if (!is_string($host) || !is_scalar($port) || !is_string($user) || !is_string($password) || !is_string($database)
+    || $user === '' || !preg_match('/^[A-Za-z0-9_][A-Za-z0-9_$-]{0,63}$/D', $database)
+    || !ctype_digit((string) $port) || (int) $port < 1 || (int) $port > 65535) {
+    fwrite(STDERR, "Konfigurasi host/port/user/database MySQL tidak didukung atau tidak valid.\n");
+    exit(1);
+}
+
+$quote = static function ($value): string {
+    return '"' . str_replace(["\\", '"', "\r", "\n"], ["\\\\", "\\\"", "\\r", "\\n"], (string) $value) . '"';
+};
+$values = [
+    'host' => $host,
+    'port' => $port,
+    'user' => $user,
+    'password' => $password,
+    'connect-timeout' => 15,
+];
+$lines = ['[client]'];
+foreach ($values as $key => $value) {
+    $lines[] = $key . '=' . $quote($value);
+}
+if (!empty($config['unix_socket'])) {
+    if (!is_string($config['unix_socket'])) {
+        fwrite(STDERR, "DB_SOCKET tidak valid.\n");
+        exit(1);
+    }
+    $lines[] = 'socket=' . $quote($config['unix_socket']);
+}
+
+$options = is_array($config['options'] ?? null) ? $config['options'] : [];
+$sslMap = [];
+foreach ([
+    'PDO::MYSQL_ATTR_SSL_CA' => 'ssl-ca',
+    'PDO::MYSQL_ATTR_SSL_CERT' => 'ssl-cert',
+    'PDO::MYSQL_ATTR_SSL_KEY' => 'ssl-key',
+    'PDO::MYSQL_ATTR_SSL_CIPHER' => 'ssl-cipher',
+    'PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT' => 'ssl-verify-server-cert',
+] as $constant => $option) {
+    if (defined($constant)) {
+        $key = constant($constant);
+        if (array_key_exists($key, $options)) {
+            $value = $options[$key];
+            if (!is_scalar($value)) {
+                fwrite(STDERR, "Opsi TLS database tidak dapat diekspor dengan aman.\n");
+                exit(1);
+            }
+            $sslMap[$option] = is_bool($value) ? ($value ? '1' : '0') : $value;
+        }
+    }
+}
+foreach ($sslMap as $key => $value) {
+    $lines[] = $key . '=' . $quote($value);
+}
+
+$defaultsWritten = file_put_contents($output, implode(PHP_EOL, $lines) . PHP_EOL, LOCK_EX);
+$databaseWritten = file_put_contents($databaseOutput, $database . PHP_EOL, LOCK_EX);
+if ($defaultsWritten === false || $databaseWritten === false || !chmod($output, 0600) || !chmod($databaseOutput, 0600)) {
+    @unlink($output);
+    @unlink($databaseOutput);
+    fwrite(STDERR, "Tidak dapat membuat file konfigurasi sementara untuk backup database.\n");
+    exit(1);
+}
+PHP
+}
+
+neobrutalism_dump_database() {
+    local backup_dir="$1"
+    local defaults_file="$TEMP_DIR/neobrutalism-mysql.cnf"
+    local database_file="$TEMP_DIR/neobrutalism-database-name"
+    local database_name dump_bin
+
+    dump_bin=$(command -v mariadb-dump || command -v mysqldump || true)
+    if [[ -z "$dump_bin" ]]; then
+        print_error "mysqldump/mariadb-dump tidak ditemukan. Backup database wajib tersedia sebelum panel diganti."
+        return 1
+    fi
+    if ! neobrutalism_create_mysql_defaults "$defaults_file" "$database_file"; then
+        print_error "Tidak dapat membaca konfigurasi database aktif secara aman."
+        return 1
+    fi
+    database_name=$(<"$database_file")
+    if [[ -z "$database_name" ]]; then
+        rm -f -- "$defaults_file" "$database_file"
+        print_error "Nama database kosong; backup dibatalkan."
+        return 1
+    fi
+
+    if ! "$dump_bin" --defaults-extra-file="$defaults_file" --single-transaction --quick --skip-lock-tables --routines --triggers --events --hex-blob "$database_name" > "$backup_dir/database.sql"; then
+        rm -f -- "$defaults_file" "$database_file" "$backup_dir/database.sql"
+        print_error "Backup database gagal. Panel tidak akan diubah. Periksa hak akses database untuk dump."
+        return 1
+    fi
+    rm -f -- "$defaults_file" "$database_file"
+
+    if ! gzip -9 "$backup_dir/database.sql" || ! gzip -t "$backup_dir/database.sql.gz"; then
+        print_error "Kompresi/verifikasi backup database gagal. Panel tidak akan diubah."
+        return 1
+    fi
+    chmod 0600 "$backup_dir/database.sql.gz"
+}
+
+neobrutalism_restore_database() {
+    local backup_dir="$1"
+    local defaults_file="$TEMP_DIR/neobrutalism-restore.cnf"
+    local database_file="$TEMP_DIR/neobrutalism-restore-database-name"
+    local database_name mysql_bin drop_query
+
+    mysql_bin=$(command -v mariadb || command -v mysql || true)
+    if [[ -z "$mysql_bin" || ! -s "$backup_dir/database.sql.gz" ]]; then
+        print_error "Client MySQL/MariaDB atau backup database tidak tersedia untuk rollback."
+        return 1
+    fi
+    if ! gzip -t "$backup_dir/database.sql.gz" || ! neobrutalism_create_mysql_defaults "$defaults_file" "$database_file"; then
+        print_error "Backup database rusak atau konfigurasi koneksi tidak dapat dipulihkan."
+        return 1
+    fi
+    database_name=$(<"$database_file")
+    if [[ -z "$database_name" ]]; then
+        rm -f -- "$defaults_file" "$database_file"
+        print_error "Nama database untuk rollback tidak tersedia."
+        return 1
+    fi
+
+    drop_query=$(cat <<'SQL'
+SELECT statement FROM (
+    SELECT 1 AS step, CONCAT('DROP VIEW IF EXISTS `', REPLACE(TABLE_NAME, '`', '``'), '`;') AS statement
+      FROM information_schema.VIEWS WHERE TABLE_SCHEMA = DATABASE()
+    UNION ALL
+    SELECT 2, 'SET FOREIGN_KEY_CHECKS=0;'
+    UNION ALL
+    SELECT 3, CONCAT('DROP TABLE IF EXISTS `', REPLACE(TABLE_NAME, '`', '``'), '`;')
+      FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'
+    UNION ALL
+    SELECT 4, 'SET FOREIGN_KEY_CHECKS=1;'
+    UNION ALL
+    SELECT 5, CONCAT('DROP ', ROUTINE_TYPE, ' IF EXISTS `', REPLACE(ROUTINE_SCHEMA, '`', '``'), '`.`', REPLACE(ROUTINE_NAME, '`', '``'), '`;')
+      FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = DATABASE()
+    UNION ALL
+    SELECT 6, CONCAT('DROP EVENT IF EXISTS `', REPLACE(EVENT_SCHEMA, '`', '``'), '`.`', REPLACE(EVENT_NAME, '`', '``'), '`;')
+      FROM information_schema.EVENTS WHERE EVENT_SCHEMA = DATABASE()
+) AS restore_objects
+ORDER BY step;
+SQL
+)
+    print_warning "Membersihkan objek database tambahan sebelum mengimpor snapshot pra-instalasi..."
+    if ! (
+        set -o pipefail
+        "$mysql_bin" --defaults-extra-file="$defaults_file" --database="$database_name" --batch --skip-column-names --raw --execute="$drop_query" |
+            "$mysql_bin" --defaults-extra-file="$defaults_file" --database="$database_name"
+    ); then
+        rm -f -- "$defaults_file" "$database_file"
+        print_error "Pembersihan objek database gagal. Panel harus tetap dalam maintenance mode; backup dipertahankan."
+        return 1
+    fi
+    if ! (set -o pipefail; gzip -dc "$backup_dir/database.sql.gz" | "$mysql_bin" --defaults-extra-file="$defaults_file" --database="$database_name"); then
+        rm -f -- "$defaults_file" "$database_file"
+        print_error "Restore database gagal. Backup dipertahankan di $backup_dir."
+        return 1
+    fi
+    rm -f -- "$defaults_file" "$database_file"
+}
+
+neobrutalism_validate_backup_candidate() {
+    local candidate="$1"
+    [[ "$candidate" =~ ^/var/backups/pterodactyl-theme-installer/neobrutalism\.[A-Za-z0-9]{8}$ ]] || return 1
+    [[ -d "$candidate" && ! -L "$candidate" ]] || return 1
+    [[ "$(stat -c '%u:%a' "$candidate" 2>/dev/null)" == "0:700" ]] || return 1
+    [[ -s "$candidate/panel.tar.gz" && ! -L "$candidate/panel.tar.gz" ]] || return 1
+    gzip -t "$candidate/panel.tar.gz"
+}
+
+neobrutalism_read_backup_state() {
+    local state_file candidate
+
+    for state_file in "$NEOBRUTALISM_STATE_FILE" "$NEOBRUTALISM_PANEL_MARKER"; do
+        [[ -f "$state_file" && ! -L "$state_file" ]] || continue
+        [[ "$(stat -c '%u:%a' "$state_file" 2>/dev/null)" == "0:600" ]] || continue
+        IFS= read -r candidate < "$state_file" || continue
+        if neobrutalism_validate_backup_candidate "$candidate"; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+neobrutalism_restore_panel_snapshot() {
+    local backup_dir="$1"
+    local preserve_current_env="${2:-no}"
+    local saved_env="$TEMP_DIR/neobrutalism-current.env"
+    local preserve_storage=no
+
+    if [[ "$preserve_current_env" == "yes" ]]; then
+        if [[ -f "$PANEL_DIR/.env" && ! -L "$PANEL_DIR/.env" ]]; then
+            if ! cp -p -- "$PANEL_DIR/.env" "$saved_env"; then
+                print_error "Tidak dapat menyimpan .env aktif sebelum pemulihan."
+                return 1
+            fi
+        else
+            print_warning ".env aktif hilang atau berupa symlink; menggunakan .env asli dari snapshot pra-instalasi."
+            preserve_current_env=no
+        fi
+    fi
+    if [[ -d "$PANEL_DIR/storage" && ! -L "$PANEL_DIR/storage" ]]; then
+        preserve_storage=yes
+    fi
+    if ! tar -tzf "$backup_dir/panel.tar.gz" >/dev/null; then
+        print_error "Snapshot source panel rusak; tidak ada file panel yang dihapus."
+        return 1
+    fi
+
+    if [[ "$preserve_storage" == "yes" ]]; then
+        if ! find "$PANEL_DIR" -mindepth 1 -maxdepth 1 ! -name storage -exec rm -rf -- {} +; then
+            print_error "Gagal membersihkan source panel sebelum pemulihan."
+            return 1
+        fi
+        if ! tar --exclude='./storage' -xzpf "$backup_dir/panel.tar.gz" -C "$PANEL_DIR"; then
+            print_error "Pemulihan source panel gagal. Backup dipertahankan di $backup_dir."
+            return 1
+        fi
+    else
+        if ! find "$PANEL_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +; then
+            print_error "Gagal membersihkan source/storage panel sebelum pemulihan."
+            return 1
+        fi
+        if ! tar -xzpf "$backup_dir/panel.tar.gz" -C "$PANEL_DIR"; then
+            print_error "Pemulihan source dan storage panel gagal. Backup dipertahankan di $backup_dir."
+            return 1
+        fi
+    fi
+
+    if [[ "$preserve_current_env" == "yes" ]]; then
+        if ! cp -p -- "$saved_env" "$PANEL_DIR/.env"; then
+            print_error "Gagal mengembalikan .env aktif."
+            return 1
+        fi
+        if [[ -f "$backup_dir/resend_key_added" ]]; then
+            sed -i -E '/^[[:space:]]*(export[[:space:]]+)?RESEND_KEY[[:space:]]*=[[:space:]]*$/d' "$PANEL_DIR/.env"
+        fi
+    fi
+
+    if [[ -f "$backup_dir/had_blueprint_command" ]]; then
+        rm -f -- /usr/local/bin/blueprint
+        cp -a -- "$backup_dir/blueprint.command" /usr/local/bin/blueprint || return 1
+    else
+        rm -f -- /usr/local/bin/blueprint
+    fi
+}
+
+neobrutalism_install_blueprint_shortcut() {
+    local helper="$PANEL_DIR/scripts/helpers/blueprint"
+    local shortcut="$TEMP_DIR/blueprint"
+
+    [[ -f "$PANEL_DIR/blueprint.sh" && -f "$helper" && -f "$PANEL_DIR/.blueprint/extensions/blueprint/private/db/is_installed" ]] || return 1
+    sed "s|BLUEPRINT_FOLDER_HERE|$PANEL_DIR|g" "$helper" > "$shortcut" || return 1
+    install -o root -g root -m 0755 "$shortcut" /usr/local/bin/blueprint
+}
+
+neobrutalism_configure_resend_mailer() {
+    local mail_config="$PANEL_DIR/config/mail.php"
+
+    php -- "$mail_config" <<'PHP'
+<?php
+$path = $argv[1] ?? '';
+if ($path === '' || !is_file($path) || is_link($path) || !is_writable(dirname($path))) {
+    fwrite(STDERR, "config/mail.php tidak tersedia untuk konfigurasi Resend.\n");
+    exit(1);
+}
+$content = file_get_contents($path);
+if ($content === false || preg_match_all("/^    'mailers' => \\[$/m", $content) !== 1 || substr_count($content, "        'smtp' => [") !== 1) {
+    fwrite(STDERR, "Struktur mailers pada config/mail.php tidak sesuai dengan source yang diaudit.\n");
+    exit(1);
+}
+if (preg_match("/'resend'\\s*=>\\s*\\[\\s*'transport'\\s*=>\\s*'resend'/s", $content)) {
+    exit(0);
+}
+if (strpos($content, "'resend' => [") !== false) {
+    fwrite(STDERR, "Konfigurasi Resend sudah ada dalam bentuk yang tidak dikenal; file tidak diubah.\n");
+    exit(1);
+}
+$updated = str_replace(
+    "        'smtp' => [",
+    "        'resend' => [\n            'transport' => 'resend',\n        ],\n\n        'smtp' => [",
+    $content,
+    $count
+);
+if ($count !== 1) {
+    fwrite(STDERR, "Gagal menambahkan mailer Resend secara deterministik.\n");
+    exit(1);
+}
+$mode = fileperms($path) & 0777;
+$temp = tempnam(dirname($path), '.mail.php.');
+if ($temp === false || file_put_contents($temp, $updated, LOCK_EX) === false || !chmod($temp, $mode) || !rename($temp, $path)) {
+    if (is_string($temp) && is_file($temp)) {
+        unlink($temp);
+    }
+    fwrite(STDERR, "Gagal menulis konfigurasi mailer Resend secara atomik.\n");
+    exit(1);
+}
+PHP
+}
+
+neobrutalism_php_version_supported() {
+    local version="$1" major minor patch
+    [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] || return 1
+    major="${BASH_REMATCH[1]}"
+    minor="${BASH_REMATCH[2]}"
+    patch="${BASH_REMATCH[3]}"
+    case "$major.$minor" in
+        8.2) (( patch >= 35 )) ;;
+        8.3) (( patch >= 36 )) ;;
+        8.4) (( patch >= 27 )) ;;
+        8.5) (( patch >= 12 )) ;;
+        *) return 1 ;;
+    esac
+}
+
+neobrutalism_restart_php_fpm() {
+    local service
+    local -a fpm_services
+    mapfile -t fpm_services < <(systemctl list-units --type=service --state=running --no-legend | awk '$1 ~ /^php[0-9]+\.[0-9]+-fpm\.service$/ {print $1}')
+    if (( ${#fpm_services[@]} == 0 )); then
+        print_error "Tidak ada service PHP-FPM aktif yang dapat diverifikasi."
+        return 1
+    fi
+    for service in "${fpm_services[@]}"; do
+        if ! systemctl restart "$service" || ! systemctl is-active --quiet "$service"; then
+            print_error "Gagal me-restart atau memverifikasi service $service."
+            return 1
+        fi
+    done
+}
+
+neobrutalism_validate_php_runtime() {
+    local cli_version major minor patch service version bin first_line
+    local -a fpm_services
+
+    cli_version=$(php -r 'printf("%d.%d.%d", PHP_MAJOR_VERSION, PHP_MINOR_VERSION, PHP_RELEASE_VERSION);') || return 1
+    if ! neobrutalism_php_version_supported "$cli_version"; then
+        print_error "PHP CLI $cli_version belum termasuk versi yang telah diperbaiki untuk PHP2Shell. Diperlukan PHP 8.2.35+, 8.3.36+, 8.4.27+, atau 8.5.12+."
+        return 1
+    fi
+
+    mapfile -t fpm_services < <(systemctl list-units --type=service --state=running --no-legend | awk '$1 ~ /^php[0-9]+\.[0-9]+-fpm\.service$/ {print $1}')
+    if (( ${#fpm_services[@]} == 0 )); then
+        print_error "Tidak ada PHP-FPM aktif. Versi runtime web tidak dapat diverifikasi; instalasi NEOBRUTALISM dibatalkan."
+        return 1
+    fi
+
+    for service in "${fpm_services[@]}"; do
+        version=${service#php}
+        version=${version%-fpm.service}
+        bin=$(command -v "php-fpm$version" || true)
+        [[ -x "$bin" ]] || bin="/usr/sbin/php-fpm$version"
+        if [[ ! -x "$bin" ]]; then
+            print_error "Tidak dapat memverifikasi binary $service; instalasi dihentikan demi keamanan runtime PHP."
+            return 1
+        fi
+        first_line=$("$bin" -v 2>/dev/null | sed -n '1p')
+        version=$(sed -nE 's/^PHP ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' <<< "$first_line")
+        if ! neobrutalism_php_version_supported "$version"; then
+            print_error "$service menggunakan PHP ${version:-tidak diketahui}, belum lolos pemeriksaan PHP2Shell."
+            return 1
+        fi
+    done
+
+    if ! neobrutalism_restart_php_fpm; then
+        print_error "Runtime PHP-FPM tidak berhasil dimuat ulang setelah pemeriksaan keamanan."
+        return 1
+    fi
+}
+
+install_neobrutalism() {
+    local TARGET_URL="$1"
+    local TARGET_NAME="$2"
+    local archive_file source_dir artisan_file candidate backup_dir available_kib state_tmp panel_marker_tmp transaction_status had_errexit=no
+    local confirmation
+
+    if [[ -e "$NEOBRUTALISM_STATE_FILE" || -L "$NEOBRUTALISM_STATE_FILE" || -e "$NEOBRUTALISM_PANEL_MARKER" || -L "$NEOBRUTALISM_PANEL_MARKER" ]]; then
+        print_error "Snapshot/marker NEOBRUTALISM masih aktif. Jalankan Reset Panel terlebih dahulu sebelum memasang tema lain."
+        return 1
+    fi
+
+    echo " "
+    echo -n -e "${BOLD}NEOBRUTALISM akan mengganti source panel. Backup seluruh panel dan database akan disimpan untuk rollback. Lanjutkan? (y/n): ${NC}"
+    read -r confirmation
+    [[ "$confirmation" == [yY] ]] || { print_info "Instalasi dibatalkan."; return 0; }
+
+    if [[ ! -d "$PANEL_DIR" || ! -f "$PANEL_DIR/artisan" || ! -f "$PANEL_DIR/.env" || -L "$PANEL_DIR/.env" || ! -d "$PANEL_DIR/storage" || -L "$PANEL_DIR/storage" ]]; then
+        print_error "Struktur panel, .env, atau storage tidak memenuhi syarat keamanan untuk backup/pemulihan."
+        return 1
+    fi
+    if [[ -e /usr/local/bin/blueprint && -d /usr/local/bin/blueprint && ! -L /usr/local/bin/blueprint ]]; then
+        print_error "/usr/local/bin/blueprint adalah direktori; tidak aman untuk menggantinya dengan CLI Blueprint."
+        return 1
+    fi
+    if [[ -e "$PANEL_DIR/storage/framework/down" || -e "$PANEL_DIR/storage/framework/maintenance.php" ]]; then
+        print_error "Panel sedang berada dalam maintenance mode. Keluarkan dari maintenance mode sebelum memasang NEOBRUTALISM."
+        return 1
+    fi
+
+    require_disk_space
+    install_archive_dependencies
+    create_temp_dir
+    archive_file="$TEMP_DIR/neobrutalism.zip"
+
+    print_info "Mengunduh source NEOBRUTALISM terbaru dari branch distribusi..."
+    wget --timeout=30 --tries=3 -q -O "$archive_file" "$TARGET_URL"
+    unzip -tq "$archive_file" >/dev/null
+    if unzip -Z1 "$archive_file" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+        print_error "Arsip berisi path absolut atau path traversal. Ekstraksi dibatalkan."
+        return 1
+    fi
+    mkdir -p "$TEMP_DIR/source"
+    unzip -oq "$archive_file" -d "$TEMP_DIR/source"
+
+    source_dir=""
+    while IFS= read -r -d '' artisan_file; do
+        candidate=${artisan_file%/artisan}
+        if [[ -f "$candidate/composer.json" && -f "$candidate/composer.lock" && -f "$candidate/package.json" && -f "$candidate/yarn.lock" ]]; then
+            source_dir="$candidate"
+            break
+        fi
+    done < <(find "$TEMP_DIR/source" -mindepth 2 -maxdepth 4 -type f -name artisan -print0)
+
+    if [[ -z "$source_dir" || -e "$source_dir/.env" || -L "$source_dir/.env" ]]; then
+        print_error "Root source NEOBRUTALISM tidak ditemukan, struktur proyek tidak lengkap, atau arsip mengandung .env yang tidak seharusnya didistribusikan."
+        return 1
+    fi
+    if [[ ! -L "$source_dir/.blueprint/lib" || "$(readlink "$source_dir/.blueprint/lib")" != "../scripts/libraries" || ! -L "$source_dir/public/extensions/blueprint" || "$(readlink "$source_dir/public/extensions/blueprint")" != "../../.blueprint/extensions/blueprint/public" || ! -L "$source_dir/public/storage" || "$(readlink "$source_dir/public/storage")" != "$PANEL_DIR/storage/app/public" ]]; then
+        print_error "Symlink Blueprint/storage pada arsip tidak sesuai dengan target yang telah diaudit."
+        return 1
+    fi
+
+    install_panel_runtime_dependencies
+    neobrutalism_validate_php_runtime || return 1
+    setup_nodejs
+    configure_yarn
+    ensure_composer
+
+    if [[ -L "$NEOBRUTALISM_BACKUP_ROOT" || -L "$(dirname "$NEOBRUTALISM_STATE_FILE")" ]]; then
+        print_error "Direktori backup/state tidak boleh berupa symlink."
+        return 1
+    fi
+    mkdir -p "$NEOBRUTALISM_BACKUP_ROOT" "$(dirname "$NEOBRUTALISM_STATE_FILE")"
+    chmod 0700 "$NEOBRUTALISM_BACKUP_ROOT" "$(dirname "$NEOBRUTALISM_STATE_FILE")"
+    available_kib=$(df -Pk "$NEOBRUTALISM_BACKUP_ROOT" | awk 'NR == 2 {print $4}')
+    if [[ ! "$available_kib" =~ ^[0-9]+$ ]] || (( available_kib < MIN_FREE_SPACE_KIB )); then
+        print_error "Ruang kosong di lokasi backup kurang dari 2 GiB. Panel tidak akan diubah."
+        return 1
+    fi
+
+    backup_dir=$(mktemp -d "$NEOBRUTALISM_BACKUP_ROOT/neobrutalism.XXXXXXXX")
+    chmod 0700 "$backup_dir"
+    print_info "Membuat snapshot seluruh source panel termasuk storage..."
+    if ! tar -czpf "$backup_dir/panel.tar.gz" -C "$PANEL_DIR" .; then
+        rm -rf -- "$backup_dir"
+        print_error "Backup source panel gagal. Tidak ada perubahan pada panel."
+        return 1
+    fi
+    chmod 0600 "$backup_dir/panel.tar.gz"
+    if [[ -e /usr/local/bin/blueprint || -L /usr/local/bin/blueprint ]]; then
+        if ! cp -a -- /usr/local/bin/blueprint "$backup_dir/blueprint.command"; then
+            rm -rf -- "$backup_dir"
+            print_error "Gagal mem-backup CLI Blueprint lama. Panel tidak akan diubah."
+            return 1
+        fi
+        touch "$backup_dir/had_blueprint_command"
+    fi
+
+    state_tmp="${NEOBRUTALISM_STATE_FILE}.tmp.$$"
+    panel_marker_tmp="${NEOBRUTALISM_PANEL_MARKER}.tmp.$$"
+    if ! printf '%s\n' "$backup_dir" > "$state_tmp" || ! chmod 0600 "$state_tmp" || ! mv -f -- "$state_tmp" "$NEOBRUTALISM_STATE_FILE"; then
+        rm -f -- "$state_tmp"
+        rm -rf -- "$backup_dir"
+        print_error "Tidak dapat mencatat lokasi snapshot. Panel tidak akan diubah."
+        return 1
+    fi
+    if ! printf '%s\n' "$backup_dir" > "$panel_marker_tmp" || ! chmod 0600 "$panel_marker_tmp" || ! chown root:root "$panel_marker_tmp" || ! mv -f -- "$panel_marker_tmp" "$NEOBRUTALISM_PANEL_MARKER"; then
+        rm -f -- "$panel_marker_tmp" "$NEOBRUTALISM_STATE_FILE"
+        rm -rf -- "$backup_dir"
+        print_error "Tidak dapat membuat marker panel. Panel tidak akan diubah."
+        return 1
+    fi
+
+    print_info "Mengganti source panel dan menjalankan migrasi/build..."
+    [[ "$-" == *e* ]] && had_errexit=yes
+    set +e
+    (
+        trap - ERR
+        set -e
+        set -o pipefail
+        cd "$PANEL_DIR"
+        php artisan down
+        touch "$backup_dir/maintenance_enabled"
+        if systemctl list-unit-files --type=service --no-legend | awk '{print $1}' | grep -qx 'pteroq.service'; then
+            systemctl stop pteroq
+        fi
+        print_info "Membuat snapshot database saat panel dan queue worker sedang dihentikan..."
+        neobrutalism_dump_database "$backup_dir"
+        available_kib=$(df -Pk "$NEOBRUTALISM_BACKUP_ROOT" | awk 'NR == 2 {print $4}')
+        if [[ ! "$available_kib" =~ ^[0-9]+$ ]] || (( available_kib < MIN_FREE_SPACE_KIB )); then
+            print_error "Snapshot selesai tetapi ruang bebas tersisa kurang dari 2 GiB; instalasi dihentikan sebelum source diganti."
+            exit 1
+        fi
+        touch "$backup_dir/panel_replacement_started"
+        find "$PANEL_DIR" -mindepth 1 -maxdepth 1 ! -name .env ! -name storage ! -name .neobrutalism-installer -exec rm -rf -- {} +
+        tar --exclude='./storage' -C "$source_dir" -cpf - . | tar -xpf - -C "$PANEL_DIR"
+        [[ -L "$PANEL_DIR/public/storage" && "$(readlink "$PANEL_DIR/public/storage")" == "$PANEL_DIR/storage/app/public" ]]
+        neobrutalism_configure_resend_mailer
+        if ! grep -qE '^[[:space:]]*(export[[:space:]]+)?RESEND_KEY[[:space:]]*=' "$PANEL_DIR/.env"; then
+            touch "$backup_dir/resend_key_added"
+            printf '\nRESEND_KEY=\n' >> "$PANEL_DIR/.env"
+        fi
+        cd "$PANEL_DIR"
+        export COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_PROCESS_TIMEOUT=2000 COMPOSER_CACHE_DIR="$TEMP_DIR/composer-cache"
+        composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+        yarn install --frozen-lockfile
+        touch "$backup_dir/database_migration_started"
+        php artisan migrate --force
+        export NODE_OPTIONS=--openssl-legacy-provider
+        yarn build:production
+        clear_artisan_cache
+        neobrutalism_install_blueprint_shortcut
+        set_panel_permissions
+        chown root:root "$NEOBRUTALISM_PANEL_MARKER"
+        chmod 0600 "$NEOBRUTALISM_PANEL_MARKER"
+        neobrutalism_restart_php_fpm
+        touch "$backup_dir/installation_complete"
+        php artisan up
+        if systemctl list-unit-files --type=service --no-legend | awk '{print $1}' | grep -qx 'pteroq.service'; then
+            run_optional systemctl restart pteroq
+        fi
+        rm -f -- "$backup_dir/maintenance_enabled" "$backup_dir/panel_replacement_started" "$backup_dir/database_migration_started"
+    )
+    transaction_status=$?
+    if [[ "$had_errexit" == yes ]]; then set -e; else set +e; fi
+    if (( transaction_status != 0 )); then
+        print_error "Instalasi NEOBRUTALISM gagal (exit code $transaction_status). Memulihkan source panel dan database dari snapshot..."
+        if [[ -f "$backup_dir/panel_replacement_started" || -f "$backup_dir/installation_complete" ]]; then
+            if ! neobrutalism_restore_panel_snapshot "$backup_dir" no; then
+                print_error "ROLLBACK SOURCE GAGAL. Panel dibiarkan dalam maintenance mode; backup: $backup_dir"
+                return 1
+            fi
+        fi
+        if [[ -f "$backup_dir/database_migration_started" || -f "$backup_dir/installation_complete" ]]; then
+            if ! neobrutalism_restore_database "$backup_dir"; then
+                print_error "ROLLBACK DATABASE GAGAL. Jangan aktifkan panel; backup: $backup_dir"
+                return 1
+            fi
+        fi
+        if ! cd "$PANEL_DIR"; then
+            print_error "Tidak dapat masuk kembali ke panel untuk menyelesaikan rollback. Backup: $backup_dir"
+            return 1
+        fi
+        if [[ -f "$backup_dir/panel_replacement_started" || -f "$backup_dir/installation_complete" ]]; then
+            run_optional php artisan optimize:clear
+            if ! neobrutalism_restart_php_fpm; then
+                print_error "Source/database telah dipulihkan, tetapi PHP-FPM belum berhasil dimuat ulang. State dan backup dipertahankan."
+                return 1
+            fi
+        fi
+        if ! php artisan up; then
+            print_error "Source dan database telah dipulihkan, tetapi panel gagal keluar dari maintenance mode. State dan backup dipertahankan."
+            return 1
+        fi
+        if ! rm -f -- "$NEOBRUTALISM_STATE_FILE" "$NEOBRUTALISM_PANEL_MARKER"; then
+            print_error "Rollback selesai tetapi state installer gagal dibersihkan. Snapshot tetap dipertahankan: $backup_dir"
+            return 1
+        fi
+        run_optional systemctl restart pteroq
+        if [[ ! -f "$backup_dir/panel_replacement_started" && ! -f "$backup_dir/installation_complete" && ! -f "$backup_dir/database_migration_started" ]]; then
+            rm -rf -- "$backup_dir"
+            print_warning "Instalasi dibatalkan sebelum source/database diubah; panel original tetap aktif."
+            return 1
+        fi
+        print_warning "Panel dikembalikan ke source sebelum NEOBRUTALISM. Snapshot tetap disimpan di $backup_dir"
+        return 1
+    fi
+
+    print_success "Tema '$TARGET_NAME' berhasil diinstall."
+    print_info "Snapshot rollback panel dan database tersimpan di: $backup_dir"
+    print_info "RESEND_KEY ditambahkan kosong bila belum ada dan mailer 'resend' didaftarkan. MAIL_MAILER dan alamat pengirim tidak diubah; konfigurasi domain/API key tetap perlu diisi sendiri."
+    print_banner "INSTALASI TEMA SELESAI" "$GREEN"
+    sleep 3
+    return 0
+}
+
+neobrutalism_uninstall() {
+    local backup_dir
+
+    if ! backup_dir=$(neobrutalism_read_backup_state); then
+        print_error "State/marker snapshot NEOBRUTALISM tidak valid atau backup tidak ditemukan. Reset generik dibatalkan untuk mencegah kehilangan data."
+        return 1
+    fi
+
+    create_temp_dir || return 1
+    print_info "Memulihkan source panel dari snapshot $backup_dir..."
+    cd "$PANEL_DIR" || { print_error "Tidak dapat masuk ke direktori panel untuk pemulihan."; return 1; }
+    if [[ ! -f "$backup_dir/panel_replacement_started" ]]; then
+        if ! php artisan down; then
+            print_error "Tidak dapat mengaktifkan maintenance mode. Source panel belum disentuh; snapshot dipertahankan."
+            return 1
+        fi
+    fi
+    if systemctl list-unit-files --type=service --no-legend | awk '{print $1}' | grep -qx 'pteroq.service'; then
+        if ! systemctl stop pteroq; then
+            print_error "Gagal menghentikan queue worker. Pemulihan dibatalkan agar source tidak diganti ketika worker masih berjalan."
+            return 1
+        fi
+    fi
+
+    if [[ -f "$backup_dir/database_migration_started" ]]; then
+        print_warning "Terdeteksi instalasi yang terputus sebelum selesai; database akan dikembalikan ke snapshot pra-instalasi."
+    fi
+    if [[ -f "$backup_dir/panel_replacement_started" || -f "$backup_dir/installation_complete" ]]; then
+        if ! neobrutalism_restore_panel_snapshot "$backup_dir" yes; then
+            print_error "Pemulihan source gagal. State snapshot dipertahankan: $NEOBRUTALISM_STATE_FILE"
+            return 1
+        fi
+    fi
+    if [[ -f "$backup_dir/database_migration_started" ]] && ! neobrutalism_restore_database "$backup_dir"; then
+        print_error "Pemulihan database gagal. Panel harus tetap dalam maintenance mode; backup: $backup_dir"
+        return 1
+    fi
+
+    cd "$PANEL_DIR" || { print_error "Tidak dapat masuk ke direktori panel setelah pemulihan."; return 1; }
+    run_optional php artisan optimize:clear
+    if ! set_panel_permissions; then
+        print_error "Source sudah dipulihkan, tetapi permission panel gagal diterapkan. Panel tetap dalam maintenance mode."
+        return 1
+    fi
+    if ! neobrutalism_restart_php_fpm; then
+        print_error "Source panel telah dipulihkan, tetapi PHP-FPM belum berhasil dimuat ulang. State dan backup dipertahankan."
+        return 1
+    fi
+    if ! php artisan up; then
+        print_error "Source panel telah dipulihkan, tetapi gagal keluar dari maintenance mode. State dan backup dipertahankan."
+        return 1
+    fi
+    if ! rm -f -- "$NEOBRUTALISM_STATE_FILE" "$NEOBRUTALISM_PANEL_MARKER"; then
+        print_error "Source sudah dipulihkan, tetapi state installer gagal dibersihkan. Snapshot dipertahankan untuk pemulihan ulang."
+        return 1
+    fi
+    run_optional systemctl restart pteroq
+    if [[ ! -f "$backup_dir/panel_replacement_started" && ! -f "$backup_dir/installation_complete" && ! -f "$backup_dir/database_migration_started" ]]; then
+        rm -rf -- "$backup_dir"
+        print_success "Percobaan instalasi dibersihkan; source panel original tidak pernah diganti."
+        return 0
+    fi
+    print_success "Source panel sebelum NEOBRUTALISM berhasil dipulihkan."
+    print_info "Database tidak di-restore pada reset normal agar data akun/server terbaru tidak hilang; migrasi tema yang bersifat tambahan tetap tersimpan."
+    print_info "Jika MAIL_MAILER pernah diubah menjadi 'resend', kembalikan nilainya ke mailer yang tersedia pada panel original."
+    print_info "Backup lengkap (termasuk dump database dan storage pra-instalasi) tetap tersedia di: $backup_dir"
+}
+
 install_theme() {
+    if [[ -e "$NEOBRUTALISM_STATE_FILE" || -L "$NEOBRUTALISM_STATE_FILE" || -e "$NEOBRUTALISM_PANEL_MARKER" || -L "$NEOBRUTALISM_PANEL_MARKER" ]]; then
+        print_error "Reset NEOBRUTALISM terlebih dahulu sebelum memasang tema lain."
+        return 1
+    fi
     require_disk_space
     local THEME_FOLDER="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme"
 
@@ -660,6 +1355,7 @@ install_theme() {
         "Noobe (Original Style);${THEME_FOLDER}/noobe.zip;normal"
         "Reviactyl;https://github.com/reviactyl/panel/releases/latest/download/panel.tar.gz;timpa"
         "NookTheme;https://github.com/Nookure/NookTheme/releases/latest/download/panel.tar.gz;timpa"
+        "NEOBRUTALISM;${NEOBRUTALISM_ARCHIVE_URL};neobrutalism"
     )
 
     local BLUEPRINT_THEMES=(
@@ -701,6 +1397,9 @@ install_theme() {
             IFS=';' read -r THEME_NAME THEME_URL type <<< "${STANDARD_THEMES[$((SELECT_THEME-1))]}"
             if [ "$type" == "timpa" ]; then
                 install_timpa "$THEME_URL" "$THEME_NAME"
+                return
+            elif [ "$type" == "neobrutalism" ]; then
+                install_neobrutalism "$THEME_URL" "$THEME_NAME"
                 return
             else
                 break
@@ -1009,13 +1708,20 @@ uninstall_theme() {
 
         case $yn in
             [Yy]*)
-                require_disk_space
                 if [ ! -d "/var/www/pterodactyl" ]; then
                     print_error "Direktori Pterodactyl tidak ditemukan."
                     return 1
                 fi
                 cd /var/www/pterodactyl || { print_error "Gagal masuk ke direktori Pterodactyl."; return 1; }
 
+                if [[ -e "$NEOBRUTALISM_STATE_FILE" || -L "$NEOBRUTALISM_STATE_FILE" || -e "$NEOBRUTALISM_PANEL_MARKER" || -L "$NEOBRUTALISM_PANEL_MARKER" ]]; then
+                    if ! neobrutalism_uninstall; then
+                        return 1
+                    fi
+                    break
+                fi
+
+                require_disk_space
                 print_info "⚙️  Memulai proses reset panel..."
 
                 echo -e "${BOLD}   - Mem-backup file .env...${NC}"
@@ -1134,6 +1840,11 @@ uninstall_panel() {
     rm -rf /var/www/pterodactyl
     rm -rf /etc/pterodactyl
     rm -rf /var/lib/pterodactyl
+    if [[ -e "$NEOBRUTALISM_STATE_FILE" || -L "$NEOBRUTALISM_STATE_FILE" ]]; then
+        print_info "Menyimpan snapshot NEOBRUTALISM di $NEOBRUTALISM_BACKUP_ROOT untuk pemulihan manual."
+        rm -f -- "$NEOBRUTALISM_STATE_FILE" "$NEOBRUTALISM_STATE_FILE".tmp.*
+        rmdir "$(dirname "$NEOBRUTALISM_STATE_FILE")" 2>/dev/null || true
+    fi
     rm -f /usr/local/bin/wings
     rm -f /usr/local/bin/composer
     rm -f /usr/local/bin/blueprint
