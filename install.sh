@@ -709,27 +709,53 @@ if (!empty($config['unix_socket'])) {
 
 $options = is_array($config['options'] ?? null) ? $config['options'] : [];
 $sslMap = [];
+$sslMaterialConfigured = false;
 foreach ([
     'PDO::MYSQL_ATTR_SSL_CA' => 'ssl-ca',
     'PDO::MYSQL_ATTR_SSL_CERT' => 'ssl-cert',
     'PDO::MYSQL_ATTR_SSL_KEY' => 'ssl-key',
     'PDO::MYSQL_ATTR_SSL_CIPHER' => 'ssl-cipher',
-    'PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT' => 'ssl-verify-server-cert',
 ] as $constant => $option) {
     if (defined($constant)) {
         $key = constant($constant);
-        if (array_key_exists($key, $options)) {
+        if (array_key_exists($key, $options) && $options[$key] !== null && $options[$key] !== '') {
             $value = $options[$key];
             if (!is_scalar($value)) {
                 fwrite(STDERR, "Opsi TLS database tidak dapat diekspor dengan aman.\n");
                 exit(1);
             }
             $sslMap[$option] = is_bool($value) ? ($value ? '1' : '0') : $value;
+            $sslMaterialConfigured = true;
         }
+    }
+}
+
+// Do not turn Laravel's default SSL verification flag into a TLS requirement.
+// Recent MariaDB clients default to verified TLS. Under the normal "prefer"
+// mode, allow MariaDB clients to fall back when the server has no TLS.
+$sslVerifyConstant = 'PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT';
+if ($sslMaterialConfigured && defined($sslVerifyConstant)) {
+    $sslVerifyKey = constant($sslVerifyConstant);
+    if (array_key_exists($sslVerifyKey, $options)) {
+        $value = $options[$sslVerifyKey];
+        if (!is_scalar($value)) {
+            fwrite(STDERR, "Opsi verifikasi TLS database tidak valid.\n");
+            exit(1);
+        }
+        $sslMap['ssl-verify-server-cert'] = is_bool($value) ? ($value ? '1' : '0') : $value;
     }
 }
 foreach ($sslMap as $key => $value) {
     $lines[] = $key . '=' . $quote($value);
+}
+
+$sslMode = strtolower(trim((string) ($config['sslmode'] ?? 'prefer')));
+if (in_array($sslMode, ['prefer', 'preferred'], true) && !$sslMaterialConfigured) {
+    // This MariaDB-only group is ignored by MySQL clients. The option makes
+    // TLS optional on MariaDB clients without disabling TLS when available.
+    $lines[] = '';
+    $lines[] = '[client-mariadb]';
+    $lines[] = 'skip-ssl-verify-server-cert';
 }
 
 $defaultsWritten = file_put_contents($output, implode(PHP_EOL, $lines) . PHP_EOL, LOCK_EX);
