@@ -1942,7 +1942,247 @@ neobrutalism_uninstall() {
     print_info "Snapshot yang melewati masa retensi dibersihkan pada eksekusi installer berikutnya."
 }
 
+theme_archive_extract_safe() {
+    local archive="$1" destination="$2"
+    if ! command -v python3 >/dev/null 2>&1; then
+        print_info "Python 3 belum tersedia; memasang runtime untuk validasi arsip yang aman..."
+        apt-get install -y python3 || return 1
+    fi
+    python3 - "$archive" "$destination" <<'PY_THEME_ARCHIVE'
+import os, re, shutil, stat, sys, tarfile, zipfile
+from pathlib import Path
+
+archive, destination = sys.argv[1:3]
+root = Path(destination)
+root.mkdir(mode=0o700, parents=True, exist_ok=False)
+max_entries = 50000
+reserve_bytes = 128 * 1024 * 1024
+entries = []
+file_paths = set()
+excluded = 0
+metadata = 0
+
+def safe_parts(raw_name):
+    if not raw_name or "\x00" in raw_name or "\\" in raw_name:
+        raise ValueError(f"Nama path arsip tidak valid: {raw_name!r}")
+    name = raw_name
+    while name.startswith("./"):
+        name = name[2:]
+    if name.startswith("/") or re.match(r"^[A-Za-z]:", name):
+        raise ValueError(f"Path absolut tidak diizinkan: {raw_name!r}")
+    name = name.rstrip("/")
+    if not name:
+        return (), True
+    parts = tuple(name.split("/"))
+    if any(part in ("", ".", "..") for part in parts):
+        raise ValueError(f"Path traversal/komponen path tidak valid: {raw_name!r}")
+    return parts, raw_name.endswith("/")
+
+def payload_relative(parts):
+    if not parts or parts[0] != "pterodactyl" or len(parts) == 1:
+        return None
+    relative = parts[1:]
+    if relative == (".env",) or relative[0] == "storage":
+        return ""
+    if relative[0] == ".env":
+        raise ValueError(".env tidak boleh dijadikan direktori di dalam arsip tema.")
+    return "/".join(relative)
+
+def add_entry(parts, is_dir, kind, size, mode, handle):
+    global excluded, metadata
+    if not parts or parts[0] != "pterodactyl":
+        metadata += 1
+        return
+    if is_dir:
+        return
+    relative = payload_relative(parts)
+    if relative == "":
+        excluded += 1
+        return
+    if relative is None:
+        metadata += 1
+        return
+    if kind not in (0, stat.S_IFREG):
+        raise ValueError(f"Hanya file reguler yang diperbolehkan: {'/'.join(parts)}")
+    if size < 0:
+        raise ValueError(f"Ukuran file tidak valid: {'/'.join(parts)}")
+    if relative in file_paths:
+        raise ValueError(f"Path file duplikat dalam arsip: {relative}")
+    file_paths.add(relative)
+    entries.append((parts, relative, size, mode, handle))
+
+try:
+    if archive.lower().endswith(".zip"):
+        with zipfile.ZipFile(archive) as zf:
+            infos = zf.infolist()
+            if len(infos) > max_entries:
+                raise ValueError(f"Jumlah entri arsip melebihi batas {max_entries}.")
+            for info in infos:
+                parts, trailing_dir = safe_parts(info.filename)
+                mode = (info.external_attr >> 16) & 0xFFFF
+                kind = stat.S_IFMT(mode)
+                is_dir = info.is_dir() or trailing_dir or kind == stat.S_IFDIR
+                if kind not in (0, stat.S_IFREG, stat.S_IFDIR):
+                    raise ValueError(f"Symlink/special file tidak diizinkan: {info.filename}")
+                if (info.is_dir() or trailing_dir) and kind == stat.S_IFREG:
+                    raise ValueError(f"Metadata tipe file ZIP tidak konsisten: {info.filename}")
+                add_entry(parts, is_dir, kind, info.file_size, mode, info)
+            if not entries:
+                raise ValueError("Arsip tidak memiliki file panel yang dapat dipasang di bawah pterodactyl/.")
+            for relative in file_paths:
+                parts = relative.split("/")
+                if any("/".join(parts[:index]) in file_paths for index in range(1, len(parts))):
+                    raise ValueError(f"Satu path dipakai sebagai file sekaligus direktori: {relative}")
+            total_size = sum(item[2] for item in entries)
+            available = shutil.disk_usage(root).free
+            if total_size > max(0, available - reserve_bytes):
+                raise ValueError("Ukuran hasil ekstraksi melebihi ruang aman yang tersedia.")
+            for parts, relative, size, mode, info in entries:
+                target = root.joinpath(*parts)
+                target.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
+                written = 0
+                with zf.open(info, "r") as source, target.open("xb") as output:
+                    while True:
+                        chunk = source.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        written += len(chunk)
+                        if written > size:
+                            raise ValueError(f"Ukuran aktual file melebihi metadata: {relative}")
+                        output.write(chunk)
+                if written != size:
+                    raise ValueError(f"Ukuran hasil ekstraksi tidak cocok: {relative}")
+                os.chmod(target, 0o644 | (mode & 0o111))
+    else:
+        with tarfile.open(archive, "r:gz") as tf:
+            members = tf.getmembers()
+            if len(members) > max_entries:
+                raise ValueError(f"Jumlah entri arsip melebihi batas {max_entries}.")
+            for member in members:
+                parts, trailing_dir = safe_parts(member.name)
+                if member.isdir() or trailing_dir:
+                    if not member.isdir():
+                        raise ValueError(f"Metadata tipe direktori TAR tidak konsisten: {member.name}")
+                    continue
+                if not member.isfile():
+                    raise ValueError(f"Symlink/hardlink/special file tidak diizinkan: {member.name}")
+                add_entry(parts, False, stat.S_IFREG, member.size, member.mode, member)
+            if not entries:
+                raise ValueError("Arsip tidak memiliki file panel yang dapat dipasang di bawah pterodactyl/.")
+            for relative in file_paths:
+                parts = relative.split("/")
+                if any("/".join(parts[:index]) in file_paths for index in range(1, len(parts))):
+                    raise ValueError(f"Satu path dipakai sebagai file sekaligus direktori: {relative}")
+            total_size = sum(item[2] for item in entries)
+            available = shutil.disk_usage(root).free
+            if total_size > max(0, available - reserve_bytes):
+                raise ValueError("Ukuran hasil ekstraksi melebihi ruang aman yang tersedia.")
+            for parts, relative, size, mode, member in entries:
+                target = root.joinpath(*parts)
+                target.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
+                source = tf.extractfile(member)
+                if source is None:
+                    raise ValueError(f"Konten file TAR tidak dapat dibaca: {relative}")
+                written = 0
+                with source, target.open("xb") as output:
+                    while True:
+                        chunk = source.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        written += len(chunk)
+                        if written > size:
+                            raise ValueError(f"Ukuran aktual file melebihi metadata: {relative}")
+                        output.write(chunk)
+                if written != size:
+                    raise ValueError(f"Ukuran hasil ekstraksi tidak cocok: {relative}")
+                os.chmod(target, 0o644 | (mode & 0o111))
+    print(f"Berhasil memvalidasi {len(entries)} file panel; {excluded} entri .env/storage diabaikan; {metadata} entri metadata di luar pterodactyl/ tidak diekstrak.")
+except Exception as exc:
+    shutil.rmtree(root, ignore_errors=True)
+    print(f"Validasi/ekstraksi arsip tema gagal: {exc}", file=sys.stderr)
+    sys.exit(1)
+PY_THEME_ARCHIVE
+}
+
+theme_overlay_apply() {
+    local source_root="$1" source_file relative destination current staged part copied=0 i
+    local -a path_parts=()
+
+    [[ -d "$source_root" && ! -L "$source_root" ]] || {
+        print_error "Direktori payload pterodactyl/ tidak ditemukan atau bukan direktori biasa."
+        return 1
+    }
+    while IFS= read -r -d '' source_file; do
+        [[ -f "$source_file" && ! -L "$source_file" ]] || {
+            print_error "Payload tema berisi file yang tidak aman: $source_file"
+            return 1
+        }
+        relative="${source_file#"$source_root"/}"
+        [[ -n "$relative" && "$relative" != /* && "$relative" != ".env" && "$relative" != storage && "$relative" != storage/* && "$relative" != *"/../"* && "$relative" != ../* && "$relative" != */.. ]] || {
+            print_error "Path payload tema tidak valid atau mencoba mengubah .env/storage: $relative"
+            return 1
+        }
+        IFS='/' read -r -a path_parts <<< "$relative"
+        current="$PANEL_DIR"
+        for ((i = 0; i < ${#path_parts[@]} - 1; i++)); do
+            part="${path_parts[$i]}"
+            [[ -n "$part" && "$part" != . && "$part" != .. ]] || {
+                print_error "Komponen direktori payload tidak valid: $relative"
+                return 1
+            }
+            current+="/$part"
+            if [[ -L "$current" ]]; then
+                print_error "Direktori tujuan merupakan symlink; penyalinan dibatalkan: $current"
+                return 1
+            elif [[ -e "$current" && ! -d "$current" ]]; then
+                print_error "Jalur tujuan seharusnya direktori, tetapi merupakan file: $current"
+                return 1
+            elif [[ ! -d "$current" ]]; then
+                mkdir -m 0755 -- "$current" || return 1
+            fi
+        done
+        destination="$PANEL_DIR/$relative"
+        if [[ -L "$destination" || ( -e "$destination" && ! -f "$destination" ) ]]; then
+            print_error "File tujuan merupakan symlink atau bukan file reguler: $destination"
+            return 1
+        fi
+        staged=$(mktemp "${destination%/*}/.theme-installer.XXXXXX") || return 1
+        if ! cp -p --no-preserve=ownership -- "$source_file" "$staged" || ! mv -fT -- "$staged" "$destination"; then
+            rm -f -- "$staged"
+            print_error "Gagal memasang file tema: $relative"
+            return 1
+        fi
+        copied=$((copied + 1))
+    done < <(find "$source_root" -type f -print0)
+
+    if (( copied == 0 )); then
+        print_error "Tidak ada file reguler yang dapat dipasang dari arsip tema."
+        return 1
+    fi
+    print_success "$copied file tema berhasil ditambahkan/diperbarui tanpa menghapus file panel lainnya."
+}
+
+theme_detect_operations() {
+    local source_root="$1" source_file relative
+    THEME_BUILD_REQUIRED=no
+    THEME_MIGRATE_REQUIRED=no
+    while IFS= read -r -d '' source_file; do
+        relative="${source_file#"$source_root"/}"
+        case "$relative" in
+            package.json|yarn.lock|webpack.mix.js|vite.config.*|postcss.config.*|tailwind.config.*|resources/*|*.tsx|*.jsx|*.scss|*.sass|*.less|*.vue)
+                THEME_BUILD_REQUIRED=yes
+                ;;
+        esac
+        case "$relative" in
+            database/migrations/*.php)
+                THEME_MIGRATE_REQUIRED=yes
+                ;;
+        esac
+    done < <(find "$source_root" -type f -print0)
+}
+
 install_theme_apply() {
+    local source_root="$TEMP_DIR/theme/pterodactyl"
     cd "$TEMP_DIR"
     if [[ "$SELECT_THEME" == [bB]* ]]; then
         print_info "Menyiapkan instalasi Blueprint extension..."
@@ -1957,7 +2197,7 @@ install_theme_apply() {
         fi
         BLUEPRINT_FILENAME=$(basename "$FOUND_FILE")
         IDENTIFIER="${BLUEPRINT_FILENAME%.*}"
-        mv -- "$FOUND_FILE" "$PANEL_DIR/$BLUEPRINT_FILENAME"
+        mv -- "$BLUEPRINT_FILENAME" "$PANEL_DIR/"
         cd "$PANEL_DIR"
         if command -v blueprint >/dev/null 2>&1; then
             if ! blueprint -i "$IDENTIFIER" && ! blueprint install "$IDENTIFIER" && ! bash blueprint.sh -install "$IDENTIFIER"; then
@@ -1975,43 +2215,45 @@ install_theme_apply() {
         rm -f -- "$PANEL_DIR/$BLUEPRINT_FILENAME"
     else
         if [[ "$SELECT_THEME" == "3" ]]; then
+            local enigma_file="$source_root/resources/scripts/components/dashboard/DashboardContainer.tsx"
+            [[ -f "$enigma_file" && ! -L "$enigma_file" ]] || {
+                print_error "File konfigurasi Enigma tidak ditemukan di dalam payload tema."
+                return 1
+            }
             print_info "Mengkonfigurasi variabel Enigma..."
-            sed -i "s|LINK_ADMIN|$LINK_ADMIN|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
-            sed -i "s|LINK_CHANNEL|$LINK_CHANNEL|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
-            sed -i "s|LINK_GROUP|$LINK_GROUP|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
+            sed -i "s|LINK_ADMIN|$LINK_ADMIN|g" "$enigma_file"
+            sed -i "s|LINK_CHANNEL|$LINK_CHANNEL|g" "$enigma_file"
+            sed -i "s|LINK_GROUP|$LINK_GROUP|g" "$enigma_file"
         fi
-        [[ ! -e pterodactyl/.env && ! -L pterodactyl/.env ]] || {
-            print_error "Paket tema berisi .env; penyalinan dibatalkan demi melindungi kredensial panel."
-            return 1
-        }
-        while IFS= read -r -d '' source_entry; do
-            cp -a -- "$source_entry" "$PANEL_DIR/"
-        done < <(find pterodactyl -mindepth 1 -maxdepth 1 ! -name .env ! -name storage -print0)
+        theme_overlay_apply "$source_root" || return 1
         cd "$PANEL_DIR"
-        install_yarn_dependencies cross-env react-feather
         if [[ "$SELECT_THEME" == "2" ]]; then
             print_info "Menjalankan instalasi Billing..."
             php artisan billing:install stable
         fi
-        print_info "Membangun aset panel..."
-        local ram_size source_entry
-        ram_size=$(free -m | awk '/Mem:/ {print $2}')
-        if [[ "$ram_size" =~ ^[0-9]+$ ]] && (( ram_size < 4000 )); then
-            print_warning "RAM di bawah 4 GiB; proses build mungkin lebih lama."
+        if [[ "$THEME_MIGRATE_REQUIRED" == yes ]]; then
+            print_info "Menjalankan migrasi database yang disertakan dalam arsip tema..."
+            php artisan migrate --force
+        else
+            print_info "Tidak ada file migrasi database dalam arsip; migrasi dilewati."
         fi
-        if [[ -L public/assets || ( -e public/assets && ! -d public/assets ) ]]; then
-            print_error "public/assets bukan direktori biasa; build dibatalkan."
-            return 1
+        if [[ "$THEME_BUILD_REQUIRED" == yes ]]; then
+            print_info "Perubahan frontend terdeteksi; menyiapkan dependency dan build aset..."
+            install_yarn_dependencies cross-env react-feather
+            if [[ -L public/assets || ( -e public/assets && ! -d public/assets ) ]]; then
+                print_error "public/assets bukan direktori biasa; build dibatalkan."
+                return 1
+            fi
+            mkdir -p -- public/assets
+            export NODE_OPTIONS=--openssl-legacy-provider
+            yarn build:production
+        else
+            print_info "Tidak ada source frontend/build manifest yang berubah; proses build dilewati."
         fi
-        mkdir -p -- public/assets
-        export NODE_OPTIONS=--openssl-legacy-provider
-        php artisan migrate --force
-        yarn build:production
         clear_artisan_cache
     fi
     set_panel_permissions
 }
-
 install_theme() {
     panel_transaction_check_idle || return 1
     require_disk_space
@@ -2045,6 +2287,8 @@ install_theme() {
     local SELECT_THEME
     local THEME_NAME
     local THEME_URL
+    local THEME_BUILD_REQUIRED=no
+    local THEME_MIGRATE_REQUIRED=no
 
     while true; do
         clear
@@ -2121,20 +2365,30 @@ install_theme() {
     wget --timeout=30 --tries=3 -q -O "$THEME_ZIP_FILE" "$THEME_URL"
 
     print_info "[2/4] Memvalidasi dan mengekstrak file tema..."
-    if [[ "$THEME_ZIP_FILE" == *.tar.gz ]]; then
-        tar -tzf "$THEME_ZIP_FILE" >/dev/null
-        if tar -tzf "$THEME_ZIP_FILE" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
-            print_error "Arsip tema mengandung path traversal. Instalasi dibatalkan."
-            return 1
+    if [[ "$SELECT_THEME" == [bB]* ]]; then
+        if [[ "$THEME_ZIP_FILE" == *.tar.gz ]]; then
+            tar -tzf "$THEME_ZIP_FILE" >/dev/null
+            if tar -tzf "$THEME_ZIP_FILE" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+                print_error "Arsip Blueprint mengandung path traversal. Instalasi dibatalkan."
+                return 1
+            fi
+            tar -xzf "$THEME_ZIP_FILE"
+        else
+            unzip -tq "$THEME_ZIP_FILE" >/dev/null
+            if unzip -Z1 "$THEME_ZIP_FILE" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+                print_error "Arsip Blueprint mengandung path traversal. Instalasi dibatalkan."
+                return 1
+            fi
+            unzip -oq "$THEME_ZIP_FILE"
         fi
-        tar -xzf "$THEME_ZIP_FILE"
     else
-        unzip -tq "$THEME_ZIP_FILE" >/dev/null
-        if unzip -Z1 "$THEME_ZIP_FILE" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
-            print_error "Arsip tema mengandung path traversal. Instalasi dibatalkan."
-            return 1
+        theme_archive_extract_safe "$THEME_ZIP_FILE" "$TEMP_DIR/theme" || return 1
+        theme_detect_operations "$TEMP_DIR/theme/pterodactyl"
+        print_info "Jenis paket: overlay dinamis; build frontend: $THEME_BUILD_REQUIRED; migrasi database: $THEME_MIGRATE_REQUIRED."
+        if [[ "$THEME_BUILD_REQUIRED" == yes ]]; then
+            setup_nodejs
+            configure_yarn
         fi
-        unzip -oq "$THEME_ZIP_FILE"
     fi
 
     rm -f -- "$THEME_ZIP_FILE"
@@ -2144,13 +2398,6 @@ install_theme() {
             print_error "Paket Blueprint tidak memiliki file .blueprint pada root arsip."
             return 1
         }
-    else
-        [[ -d pterodactyl && -f pterodactyl/artisan && ! -e pterodactyl/.env && ! -L pterodactyl/.env ]] || {
-            print_error "Struktur tema manual tidak valid atau arsip membawa .env yang tidak boleh menimpa kredensial panel."
-            return 1
-        }
-        setup_nodejs
-        configure_yarn
     fi
     if ! panel_transaction_run "install-theme-${THEME_NAME//[^A-Za-z0-9_-]/-}" install_theme_apply; then
         print_error "Instalasi tema '$THEME_NAME' gagal. Panel telah di-rollback bila snapshot tersedia."
