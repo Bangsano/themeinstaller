@@ -328,6 +328,7 @@ LOG_FILE=""
 
 NEOBRUTALISM_ARCHIVE_URL="https://github.com/firllyfikaa/NEOBRUTALIS-Pterodactyl/archive/refs/heads/main.zip"
 NEOBRUTALISM_BACKUP_ROOT="/var/backups/pterodactyl-theme-installer"
+NEOBRUTALISM_BACKUP_RETENTION_DAYS=7
 NEOBRUTALISM_STATE_FILE="/var/lib/pterodactyl-theme-installer/neobrutalism.active"
 NEOBRUTALISM_PANEL_MARKER="$PANEL_DIR/.neobrutalism-installer"
 
@@ -868,11 +869,112 @@ SQL
 
 neobrutalism_validate_backup_candidate() {
     local candidate="$1"
-    [[ "$candidate" =~ ^/var/backups/pterodactyl-theme-installer/neobrutalism\.[A-Za-z0-9]{8}$ ]] || return 1
+    [[ "$candidate" =~ ^/var/backups/pterodactyl-theme-installer/neobrutalism(\.[A-Za-z0-9]{8}|-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9]{8})$ ]] || return 1
     [[ -d "$candidate" && ! -L "$candidate" ]] || return 1
     [[ "$(stat -c '%u:%a' "$candidate" 2>/dev/null)" == "0:700" ]] || return 1
     [[ -s "$candidate/panel.tar.gz" && ! -L "$candidate/panel.tar.gz" ]] || return 1
     gzip -t "$candidate/panel.tar.gz"
+}
+
+neobrutalism_mark_snapshot_retired() {
+    local backup_dir="$1"
+    local retired_file="$backup_dir/retired_at"
+    local tmp_file="$backup_dir/.retired_at.tmp.$$"
+    local retired_at
+
+    if ! neobrutalism_validate_backup_candidate "$backup_dir"; then
+        print_error "Snapshot tidak valid; status retensi tidak akan diubah: $backup_dir"
+        return 1
+    fi
+    if [[ -e "$retired_file" || -L "$retired_file" ]]; then
+        [[ -f "$retired_file" && ! -L "$retired_file" && "$(stat -c '%u:%a' "$retired_file" 2>/dev/null)" == "0:600" ]] || return 1
+        IFS= read -r retired_at < "$retired_file" || return 1
+        [[ "$retired_at" =~ ^[0-9]{10,11}$ ]] || return 1
+        return 0
+    fi
+
+    retired_at=$(date +%s) || return 1
+    [[ "$retired_at" =~ ^[0-9]{10,11}$ ]] || return 1
+    if ! (umask 077; printf '%s\n' "$retired_at" > "$tmp_file") || ! chown root:root "$tmp_file" || ! chmod 0600 "$tmp_file" || ! mv -f -- "$tmp_file" "$retired_file"; then
+        rm -f -- "$tmp_file"
+        print_error "Tidak dapat mencatat waktu retensi snapshot: $backup_dir"
+        return 1
+    fi
+}
+
+neobrutalism_prune_retired_snapshots() {
+    local state_file candidate retired_at now age deleted=0 retention_seconds active_backup is_active
+    local -a active_backups=()
+
+    [[ -d "$NEOBRUTALISM_BACKUP_ROOT" && ! -L "$NEOBRUTALISM_BACKUP_ROOT" ]] || return 0
+    [[ "$(stat -c '%u:%a' "$NEOBRUTALISM_BACKUP_ROOT" 2>/dev/null)" == "0:700" ]] || return 0
+    [[ "$NEOBRUTALISM_BACKUP_RETENTION_DAYS" =~ ^[1-9][0-9]*$ ]] || return 0
+    retention_seconds=$((NEOBRUTALISM_BACKUP_RETENTION_DAYS * 86400))
+    now=$(date +%s) || return 0
+    [[ "$now" =~ ^[0-9]{10,11}$ ]] || return 0
+
+    # Never prune when an existing active marker is malformed or cannot be trusted.
+    for state_file in "$NEOBRUTALISM_STATE_FILE" "$NEOBRUTALISM_PANEL_MARKER"; do
+        [[ -e "$state_file" || -L "$state_file" ]] || continue
+        if [[ -L "$state_file" || ! -f "$state_file" || "$(stat -c '%u:%a' "$state_file" 2>/dev/null)" != "0:600" ]]; then
+            print_warning "Marker snapshot tidak valid; pembersihan otomatis dilewati demi keamanan backup: $state_file"
+            return 0
+        fi
+        IFS= read -r active_backup < "$state_file" || {
+            print_warning "Marker snapshot tidak dapat dibaca; pembersihan otomatis dilewati."
+            return 0
+        }
+        if [[ ! "$active_backup" =~ ^/var/backups/pterodactyl-theme-installer/neobrutalism(\.[A-Za-z0-9]{8}|-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9]{8})$ ]]; then
+            print_warning "Path pada marker snapshot tidak valid; pembersihan otomatis dilewati."
+            return 0
+        fi
+        if [[ ! -d "$active_backup" || -L "$active_backup" ]]; then
+            print_warning "Snapshot aktif yang dirujuk marker tidak ditemukan; pembersihan otomatis dilewati: $active_backup"
+            return 0
+        fi
+        active_backups+=("$active_backup")
+    done
+
+    while IFS= read -r -d '' candidate; do
+        is_active=no
+        for active_backup in "${active_backups[@]}"; do
+            if [[ "$candidate" == "$active_backup" ]]; then
+                is_active=yes
+                break
+            fi
+        done
+        [[ "$is_active" == "no" ]] || continue
+        neobrutalism_validate_backup_candidate "$candidate" || continue
+
+        if [[ ! -e "$candidate/retired_at" && ! -L "$candidate/retired_at" ]]; then
+            # Legacy build-fix snapshots have no retirement marker. Start their
+            # grace period now; directory mtime may predate the user's uninstall.
+            if neobrutalism_mark_snapshot_retired "$candidate"; then
+                print_info "Snapshot lama ditandai untuk retensi ${NEOBRUTALISM_BACKUP_RETENTION_DAYS} hari: $candidate"
+            else
+                print_warning "Snapshot lama tidak dapat diberi penanda retensi; backup dipertahankan: $candidate"
+            fi
+            continue
+        fi
+        if [[ ! -f "$candidate/retired_at" || -L "$candidate/retired_at" || "$(stat -c '%u:%a' "$candidate/retired_at" 2>/dev/null)" != "0:600" ]]; then
+            print_warning "Penanda retensi snapshot tidak valid; backup dipertahankan: $candidate"
+            continue
+        fi
+        IFS= read -r retired_at < "$candidate/retired_at" || continue
+        [[ "$retired_at" =~ ^[0-9]{10,11}$ ]] || continue
+        (( retired_at <= now )) || continue
+        age=$((now - retired_at))
+        (( age >= retention_seconds )) || continue
+        if rm -rf -- "$candidate"; then
+            ((deleted += 1))
+        else
+            print_warning "Snapshot yang melewati masa retensi tidak dapat dibersihkan otomatis: $candidate"
+        fi
+    done < <(find -P "$NEOBRUTALISM_BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -name 'neobrutalism*' -print0)
+
+    if (( deleted > 0 )); then
+        print_info "$deleted snapshot NEOBRUTALISM yang telah melewati retensi ${NEOBRUTALISM_BACKUP_RETENTION_DAYS} hari berhasil dibersihkan."
+    fi
 }
 
 neobrutalism_read_backup_state() {
@@ -1079,7 +1181,7 @@ neobrutalism_validate_php_runtime() {
 install_neobrutalism() {
     local TARGET_URL="$1"
     local TARGET_NAME="$2"
-    local archive_file source_dir artisan_file candidate backup_dir available_kib state_tmp panel_marker_tmp transaction_status had_errexit=no
+    local archive_file source_dir artisan_file candidate backup_dir available_kib state_tmp panel_marker_tmp transaction_status had_errexit=no snapshot_stamp
     local confirmation
 
     if [[ -e "$NEOBRUTALISM_STATE_FILE" || -L "$NEOBRUTALISM_STATE_FILE" || -e "$NEOBRUTALISM_PANEL_MARKER" || -L "$NEOBRUTALISM_PANEL_MARKER" ]]; then
@@ -1156,7 +1258,15 @@ install_neobrutalism() {
         return 1
     fi
 
-    backup_dir=$(mktemp -d "$NEOBRUTALISM_BACKUP_ROOT/neobrutalism.XXXXXXXX")
+    snapshot_stamp=$(date -u +%Y%m%dT%H%M%SZ) || return 1
+    if [[ ! "$snapshot_stamp" =~ ^[0-9]{8}T[0-9]{6}Z$ ]]; then
+        print_error "Timestamp UTC untuk nama snapshot tidak valid. Panel tidak akan diubah."
+        return 1
+    fi
+    backup_dir=$(mktemp -d "$NEOBRUTALISM_BACKUP_ROOT/neobrutalism-$snapshot_stamp-XXXXXXXX") || {
+        print_error "Tidak dapat membuat direktori snapshot. Panel tidak akan diubah."
+        return 1
+    }
     chmod 0700 "$backup_dir"
     print_info "Membuat snapshot seluruh source panel termasuk storage..."
     if ! tar -czpf "$backup_dir/panel.tar.gz" -C "$PANEL_DIR" .; then
@@ -1275,17 +1385,25 @@ install_neobrutalism() {
             print_error "Source dan database telah dipulihkan, tetapi panel gagal keluar dari maintenance mode. State dan backup dipertahankan."
             return 1
         fi
-        if ! rm -f -- "$NEOBRUTALISM_STATE_FILE" "$NEOBRUTALISM_PANEL_MARKER"; then
-            print_error "Rollback selesai tetapi state installer gagal dibersihkan. Snapshot tetap dipertahankan: $backup_dir"
-            return 1
-        fi
         run_optional systemctl restart pteroq
         if [[ ! -f "$backup_dir/panel_replacement_started" && ! -f "$backup_dir/installation_complete" && ! -f "$backup_dir/database_migration_started" ]]; then
+            if ! rm -f -- "$NEOBRUTALISM_STATE_FILE" "$NEOBRUTALISM_PANEL_MARKER"; then
+                print_error "State installer gagal dibersihkan. Snapshot tetap dipertahankan: $backup_dir"
+                return 1
+            fi
             rm -rf -- "$backup_dir"
             print_warning "Instalasi dibatalkan sebelum source/database diubah; panel original tetap aktif."
             return 1
         fi
-        print_warning "Panel dikembalikan ke source sebelum NEOBRUTALISM. Snapshot tetap disimpan di $backup_dir"
+        if ! neobrutalism_mark_snapshot_retired "$backup_dir"; then
+            print_error "Panel telah dipulihkan, tetapi snapshot belum berhasil masuk masa retensi. State tetap dipertahankan untuk pemulihan ulang."
+            return 1
+        fi
+        if ! rm -f -- "$NEOBRUTALISM_STATE_FILE" "$NEOBRUTALISM_PANEL_MARKER"; then
+            print_error "Rollback selesai tetapi state installer gagal dibersihkan. Snapshot tetap dipertahankan: $backup_dir"
+            return 1
+        fi
+        print_warning "Panel dikembalikan ke source sebelum NEOBRUTALISM. Snapshot disimpan selama ${NEOBRUTALISM_BACKUP_RETENTION_DAYS} hari: $backup_dir"
         return 1
     fi
 
@@ -1349,20 +1467,29 @@ neobrutalism_uninstall() {
         print_error "Source panel telah dipulihkan, tetapi gagal keluar dari maintenance mode. State dan backup dipertahankan."
         return 1
     fi
-    if ! rm -f -- "$NEOBRUTALISM_STATE_FILE" "$NEOBRUTALISM_PANEL_MARKER"; then
-        print_error "Source sudah dipulihkan, tetapi state installer gagal dibersihkan. Snapshot dipertahankan untuk pemulihan ulang."
-        return 1
-    fi
     run_optional systemctl restart pteroq
     if [[ ! -f "$backup_dir/panel_replacement_started" && ! -f "$backup_dir/installation_complete" && ! -f "$backup_dir/database_migration_started" ]]; then
+        if ! rm -f -- "$NEOBRUTALISM_STATE_FILE" "$NEOBRUTALISM_PANEL_MARKER"; then
+            print_error "State installer gagal dibersihkan. Snapshot dipertahankan: $backup_dir"
+            return 1
+        fi
         rm -rf -- "$backup_dir"
         print_success "Percobaan instalasi dibersihkan; source panel original tidak pernah diganti."
         return 0
     fi
+    if ! neobrutalism_mark_snapshot_retired "$backup_dir"; then
+        print_error "Source sudah dipulihkan, tetapi snapshot belum berhasil masuk masa retensi. State tetap dipertahankan untuk pemulihan ulang."
+        return 1
+    fi
+    if ! rm -f -- "$NEOBRUTALISM_STATE_FILE" "$NEOBRUTALISM_PANEL_MARKER"; then
+        print_error "Source sudah dipulihkan, tetapi state installer gagal dibersihkan. Snapshot dipertahankan untuk pemulihan ulang."
+        return 1
+    fi
     print_success "Source panel sebelum NEOBRUTALISM berhasil dipulihkan."
     print_info "Database tidak di-restore pada reset normal agar data akun/server terbaru tidak hilang; migrasi tema yang bersifat tambahan tetap tersimpan."
     print_info "Jika MAIL_MAILER pernah diubah menjadi 'resend', kembalikan nilainya ke mailer yang tersedia pada panel original."
-    print_info "Backup lengkap (termasuk dump database dan storage pra-instalasi) tetap tersedia di: $backup_dir"
+    print_info "Snapshot lengkap termasuk dump database dan storage pra-instalasi disimpan selama ${NEOBRUTALISM_BACKUP_RETENTION_DAYS} hari: $backup_dir"
+    print_info "Snapshot yang melewati masa retensi dibersihkan pada eksekusi installer berikutnya."
 }
 
 install_theme() {
@@ -1871,8 +1998,19 @@ uninstall_panel() {
     rm -rf /etc/pterodactyl
     rm -rf /var/lib/pterodactyl
     if [[ -e "$NEOBRUTALISM_STATE_FILE" || -L "$NEOBRUTALISM_STATE_FILE" ]]; then
-        print_info "Menyimpan snapshot NEOBRUTALISM di $NEOBRUTALISM_BACKUP_ROOT untuk pemulihan manual."
-        rm -f -- "$NEOBRUTALISM_STATE_FILE" "$NEOBRUTALISM_STATE_FILE".tmp.*
+        local neobrutalism_backup_dir
+        if neobrutalism_backup_dir=$(neobrutalism_read_backup_state); then
+            if neobrutalism_mark_snapshot_retired "$neobrutalism_backup_dir"; then
+                print_info "Snapshot NEOBRUTALISM disimpan selama ${NEOBRUTALISM_BACKUP_RETENTION_DAYS} hari: $neobrutalism_backup_dir"
+                if ! rm -f -- "$NEOBRUTALISM_STATE_FILE" "$NEOBRUTALISM_STATE_FILE".tmp.*; then
+                    print_warning "State snapshot gagal dibersihkan; backup tetap dilindungi dari pembersihan otomatis."
+                fi
+            else
+                print_warning "Snapshot tidak dapat ditandai untuk retensi; backup dan state dipertahankan: $neobrutalism_backup_dir"
+            fi
+        else
+            print_warning "State snapshot NEOBRUTALISM tidak valid; backup dibiarkan utuh untuk pemeriksaan manual."
+        fi
         rmdir "$(dirname "$NEOBRUTALISM_STATE_FILE")" 2>/dev/null || true
     fi
     rm -f /usr/local/bin/wings
@@ -2283,6 +2421,7 @@ MAIN_MENU=(
 
 # Main script execution
 initialize_logging
+neobrutalism_prune_retired_snapshots
 validate_panel_installation
 start_script
 
