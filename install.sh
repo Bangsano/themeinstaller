@@ -694,7 +694,6 @@ $values = [
     'port' => $port,
     'user' => $user,
     'password' => $password,
-    'connect-timeout' => 15,
 ];
 $lines = ['[client]'];
 foreach ($values as $key => $value) {
