@@ -331,6 +331,9 @@ NEOBRUTALISM_BACKUP_ROOT="/var/backups/pterodactyl-theme-installer"
 NEOBRUTALISM_BACKUP_RETENTION_DAYS=7
 NEOBRUTALISM_STATE_FILE="/var/lib/pterodactyl-theme-installer/neobrutalism.active"
 NEOBRUTALISM_PANEL_MARKER="$PANEL_DIR/.neobrutalism-installer"
+PANEL_TRANSACTION_STATE_FILE="/var/lib/pterodactyl-theme-installer/panel-operation.state"
+INSTALLER_LOCK_FILE="/run/lock/pterodactyl-theme-installer.lock"
+INSTALLER_LOCK_FD=""
 
 print_banner() {
     local title="$1"
@@ -356,6 +359,31 @@ initialize_logging() {
     chmod 600 "$LOG_FILE"
     exec > >(tee -a "$LOG_FILE") 2>&1
     print_info "Log lengkap tersimpan di: $LOG_FILE"
+}
+
+acquire_installer_lock() {
+    if ! command -v flock >/dev/null 2>&1; then
+        print_error "Utilitas flock tidak tersedia. Installer dihentikan untuk mencegah dua proses mengubah panel bersamaan."
+        return 1
+    fi
+    if [[ ! -d /run/lock || -L /run/lock || -L "$INSTALLER_LOCK_FILE" ]]; then
+        print_error "Lokasi lock installer tidak valid atau berupa symlink."
+        return 1
+    fi
+    if [[ -e "$INSTALLER_LOCK_FILE" && ( ! -f "$INSTALLER_LOCK_FILE" || "$(stat -c '%u' "$INSTALLER_LOCK_FILE" 2>/dev/null)" != 0 ) ]]; then
+        print_error "File lock installer bukan file biasa milik root."
+        return 1
+    fi
+    (umask 077; : >> "$INSTALLER_LOCK_FILE") || return 1
+    chown root:root "$INSTALLER_LOCK_FILE" && chmod 0600 "$INSTALLER_LOCK_FILE" || return 1
+    exec {INSTALLER_LOCK_FD}>> "$INSTALLER_LOCK_FILE" || return 1
+    if ! flock -n "$INSTALLER_LOCK_FD"; then
+        exec {INSTALLER_LOCK_FD}>&-
+        INSTALLER_LOCK_FD=""
+        print_error "Installer lain sedang berjalan. Selesaikan proses tersebut sebelum menjalankan installer ini kembali."
+        return 1
+    fi
+    return 0
 }
 
 handle_error() {
@@ -869,11 +897,12 @@ SQL
 
 neobrutalism_validate_backup_candidate() {
     local candidate="$1"
-    [[ "$candidate" =~ ^/var/backups/pterodactyl-theme-installer/neobrutalism(\.[A-Za-z0-9]{8}|-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9]{8})$ ]] || return 1
+    [[ "$candidate" =~ ^/var/backups/pterodactyl-theme-installer/(neobrutalism(\.[A-Za-z0-9]{8}|-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9]{8})|panel-operation-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9]{8})$ ]] || return 1
     [[ -d "$candidate" && ! -L "$candidate" ]] || return 1
     [[ "$(stat -c '%u:%a' "$candidate" 2>/dev/null)" == "0:700" ]] || return 1
     [[ -s "$candidate/panel.tar.gz" && ! -L "$candidate/panel.tar.gz" ]] || return 1
-    gzip -t "$candidate/panel.tar.gz"
+    [[ -s "$candidate/database.sql.gz" && ! -L "$candidate/database.sql.gz" ]] || return 1
+    gzip -t "$candidate/panel.tar.gz" && gzip -t "$candidate/database.sql.gz"
 }
 
 neobrutalism_mark_snapshot_retired() {
@@ -908,6 +937,10 @@ neobrutalism_prune_retired_snapshots() {
 
     [[ -d "$NEOBRUTALISM_BACKUP_ROOT" && ! -L "$NEOBRUTALISM_BACKUP_ROOT" ]] || return 0
     [[ "$(stat -c '%u:%a' "$NEOBRUTALISM_BACKUP_ROOT" 2>/dev/null)" == "0:700" ]] || return 0
+    if [[ -e "$PANEL_TRANSACTION_STATE_FILE" || -L "$PANEL_TRANSACTION_STATE_FILE" ]]; then
+        print_warning "Transaksi panel umum belum diselesaikan; pembersihan snapshot ditunda."
+        return 0
+    fi
     [[ "$NEOBRUTALISM_BACKUP_RETENTION_DAYS" =~ ^[1-9][0-9]*$ ]] || return 0
     retention_seconds=$((NEOBRUTALISM_BACKUP_RETENTION_DAYS * 86400))
     now=$(date +%s) || return 0
@@ -970,7 +1003,8 @@ neobrutalism_prune_retired_snapshots() {
         else
             print_warning "Snapshot yang melewati masa retensi tidak dapat dibersihkan otomatis: $candidate"
         fi
-    done < <(find -P "$NEOBRUTALISM_BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -name 'neobrutalism*' -print0)
+    done < <(find -P "$NEOBRUTALISM_BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d \
+        \( -name 'neobrutalism*' -o -name 'panel-operation-*' \) -print0)
 
     if (( deleted > 0 )); then
         print_info "$deleted snapshot NEOBRUTALISM yang telah melewati retensi ${NEOBRUTALISM_BACKUP_RETENTION_DAYS} hari berhasil dibersihkan."
@@ -1053,6 +1087,422 @@ neobrutalism_restore_panel_snapshot() {
     else
         rm -f -- /usr/local/bin/blueprint
     fi
+}
+
+
+panel_transaction_write_state() {
+    local status="$1" backup_dir="$2" tmp_file="${PANEL_TRANSACTION_STATE_FILE}.tmp.$$"
+    [[ "$status" == active || "$status" == committed ]] || return 1
+    [[ "$backup_dir" =~ ^/var/backups/pterodactyl-theme-installer/panel-operation-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9]{8}$ ]] || return 1
+    [[ -d "$backup_dir" && ! -L "$backup_dir" && "$(stat -c '%u:%a' "$backup_dir" 2>/dev/null)" == "0:700" ]] || return 1
+    [[ -s "$backup_dir/panel.tar.gz" && ! -L "$backup_dir/panel.tar.gz" ]] || return 1
+    gzip -t "$backup_dir/panel.tar.gz" || return 1
+    if [[ "$status" == committed ]]; then neobrutalism_validate_backup_candidate "$backup_dir" || return 1; fi
+    mkdir -p "$(dirname "$PANEL_TRANSACTION_STATE_FILE")" || return 1
+    chmod 0700 "$(dirname "$PANEL_TRANSACTION_STATE_FILE")" || return 1
+    if ! (umask 077; printf '%s\t%s\n' "$status" "$backup_dir" > "$tmp_file") ||
+        ! chown root:root "$tmp_file" || ! chmod 0600 "$tmp_file" || ! mv -f -- "$tmp_file" "$PANEL_TRANSACTION_STATE_FILE"; then
+        rm -f -- "$tmp_file"
+        return 1
+    fi
+}
+
+panel_transaction_check_idle() {
+    if [[ -e "$PANEL_TRANSACTION_STATE_FILE" || -L "$PANEL_TRANSACTION_STATE_FILE" ||
+          -e "$NEOBRUTALISM_STATE_FILE" || -L "$NEOBRUTALISM_STATE_FILE" ||
+          -e "$NEOBRUTALISM_PANEL_MARKER" || -L "$NEOBRUTALISM_PANEL_MARKER" ]]; then
+        print_error "Ada snapshot/transaksi panel aktif atau belum selesai. Pulihkan/reset panel terlebih dahulu sebelum menjalankan fitur ini."
+        return 1
+    fi
+}
+
+panel_transaction_restart_php_fpm() {
+    local service units
+    local -a fpm_services=()
+    units=$(systemctl list-units --type=service --state=running --no-legend) || {
+        print_error "Tidak dapat memeriksa service PHP-FPM."
+        return 1
+    }
+    mapfile -t fpm_services < <(awk '$1 ~ /^php[0-9]+\.[0-9]+-fpm\.service$/ {print $1}' <<< "$units")
+    if (( ${#fpm_services[@]} == 0 )); then
+        print_warning "Tidak ada PHP-FPM aktif; restart FPM dilewati (misalnya panel menggunakan handler PHP lain)."
+        return 0
+    fi
+    for service in "${fpm_services[@]}"; do
+        if ! systemctl restart "$service" || ! systemctl is-active --quiet "$service"; then
+            print_error "Gagal me-restart atau memverifikasi service $service."
+            return 1
+        fi
+    done
+}
+
+panel_transaction_capture_services() {
+    local service active enabled
+    : > "$1/service_state"
+    for service in pteroq wings agent; do
+        active=$(systemctl is-active "$service" 2>/dev/null || true)
+        enabled=$(systemctl is-enabled "$service" 2>/dev/null || true)
+        [[ -n "$active" ]] || active=unknown
+        [[ -n "$enabled" ]] || enabled=unknown
+        printf '%s\t%s\t%s\n' "$service" "$active" "$enabled" >> "$1/service_state"
+    done
+    chown root:root "$1/service_state" && chmod 0600 "$1/service_state"
+}
+
+panel_transaction_restore_system_files() {
+    local backup_dir="$1"
+    [[ -s "$backup_dir/system.tar.gz" && ! -L "$backup_dir/system.tar.gz" ]] || return 1
+    tar -tzf "$backup_dir/system.tar.gz" >/dev/null || return 1
+    rm -f -- /usr/local/bin/agent /etc/systemd/system/agent.service /etc/systemd/system/multi-user.target.wants/agent.service || return 1
+    rm -rf -- /etc/reviactyl || return 1
+    tar -xzpf "$backup_dir/system.tar.gz" -C / || return 1
+
+    rm -f -- /usr/local/bin/blueprint || return 1
+    if [[ -f "$backup_dir/had_blueprint_command" ]]; then
+        [[ -e "$backup_dir/blueprint.command" || -L "$backup_dir/blueprint.command" ]] || return 1
+        [[ ! -d "$backup_dir/blueprint.command" || -L "$backup_dir/blueprint.command" ]] || return 1
+        cp -a -- "$backup_dir/blueprint.command" /usr/local/bin/blueprint || return 1
+    fi
+    systemctl daemon-reload
+}
+
+panel_transaction_ensure_maintenance() {
+    local down_file="$PANEL_DIR/storage/framework/down"
+    local maintenance_file="$PANEL_DIR/storage/framework/maintenance.php"
+
+    [[ ! -L "$PANEL_DIR/storage" && ! -L "$PANEL_DIR/storage/framework" && ! -L "$down_file" && ! -L "$maintenance_file" ]] || return 1
+    if (cd "$PANEL_DIR" && php artisan down); then
+        return 0
+    fi
+    [[ -e "$down_file" || -e "$maintenance_file" ]] && return 0
+    mkdir -p -- "$(dirname "$down_file")" || return 1
+    : > "$down_file" || return 1
+    chown www-data:www-data "$down_file" && chmod 0640 "$down_file" || return 1
+    [[ -f "$down_file" && ! -L "$down_file" ]]
+}
+
+panel_transaction_restore_services() {
+    local service active enabled
+    local file="$1/service_state"
+    [[ -f "$file" && ! -L "$file" ]] || return 1
+    while IFS=$'\t' read -r service active enabled; do
+        case "$service" in pteroq|wings|agent) ;; *) return 1 ;; esac
+        case "$enabled" in
+            enabled|enabled-runtime) systemctl enable "$service" || return 1 ;;
+            disabled) systemctl disable "$service" || return 1 ;;
+            unknown|not-found|static|indirect|masked|masked-runtime|generated|transient|linked|linked-runtime|alias) ;;
+            *) return 1 ;;
+        esac
+        case "$active" in
+            active) systemctl start "$service" || return 1 ;;
+            inactive|failed) systemctl stop "$service" || return 1 ;;
+            unknown|activating|deactivating|maintenance) ;;
+            *) return 1 ;;
+        esac
+    done < "$file"
+    systemctl daemon-reload
+}
+
+panel_transaction_restore_queue_after_commit() {
+    local active
+    active=$(awk -F '\t' '$1 == "pteroq" {print $2}' "$1/service_state") || return 1
+    if [[ "$active" == active ]]; then
+        systemctl start pteroq && systemctl is-active --quiet pteroq
+    fi
+}
+
+panel_transaction_restore_files() {
+    local backup_dir="$1"
+    [[ -s "$backup_dir/panel.tar.gz" && ! -L "$backup_dir/panel.tar.gz" ]] || return 1
+    tar -tzf "$backup_dir/panel.tar.gz" >/dev/null || return 1
+    [[ ! -L "$PANEL_DIR" ]] || return 1
+    mkdir -p "$PANEL_DIR" || return 1
+    find "$PANEL_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + || return 1
+    tar -xzpf "$backup_dir/panel.tar.gz" -C "$PANEL_DIR" || return 1
+}
+
+panel_transaction_finish_state() {
+    local backup_dir="$1"
+    if ! panel_transaction_write_state committed "$backup_dir"; then
+        print_error "Tidak dapat menandai transaksi sebagai selesai. State aktif dipertahankan untuk pemulihan berikutnya."
+        return 1
+    fi
+    if ! neobrutalism_mark_snapshot_retired "$backup_dir"; then
+        print_warning "Operasi selesai, tetapi snapshot belum dapat diberi penanda retensi. State committed dipertahankan agar pembersihan dapat dilanjutkan pada eksekusi berikutnya."
+        return 0
+    fi
+    if ! rm -f -- "$PANEL_TRANSACTION_STATE_FILE"; then
+        print_warning "Operasi selesai, tetapi state transaksi tidak dapat dihapus. Snapshot tetap dilindungi."
+        return 0
+    fi
+    return 0
+}
+
+panel_transaction_rollback() {
+    local backup_dir="$1"
+    print_warning "Memulihkan source panel, database, konfigurasi integrasi, dan status service dari snapshot..."
+    if ! panel_transaction_ensure_maintenance; then
+        print_error "Maintenance mode tidak dapat dipastikan aktif. Rollback file/database tidak dilanjutkan; snapshot dipertahankan: $backup_dir"
+        return 1
+    fi
+    if [[ ! -f "$backup_dir/service_state" || -L "$backup_dir/service_state" || "$(stat -c '%u:%a' "$backup_dir/service_state" 2>/dev/null)" != "0:600" ||
+          ! -s "$backup_dir/system.tar.gz" || -L "$backup_dir/system.tar.gz" || "$(stat -c '%u:%a' "$backup_dir/system.tar.gz" 2>/dev/null)" != "0:600" ]] ||
+       ! gzip -t "$backup_dir/system.tar.gz" || ! tar -tzf "$backup_dir/system.tar.gz" >/dev/null; then
+        print_error "Snapshot integrasi sistem/service tidak lengkap atau rusak. Panel dipertahankan dalam maintenance mode; backup: $backup_dir"
+        return 1
+    fi
+    if systemctl is-active --quiet pteroq && ! systemctl stop pteroq; then
+        print_error "Queue worker tidak dapat dihentikan. Rollback database tidak dilanjutkan; panel tetap dalam maintenance mode. Snapshot: $backup_dir"
+        return 1
+    fi
+    if ! panel_transaction_restore_files "$backup_dir"; then
+        if [[ -f "$PANEL_DIR/artisan" ]]; then panel_transaction_ensure_maintenance || true; fi
+        print_error "Rollback source panel gagal. Panel harus tetap dianggap tidak siap; snapshot: $backup_dir"
+        return 1
+    fi
+    if ! panel_transaction_ensure_maintenance; then
+        print_error "Source panel telah dipulihkan, tetapi maintenance mode tidak dapat diaktifkan kembali. Jangan gunakan panel; snapshot: $backup_dir"
+        return 1
+    fi
+    if ! neobrutalism_restore_database "$backup_dir"; then
+        print_error "Rollback database gagal. Panel dipertahankan dalam maintenance mode; snapshot: $backup_dir"
+        return 1
+    fi
+    if ! panel_transaction_restore_system_files "$backup_dir"; then
+        print_error "Rollback file integrasi sistem gagal. Panel dipertahankan dalam maintenance mode. Snapshot: $backup_dir"
+        return 1
+    fi
+    if ! (cd "$PANEL_DIR" && php artisan optimize:clear && set_panel_permissions) || ! panel_transaction_restart_php_fpm; then
+        print_error "Source/database telah dipulihkan, tetapi cache, permission, atau PHP-FPM gagal dipulihkan. Panel tetap dalam maintenance mode; snapshot: $backup_dir"
+        return 1
+    fi
+    if ! (cd "$PANEL_DIR" && php artisan up); then
+        (cd "$PANEL_DIR" && php artisan down) || true
+        print_error "Source dan database telah dipulihkan, tetapi panel gagal keluar dari maintenance mode. Snapshot: $backup_dir"
+        return 1
+    fi
+    if ! panel_transaction_restore_services "$backup_dir"; then
+        systemctl stop pteroq 2>/dev/null || true
+        panel_transaction_ensure_maintenance || true
+        print_error "Source dan database telah dipulihkan, tetapi status service tidak berhasil dikembalikan. Panel kembali ke maintenance mode; snapshot: $backup_dir"
+        return 1
+    fi
+    if ! panel_transaction_finish_state "$backup_dir"; then
+        systemctl stop pteroq 2>/dev/null || true
+        panel_transaction_ensure_maintenance || true
+        print_error "Rollback berhasil, tetapi state transaksi belum dapat difinalisasi. Panel kembali ke maintenance mode; backup tetap dipertahankan: $backup_dir"
+        return 1
+    fi
+    print_warning "Rollback berhasil. Snapshot disimpan selama ${NEOBRUTALISM_BACKUP_RETENTION_DAYS} hari: $backup_dir"
+}
+
+panel_transaction_release_unmodified() {
+    local backup_dir="$1"
+    if [[ -d "$PANEL_DIR" && -f "$PANEL_DIR/artisan" ]]; then
+        (cd "$PANEL_DIR" && php artisan up) || return 1
+    fi
+    panel_transaction_restore_services "$backup_dir" || return 1
+    rm -f -- "$PANEL_TRANSACTION_STATE_FILE" || return 1
+    rm -rf -- "$backup_dir"
+}
+
+panel_transaction_begin() {
+    local operation="$1" backup_dir stamp available_kib panel_size_kib required_kib path
+    local -a system_paths=()
+
+    if [[ -e "$PANEL_TRANSACTION_STATE_FILE" || -L "$PANEL_TRANSACTION_STATE_FILE" ||
+          -e "$NEOBRUTALISM_STATE_FILE" || -L "$NEOBRUTALISM_STATE_FILE" ||
+          -e "$NEOBRUTALISM_PANEL_MARKER" || -L "$NEOBRUTALISM_PANEL_MARKER" ]]; then
+        print_error "Masih ada transaksi/snapshot panel aktif. Selesaikan pemulihan atau reset terlebih dahulu."
+        return 1
+    fi
+    if [[ ! -d "$PANEL_DIR" || -L "$PANEL_DIR" || ! -f "$PANEL_DIR/artisan" ||
+          ! -f "$PANEL_DIR/.env" || -L "$PANEL_DIR/.env" || ! -d "$PANEL_DIR/storage" || -L "$PANEL_DIR/storage" ]]; then
+        print_error "Struktur panel, .env, atau storage tidak memenuhi syarat snapshot transaksi."
+        return 1
+    fi
+    if [[ -e "$PANEL_DIR/storage/framework/down" || -e "$PANEL_DIR/storage/framework/maintenance.php" ]]; then
+        print_error "Panel sudah berada dalam maintenance mode. Selesaikan kondisi tersebut sebelum memulai transaksi baru."
+        return 1
+    fi
+    if [[ -L "$NEOBRUTALISM_BACKUP_ROOT" || -L "$(dirname "$PANEL_TRANSACTION_STATE_FILE")" ]]; then
+        print_error "Direktori backup/state tidak boleh berupa symlink."
+        return 1
+    fi
+    mkdir -p "$NEOBRUTALISM_BACKUP_ROOT" "$(dirname "$PANEL_TRANSACTION_STATE_FILE")" || return 1
+    chmod 0700 "$NEOBRUTALISM_BACKUP_ROOT" "$(dirname "$PANEL_TRANSACTION_STATE_FILE")" || return 1
+    available_kib=$(df -Pk "$NEOBRUTALISM_BACKUP_ROOT" | awk 'NR == 2 {print $4}')
+    panel_size_kib=$(du -sk -- "$PANEL_DIR" | awk 'NR == 1 {print $1}')
+    if [[ ! "$available_kib" =~ ^[0-9]+$ || ! "$panel_size_kib" =~ ^[0-9]+$ ]]; then
+        print_error "Tidak dapat memperkirakan kebutuhan ruang snapshot panel. Operasi dibatalkan."
+        return 1
+    fi
+    required_kib=$((panel_size_kib + MIN_FREE_SPACE_KIB))
+    if (( available_kib < required_kib )); then
+        print_error "Ruang backup tidak cukup: diperlukan sekurangnya ukuran panel saat ini + 2 GiB (panel $((panel_size_kib / 1024)) MiB, tersedia $((available_kib / 1024)) MiB)."
+        return 1
+    fi
+
+    stamp=$(date -u +%Y%m%dT%H%M%SZ) || return 1
+    [[ "$stamp" =~ ^[0-9]{8}T[0-9]{6}Z$ ]] || return 1
+    backup_dir=$(mktemp -d "$NEOBRUTALISM_BACKUP_ROOT/panel-operation-$stamp-XXXXXXXX") || return 1
+    chmod 0700 "$backup_dir" || { rm -rf -- "$backup_dir"; return 1; }
+
+    print_info "Membuat snapshot source panel sebelum operasi '$operation'..."
+    if ! tar -czpf "$backup_dir/panel.tar.gz" -C "$PANEL_DIR" .; then
+        rm -rf -- "$backup_dir"
+        print_error "Snapshot source panel gagal. Tidak ada perubahan yang dilakukan."
+        return 1
+    fi
+    chmod 0600 "$backup_dir/panel.tar.gz" || { rm -rf -- "$backup_dir"; return 1; }
+    if [[ -e /usr/local/bin/blueprint || -L /usr/local/bin/blueprint ]]; then
+        if ! cp -a -- /usr/local/bin/blueprint "$backup_dir/blueprint.command"; then
+            rm -rf -- "$backup_dir"
+            print_error "Tidak dapat mem-backup CLI Blueprint. Operasi dibatalkan."
+            return 1
+        fi
+        touch "$backup_dir/had_blueprint_command"
+    fi
+
+    for path in etc/systemd/system/agent.service etc/systemd/system/multi-user.target.wants/agent.service etc/reviactyl usr/local/bin/agent; do
+        if [[ -e "/$path" || -L "/$path" ]]; then system_paths+=("$path"); fi
+    done
+    if (( ${#system_paths[@]} > 0 )); then
+        if ! tar -czpf "$backup_dir/system.tar.gz" -C / "${system_paths[@]}"; then
+            rm -rf -- "$backup_dir"
+            print_error "Snapshot konfigurasi integrasi sistem gagal. Operasi dibatalkan."
+            return 1
+        fi
+    else
+        tar -czpf "$backup_dir/system.tar.gz" --files-from /dev/null || { rm -rf -- "$backup_dir"; return 1; }
+    fi
+    panel_transaction_capture_services "$backup_dir" || { rm -rf -- "$backup_dir"; return 1; }
+    chmod 0600 "$backup_dir/system.tar.gz" || { rm -rf -- "$backup_dir"; return 1; }
+
+    if ! panel_transaction_write_state active "$backup_dir"; then
+        rm -rf -- "$backup_dir"
+        print_error "Tidak dapat mencatat transaksi aktif. Operasi dibatalkan."
+        return 1
+    fi
+    if ! (cd "$PANEL_DIR" && php artisan down); then
+        if (cd "$PANEL_DIR" && php artisan up); then
+            rm -f -- "$PANEL_TRANSACTION_STATE_FILE"
+            rm -rf -- "$backup_dir"
+        else
+            print_error "Aktivasi maintenance gagal dan panel juga tidak dapat dikembalikan live. State/snapshot dipertahankan untuk recovery: $backup_dir"
+        fi
+        print_error "Tidak dapat mengaktifkan maintenance mode. Source panel belum disentuh."
+        return 1
+    fi
+    touch "$backup_dir/maintenance_enabled"
+    if [[ "$(awk -F '\t' '$1 == "pteroq" {print $2}' "$backup_dir/service_state")" == active ]]; then
+        if ! systemctl stop pteroq; then
+            if ! panel_transaction_release_unmodified "$backup_dir"; then
+                print_error "Gagal mengembalikan panel/service setelah queue worker gagal dihentikan. State dan snapshot dipertahankan: $backup_dir"
+            fi
+            return 1
+        fi
+    fi
+    print_info "Membuat snapshot database MySQL/MariaDB..."
+    if ! neobrutalism_dump_database "$backup_dir"; then
+        if ! panel_transaction_release_unmodified "$backup_dir"; then
+            print_error "Gagal mengembalikan panel/service setelah backup database gagal. State dan snapshot dipertahankan: $backup_dir"
+        fi
+        return 1
+    fi
+    touch "$backup_dir/database_backup_complete"
+    PANEL_TRANSACTION_BACKUP_DIR="$backup_dir"
+    return 0
+}
+
+panel_transaction_run() {
+    local operation="$1" apply_function="$2" backup_dir status=0
+    shift 2
+    panel_transaction_begin "$operation" || return 1
+    backup_dir="$PANEL_TRANSACTION_BACKUP_DIR"
+
+    if (trap - ERR; set -e; touch "$backup_dir/panel_mutation_started"; "$apply_function" "$@"); then
+        status=0
+    else
+        status=$?
+    fi
+
+    if (( status == 0 )); then
+        if ! panel_transaction_restart_php_fpm || ! (cd "$PANEL_DIR" && php artisan up) || ! panel_transaction_restore_queue_after_commit "$backup_dir"; then
+            status=1
+            print_error "Finalisasi operasi '$operation' gagal. Memulai rollback."
+        fi
+    fi
+
+    if (( status != 0 )); then
+        print_error "Operasi '$operation' gagal (exit code $status)."
+        if ! panel_transaction_rollback "$backup_dir"; then
+            print_error "ROLLBACK GAGAL. Panel jangan digunakan sampai pemulihan manual selesai. Snapshot: $backup_dir"
+            return 1
+        fi
+        return "$status"
+    fi
+
+    if ! panel_transaction_finish_state "$backup_dir"; then
+        print_error "Operasi '$operation' selesai, tetapi state transaksi tidak dapat dikomit. Memulihkan snapshot agar hasil tidak ambigu."
+        if ! panel_transaction_rollback "$backup_dir"; then
+            print_error "Rollback setelah kegagalan pencatatan commit gagal. Snapshot: $backup_dir"
+            return 1
+        fi
+        return 1
+    fi
+    print_success "Operasi '$operation' berhasil. Snapshot rollback disimpan selama ${NEOBRUTALISM_BACKUP_RETENTION_DAYS} hari: $backup_dir"
+}
+
+panel_transaction_recover_pending() {
+    local state status backup_dir
+    [[ -e "$PANEL_TRANSACTION_STATE_FILE" || -L "$PANEL_TRANSACTION_STATE_FILE" ]] || return 0
+    if [[ -L "$PANEL_TRANSACTION_STATE_FILE" || ! -f "$PANEL_TRANSACTION_STATE_FILE" ||
+          "$(stat -c '%u:%a' "$PANEL_TRANSACTION_STATE_FILE" 2>/dev/null)" != "0:600" ]]; then
+        print_error "State transaksi panel tidak valid. Operasi baru diblokir dan backup tidak disentuh."
+        return 1
+    fi
+    IFS=$'\t' read -r status backup_dir < "$PANEL_TRANSACTION_STATE_FILE" || return 1
+    if [[ "$status" != active && "$status" != committed ]] ||
+       [[ ! "$backup_dir" =~ ^/var/backups/pterodactyl-theme-installer/panel-operation-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9]{8}$ ]] ||
+       [[ ! -d "$backup_dir" || -L "$backup_dir" || "$(stat -c '%u:%a' "$backup_dir" 2>/dev/null)" != "0:700" ]]; then
+        print_error "State transaksi menunjuk snapshot tidak valid. Operasi baru diblokir; periksa $PANEL_TRANSACTION_STATE_FILE."
+        return 1
+    fi
+
+    create_temp_dir || return 1
+    if [[ "$status" == committed ]]; then
+        neobrutalism_validate_backup_candidate "$backup_dir" || {
+            print_error "Snapshot committed tidak valid; backup dipertahankan dan installer dihentikan."
+            return 1
+        }
+        if ! neobrutalism_mark_snapshot_retired "$backup_dir" || ! rm -f -- "$PANEL_TRANSACTION_STATE_FILE"; then
+            print_error "Transaksi telah selesai, tetapi state retensi belum dapat diselesaikan."
+            return 1
+        fi
+        print_info "State transaksi yang sebelumnya sudah committed berhasil dirapikan."
+        return 0
+    fi
+
+    if [[ ! -f "$backup_dir/panel_mutation_started" ]]; then
+        [[ -s "$backup_dir/panel.tar.gz" && ! -L "$backup_dir/panel.tar.gz" ]] && gzip -t "$backup_dir/panel.tar.gz" || {
+            print_error "Snapshot panel untuk transaksi yang belum dimutasi tidak valid; state dipertahankan."
+            return 1
+        }
+        print_warning "Menemukan transaksi yang terhenti sebelum source panel dimodifikasi; mengembalikan maintenance/service tanpa restore database."
+        if ! panel_transaction_release_unmodified "$backup_dir"; then
+            print_error "Pemulihan transaksi yang belum mengubah source gagal. State dipertahankan."
+            return 1
+        fi
+        return 0
+    fi
+
+    neobrutalism_validate_backup_candidate "$backup_dir" || {
+        print_error "Snapshot database/source transaksi yang terputus tidak lengkap; panel tidak akan diaktifkan."
+        return 1
+    }
+    print_warning "Menemukan transaksi panel yang terputus. Menjalankan rollback otomatis dari snapshot..."
+    panel_transaction_rollback "$backup_dir"
 }
 
 neobrutalism_install_blueprint_shortcut() {
@@ -1184,8 +1634,8 @@ install_neobrutalism() {
     local archive_file source_dir artisan_file candidate backup_dir available_kib state_tmp panel_marker_tmp transaction_status had_errexit=no snapshot_stamp
     local confirmation
 
-    if [[ -e "$NEOBRUTALISM_STATE_FILE" || -L "$NEOBRUTALISM_STATE_FILE" || -e "$NEOBRUTALISM_PANEL_MARKER" || -L "$NEOBRUTALISM_PANEL_MARKER" ]]; then
-        print_error "Snapshot/marker NEOBRUTALISM masih aktif. Jalankan Reset Panel terlebih dahulu sebelum memasang tema lain."
+    if [[ -e "$PANEL_TRANSACTION_STATE_FILE" || -L "$PANEL_TRANSACTION_STATE_FILE" || -e "$NEOBRUTALISM_STATE_FILE" || -L "$NEOBRUTALISM_STATE_FILE" || -e "$NEOBRUTALISM_PANEL_MARKER" || -L "$NEOBRUTALISM_PANEL_MARKER" ]]; then
+        print_error "Snapshot/transaksi panel masih aktif. Selesaikan pemulihan atau reset panel terlebih dahulu sebelum memasang tema lain."
         return 1
     fi
 
@@ -1492,11 +1942,78 @@ neobrutalism_uninstall() {
     print_info "Snapshot yang melewati masa retensi dibersihkan pada eksekusi installer berikutnya."
 }
 
-install_theme() {
-    if [[ -e "$NEOBRUTALISM_STATE_FILE" || -L "$NEOBRUTALISM_STATE_FILE" || -e "$NEOBRUTALISM_PANEL_MARKER" || -L "$NEOBRUTALISM_PANEL_MARKER" ]]; then
-        print_error "Reset NEOBRUTALISM terlebih dahulu sebelum memasang tema lain."
-        return 1
+install_theme_apply() {
+    cd "$TEMP_DIR"
+    if [[ "$SELECT_THEME" == [bB]* ]]; then
+        print_info "Menyiapkan instalasi Blueprint extension..."
+        if ! command -v blueprint >/dev/null 2>&1 && [[ ! -f "$PANEL_DIR/blueprint.sh" && ! -f "$PANEL_DIR/blueprint/blueprint.sh" ]]; then
+            print_error "Blueprint belum terinstall."
+            return 1
+        fi
+        FOUND_FILE=$(find . -maxdepth 1 -type f -name "*.blueprint" -print -quit)
+        if [[ -z "$FOUND_FILE" ]]; then
+            print_error "File .blueprint tidak ditemukan dalam arsip."
+            return 1
+        fi
+        BLUEPRINT_FILENAME=$(basename "$FOUND_FILE")
+        IDENTIFIER="${BLUEPRINT_FILENAME%.*}"
+        mv -- "$FOUND_FILE" "$PANEL_DIR/$BLUEPRINT_FILENAME"
+        cd "$PANEL_DIR"
+        if command -v blueprint >/dev/null 2>&1; then
+            if ! blueprint -i "$IDENTIFIER" && ! blueprint install "$IDENTIFIER" && ! bash blueprint.sh -install "$IDENTIFIER"; then
+                print_error "Seluruh metode instalasi Blueprint gagal untuk tema '$THEME_NAME'."
+                return 1
+            fi
+        elif [[ -f blueprint.sh ]]; then
+            bash blueprint.sh -i "$IDENTIFIER"
+        elif [[ -f blueprint/blueprint.sh ]]; then
+            bash blueprint/blueprint.sh -i "$IDENTIFIER"
+        else
+            print_error "CLI/script Blueprint tidak ditemukan setelah pemeriksaan."
+            return 1
+        fi
+        rm -f -- "$PANEL_DIR/$BLUEPRINT_FILENAME"
+    else
+        if [[ "$SELECT_THEME" == "3" ]]; then
+            print_info "Mengkonfigurasi variabel Enigma..."
+            sed -i "s|LINK_ADMIN|$LINK_ADMIN|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
+            sed -i "s|LINK_CHANNEL|$LINK_CHANNEL|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
+            sed -i "s|LINK_GROUP|$LINK_GROUP|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
+        fi
+        [[ ! -e pterodactyl/.env && ! -L pterodactyl/.env ]] || {
+            print_error "Paket tema berisi .env; penyalinan dibatalkan demi melindungi kredensial panel."
+            return 1
+        }
+        while IFS= read -r -d '' source_entry; do
+            cp -a -- "$source_entry" "$PANEL_DIR/"
+        done < <(find pterodactyl -mindepth 1 -maxdepth 1 ! -name .env ! -name storage -print0)
+        cd "$PANEL_DIR"
+        install_yarn_dependencies cross-env react-feather
+        if [[ "$SELECT_THEME" == "2" ]]; then
+            print_info "Menjalankan instalasi Billing..."
+            php artisan billing:install stable
+        fi
+        print_info "Membangun aset panel..."
+        local ram_size source_entry
+        ram_size=$(free -m | awk '/Mem:/ {print $2}')
+        if [[ "$ram_size" =~ ^[0-9]+$ ]] && (( ram_size < 4000 )); then
+            print_warning "RAM di bawah 4 GiB; proses build mungkin lebih lama."
+        fi
+        if [[ -L public/assets || ( -e public/assets && ! -d public/assets ) ]]; then
+            print_error "public/assets bukan direktori biasa; build dibatalkan."
+            return 1
+        fi
+        mkdir -p -- public/assets
+        export NODE_OPTIONS=--openssl-legacy-provider
+        php artisan migrate --force
+        yarn build:production
+        clear_artisan_cache
     fi
+    set_panel_permissions
+}
+
+install_theme() {
+    panel_transaction_check_idle || return 1
     require_disk_space
     local THEME_FOLDER="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme"
 
@@ -1577,6 +2094,9 @@ install_theme() {
         fi
     done
 
+    if [[ "$SELECT_THEME" == [bB]* ]]; then
+        print_warning "Ekstensi Blueprint dapat menjalankan skrip kustom. Rollback mencakup source panel, database, dan integrasi sistem yang dicatat; perubahan OS eksternal oleh skrip ekstensi tidak dapat dipulihkan secara generik."
+    fi
     echo " "
     echo -n -e "${BOLD}Anda memilih tema '$THEME_NAME'. Lanjutkan? (y/n): ${NC}"
     read confirmation
@@ -1596,165 +2116,70 @@ install_theme() {
     install_archive_dependencies
 
     print_info "[1/4] Mengunduh file tema..."
-    wget "$THEME_URL"
-    local THEME_ZIP_FILE=$(basename "$THEME_URL")
+    local THEME_ZIP_FILE
+    THEME_ZIP_FILE=$(basename "$THEME_URL")
+    wget --timeout=30 --tries=3 -q -O "$THEME_ZIP_FILE" "$THEME_URL"
 
-    print_info "[2/4] Mengekstrak file tema..."
+    print_info "[2/4] Memvalidasi dan mengekstrak file tema..."
     if [[ "$THEME_ZIP_FILE" == *.tar.gz ]]; then
+        tar -tzf "$THEME_ZIP_FILE" >/dev/null
+        if tar -tzf "$THEME_ZIP_FILE" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+            print_error "Arsip tema mengandung path traversal. Instalasi dibatalkan."
+            return 1
+        fi
         tar -xzf "$THEME_ZIP_FILE"
     else
+        unzip -tq "$THEME_ZIP_FILE" >/dev/null
+        if unzip -Z1 "$THEME_ZIP_FILE" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+            print_error "Arsip tema mengandung path traversal. Instalasi dibatalkan."
+            return 1
+        fi
         unzip -oq "$THEME_ZIP_FILE"
     fi
 
-    rm -f "$THEME_ZIP_FILE"
+    rm -f -- "$THEME_ZIP_FILE"
 
     if [[ "$SELECT_THEME" == [bB]* ]]; then
-        # --- JALUR BLUEPRINT ---
-        print_info "[3/4] Menyiapkan Blueprint..."
-
-        if ! command -v blueprint >/dev/null 2>&1 && [ ! -f "/var/www/pterodactyl/blueprint.sh" ] && [ ! -f "/var/www/pterodactyl/blueprint/blueprint.sh" ]; then
-            print_error "Blueprint belum terinstall."
+        find . -maxdepth 1 -type f -name '*.blueprint' -print -quit | grep -q . || {
+            print_error "Paket Blueprint tidak memiliki file .blueprint pada root arsip."
             return 1
-        fi
-
-        FOUND_FILE=$(find . -maxdepth 1 -name "*.blueprint" -print -quit)
-
-        if [ -z "$FOUND_FILE" ]; then
-                print_error "File .blueprint tidak ditemukan dalam zip!"
-                return 1
-        fi
-
-        BLUEPRINT_FILENAME=$(basename "$FOUND_FILE")
-        IDENTIFIER="${BLUEPRINT_FILENAME%.*}"
-        mv "$BLUEPRINT_FILENAME" /var/www/pterodactyl/
-
-        print_info "[4/4] Menginstall via Blueprint..."
-        cd /var/www/pterodactyl
-
-        if command -v blueprint >/dev/null 2>&1; then
-            if ! blueprint -i "$IDENTIFIER" && ! blueprint install "$IDENTIFIER" && ! bash blueprint.sh -install "$IDENTIFIER"; then
-                print_error "Seluruh metode instalasi Blueprint gagal untuk tema '$THEME_NAME'."
-                return 1
-            fi
-        elif [ -f "blueprint.sh" ]; then
-            bash blueprint.sh -i "$IDENTIFIER"
-        elif [ -f "blueprint/blueprint.sh" ]; then
-            bash blueprint/blueprint.sh -i "$IDENTIFIER"
-        fi
-
-        rm -f "/var/www/pterodactyl/$BLUEPRINT_FILENAME"
-
-        print_success "Tema '$THEME_NAME' berhasil diinstall."
+        }
     else
-        # --- JALUR MANUAL ---
-        if [ "$SELECT_THEME" == "3" ]; then
-            print_info "Mengkonfigurasi variabel Enigma..."
-            sed -i "s|LINK_ADMIN|$LINK_ADMIN|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
-            sed -i "s|LINK_CHANNEL|$LINK_CHANNEL|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
-            sed -i "s|LINK_GROUP|$LINK_GROUP|g" pterodactyl/resources/scripts/components/dashboard/DashboardContainer.tsx
-        fi
-
-        print_info "[3/4] Menyalin file..."
-        cp -rfT pterodactyl /var/www/pterodactyl
-        cd /var/www/pterodactyl
-
+        [[ -d pterodactyl && -f pterodactyl/artisan && ! -e pterodactyl/.env && ! -L pterodactyl/.env ]] || {
+            print_error "Struktur tema manual tidak valid atau arsip membawa .env yang tidak boleh menimpa kredensial panel."
+            return 1
+        }
         setup_nodejs
-
-        print_info "Mengaktifkan Corepack untuk kompatibilitas Yarn..."
-        print_info "Mengatur toleransi jaringan Yarn..."
         configure_yarn
-
-        print_info "Menginstal dependensi build..."
-        install_yarn_dependencies cross-env react-feather
-
-        if [ "$SELECT_THEME" == "2" ]; then
-            print_info "Menjalankan instalasi Billing..."
-            php artisan billing:install stable
-        fi
-
-        print_info "[4/4] Membangun aset panel..."
-        print_warning "Proses build sedang berjalan. Mohon bersabar dan JANGAN tutup terminal sampai proses selesai!"
-        RAM_SIZE=$(free -m | awk '/Mem:/ {print $2}')
-        if [ "$RAM_SIZE" -lt 4000 ]; then print_warning "Di RAM kecil mungkin proses buildnya akan memakan waktu sedikit lebih lama."; fi
-
-        export NODE_OPTIONS=--openssl-legacy-provider
-        php artisan migrate --force
-        yarn build:production
-        clear_artisan_cache
-        print_success "Tema '$THEME_NAME' berhasil diinstall."
     fi
-
-    set_panel_permissions
+    if ! panel_transaction_run "install-theme-${THEME_NAME//[^A-Za-z0-9_-]/-}" install_theme_apply; then
+        print_error "Instalasi tema '$THEME_NAME' gagal. Panel telah di-rollback bila snapshot tersedia."
+        return 1
+    fi
 
     print_banner "INSTALASI TEMA SELESAI" "$GREEN"
     sleep 3
     return 0
 }
 
-install_timpa() {
-    local TARGET_URL=$1
-    local TARGET_NAME=$2
-
-    echo " "
-    echo -n -e "${BOLD}Anda memilih tema '$TARGET_NAME'. Lanjutkan? (y/n): ${NC}"
-    read confirmation
-    if [[ "$confirmation" != [yY] ]]; then echo -e "${BOLD}Instalasi dibatalkan.${NC}"; return; fi
-
-    create_temp_dir
-
-    print_info "Memulai instalasi tema $TARGET_NAME..."
-
-    install_panel_runtime_dependencies
-
-    print_info "[1/4] Mengunduh file panel/tema..."
-    cd "$TEMP_DIR"
-
-    if [[ "$TARGET_URL" == *.zip ]]; then
-            FILE_EXT="zip"
-            FILENAME="panel.zip"
+install_timpa_apply() {
+    local confirmation_arch="$FILE_EXT"
+    cd "$PANEL_DIR"
+    find . -mindepth 1 -maxdepth 1 ! -name .env ! -name storage ! -name .neobrutalism-installer -exec rm -rf -- {} +
+    if [[ "$confirmation_arch" == zip ]]; then
+        unzip -oq "$TEMP_DIR/$FILENAME" -d "$PANEL_DIR" -x '.env' './.env' 'storage' 'storage/*' './storage/*'
     else
-            FILE_EXT="tar.gz"
-            FILENAME="panel.tar.gz"
+        tar --exclude='./.env' --exclude='.env' --exclude='./storage' --exclude='storage' -xzf "$TEMP_DIR/$FILENAME" -C "$PANEL_DIR"
     fi
-
-    wget -O "$FILENAME" "$TARGET_URL"
-
-    print_info "[2/4] Mempersiapkan direktori & Backup Config..."
-
-    if [ ! -d "/var/www/pterodactyl" ]; then
-        print_error "Direktori Pterodactyl tidak ditemukan."
+    [[ -f .env && -d storage && -f artisan && -f composer.json ]] || {
+        print_error "Arsip '$TARGET_NAME' tidak menghasilkan struktur panel yang valid."
         return 1
-    fi
-
-    cd /var/www/pterodactyl
-    run_optional php artisan down
-
-    if [ -f ".env" ]; then 
-        cp .env /tmp/.env.backup
-    fi
-
-    find . -mindepth 1 -delete
-    rm -f /usr/local/bin/blueprint
-
-    print_info "[3/4] Mengekstrak file & Mengembalikan konfigurasi..."
-
-    if [[ "$FILE_EXT" == "zip" ]]; then
-            unzip -o "$TEMP_DIR/$FILENAME" -d /var/www/pterodactyl/
-    else
-            tar -xzf "$TEMP_DIR/$FILENAME" -C /var/www/pterodactyl/
-    fi
-
-    if [ -f "/tmp/.env.backup" ]; then 
-        mv /tmp/.env.backup .env
-    fi
-
-    chmod -R 755 storage/* bootstrap/cache/
-
-    print_info "[4/4] Menginstal dependensi & Membangun aset..."
+    }
+    chmod -R 755 bootstrap/cache/
     install_composer_dependencies
 
     if [[ "${TARGET_NAME,,}" == *"reviactyl"* ]]; then
-            print_info "Menginjeksi skema database Reviactyl secara manual..."
+        print_info "Menginjeksi skema database Reviactyl secara manual..."
         php <<'EOF_PHP'
 <?php
 require __DIR__.'/vendor/autoload.php';
@@ -1779,24 +2204,16 @@ try {
             $t->timestamp('expires_at')->nullable();
             $t->timestamps();
         });
-
         echo "   [DB INFO] Tabel subuser_preview_sessions berhasil diinjeksi.\n";
     }
-
     $migrationName = '2026_08_21_000000_create_subuser_preview_sessions_table';
-    $migrationExists = DB::table('migrations')->where('migration', $migrationName)->exists();
-
-    if (!$migrationExists) {
+    if (!DB::table('migrations')->where('migration', $migrationName)->exists()) {
         $maxBatch = DB::table('migrations')->max('batch') ?? 0;
-        DB::table('migrations')->insert([
-            'migration' => $migrationName,
-            'batch' => $maxBatch + 1
-        ]);
+        DB::table('migrations')->insert(['migration' => $migrationName, 'batch' => $maxBatch + 1]);
         echo "   [DB INFO] Status migrasi Reviactyl di-bypass.\n";
     }
-
-} catch (\Exception $e) {
-    echo "   [DB ERROR] " . $e->getMessage() . "\n";
+} catch (\Throwable $e) {
+    fwrite(STDERR, "   [DB ERROR] " . $e->getMessage() . "\\n");
     exit(1);
 }
 EOF_PHP
@@ -1804,25 +2221,23 @@ EOF_PHP
 
     php artisan migrate --seed --force
     clear_artisan_cache
-    php artisan up
 
     if [[ "${TARGET_NAME,,}" == *"reviactyl"* ]]; then
-            print_info "Mengalihkan backend dari Wings ke Reviactyl Agent..."
-
-            run_optional systemctl stop wings
-            run_optional systemctl disable wings
-            run_optional systemctl stop agent
-
-            curl -fSL -o /usr/local/bin/agent "https://github.com/reviactyl/agent/releases/latest/download/agent_linux_$([[ "$(uname -m)" == "x86_64" ]] && echo "amd64" || echo "arm64")"
-            chmod u+x /usr/local/bin/agent
-
-            mkdir -p /var/run/agent
-            chown root:root /var/run/agent
-
-            run_optional mkdir -p /etc/reviactyl
-            cp /etc/pterodactyl/config.yml /etc/reviactyl/config.yml
-
-        cat << 'EOF_AGENT' | tee /etc/systemd/system/agent.service
+        print_info "Mengalihkan backend dari Wings ke Reviactyl Agent..."
+        systemctl stop wings
+        systemctl disable wings
+        systemctl stop agent 2>/dev/null || true
+        local agent_arch
+        case "$(uname -m)" in
+            x86_64) agent_arch=amd64 ;;
+            aarch64|arm64) agent_arch=arm64 ;;
+            *) print_error "Arsitektur $(uname -m) tidak didukung untuk Reviactyl Agent."; return 1 ;;
+        esac
+        curl -fSL --retry 3 --connect-timeout 15 -o "$TEMP_DIR/agent" "https://github.com/reviactyl/agent/releases/latest/download/agent_linux_${agent_arch}"
+        install -o root -g root -m 0755 "$TEMP_DIR/agent" /usr/local/bin/agent
+        install -d -o root -g root -m 0755 /var/run/agent /etc/reviactyl
+        cp -f -- /etc/pterodactyl/config.yml /etc/reviactyl/config.yml
+        cat > "$TEMP_DIR/agent.service" <<'EOF_AGENT'
 [Unit]
 Description=Reviactyl Agent
 After=docker.service
@@ -1843,121 +2258,134 @@ RestartSec=5s
 [Install]
 WantedBy=multi-user.target
 EOF_AGENT
-
-            systemctl daemon-reload
-            run_optional systemctl enable --now agent
-            print_info "Reviactyl Agent berhasil diinstal dan dijalankan."
+        install -o root -g root -m 0644 "$TEMP_DIR/agent.service" /etc/systemd/system/agent.service
+        systemctl daemon-reload
+        systemctl enable --now agent
+        print_info "Reviactyl Agent berhasil diinstal dan dijalankan."
     fi
-
     set_panel_permissions
+}
 
-    print_success "Tema '$TARGET_NAME' berhasil diinstall."
+install_timpa() {
+    local TARGET_URL="$1" TARGET_NAME="$2" FILE_EXT FILENAME
+    local confirmation
+
+    echo " "
+    echo -n -e "${BOLD}Anda memilih tema '$TARGET_NAME'. Lanjutkan? (y/n): ${NC}"
+    read -r confirmation
+    [[ "$confirmation" == [yY] ]] || { print_info "Instalasi dibatalkan."; return 0; }
+
+    create_temp_dir
+    install_panel_runtime_dependencies
+    cd "$TEMP_DIR"
+    if [[ "$TARGET_URL" == *.zip ]]; then FILE_EXT=zip; FILENAME=panel.zip; else FILE_EXT=tar.gz; FILENAME=panel.tar.gz; fi
+    print_info "Mengunduh paket $TARGET_NAME..."
+    wget --timeout=30 --tries=3 -q -O "$FILENAME" "$TARGET_URL"
+    if [[ "$FILE_EXT" == zip ]]; then
+        unzip -tq "$FILENAME" >/dev/null
+        if unzip -Z1 "$FILENAME" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+            print_error "Arsip mengandung path traversal; instalasi dibatalkan."
+            return 1
+        fi
+    else
+        tar -tzf "$FILENAME" >/dev/null
+        if tar -tzf "$FILENAME" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+            print_error "Arsip mengandung path traversal; instalasi dibatalkan."
+            return 1
+        fi
+    fi
+    if ! panel_transaction_run "install-${TARGET_NAME//[^A-Za-z0-9_-]/-}" install_timpa_apply; then
+        print_error "Instalasi '$TARGET_NAME' gagal; panel dan database dipulihkan bila snapshot tersedia."
+        return 1
+    fi
     print_banner "INSTALASI TEMA SELESAI" "$GREEN"
     sleep 3
 }
 
+uninstall_theme_apply() {
+    cd "$PANEL_DIR"
+    find . -mindepth 1 -maxdepth 1 ! -name .env ! -name storage -exec rm -rf -- {} +
+    tar --exclude='./.env' --exclude='.env' --exclude='./storage' --exclude='storage' -xzf "$TEMP_DIR/panel-original.tar.gz" -C "$PANEL_DIR"
+    [[ -f .env && -d storage && -f artisan && -f composer.json ]] || {
+        print_error "Arsip panel original tidak menghasilkan struktur yang valid."
+        return 1
+    }
+    chmod -R 755 bootstrap/cache/
+    install_composer_dependencies
+    php artisan migrate --seed --force
+    clear_artisan_cache
+    rm -f -- /usr/local/bin/blueprint
+
+    if [[ -f /etc/systemd/system/agent.service || -x /usr/local/bin/agent || -d /etc/reviactyl ]]; then
+        systemctl stop agent 2>/dev/null || true
+        systemctl disable agent 2>/dev/null || true
+        rm -f -- /etc/systemd/system/agent.service /usr/local/bin/agent
+        rm -rf -- /etc/reviactyl
+        systemctl daemon-reload
+    fi
+    if systemctl list-unit-files --type=service --no-legend | awk '{print $1}' | grep -qx 'wings.service'; then
+        systemctl enable --now wings
+    fi
+    set_panel_permissions
+}
+
 uninstall_theme() {
+    local confirmation yn
     print_banner "RESET PANEL (UNINSTALL THEME/TOOLS)" "$CYAN"
+    echo -n -e "${BOLD}Apakah Anda benar-benar yakin ingin melanjutkan? (y/n): ${NC}"
+    read -r yn
+    case "$yn" in
+        [Yy]*) ;;
+        *) print_info "Operasi dibatalkan."; return 0 ;;
+    esac
+    if [[ ! -d "$PANEL_DIR" ]]; then
+        print_error "Direktori Pterodactyl tidak ditemukan."
+        return 1
+    fi
+    if [[ -e "$NEOBRUTALISM_STATE_FILE" || -L "$NEOBRUTALISM_STATE_FILE" || -e "$NEOBRUTALISM_PANEL_MARKER" || -L "$NEOBRUTALISM_PANEL_MARKER" ]]; then
+        if ! neobrutalism_uninstall; then return 1; fi
+        return 0
+    fi
+    if [[ -e "$PANEL_TRANSACTION_STATE_FILE" || -L "$PANEL_TRANSACTION_STATE_FILE" ]]; then
+        print_error "Masih ada transaksi panel yang belum diselesaikan. Reset dibatalkan sebelum melakukan perubahan."
+        return 1
+    fi
 
-    while true; do
-        echo -n -e "${BOLD}Apakah Anda benar-benar yakin ingin melanjutkan? (y/n): ${NC}"
-        read yn
-
-        case $yn in
-            [Yy]*)
-                if [ ! -d "/var/www/pterodactyl" ]; then
-                    print_error "Direktori Pterodactyl tidak ditemukan."
-                    return 1
-                fi
-                cd /var/www/pterodactyl || { print_error "Gagal masuk ke direktori Pterodactyl."; return 1; }
-
-                if [[ -e "$NEOBRUTALISM_STATE_FILE" || -L "$NEOBRUTALISM_STATE_FILE" || -e "$NEOBRUTALISM_PANEL_MARKER" || -L "$NEOBRUTALISM_PANEL_MARKER" ]]; then
-                    if ! neobrutalism_uninstall; then
-                        return 1
-                    fi
-                    break
-                fi
-
-                require_disk_space
-                print_info "⚙️  Memulai proses reset panel..."
-
-                echo -e "${BOLD}   - Mem-backup file .env...${NC}"
-                TEMP_BACKUP=$(mktemp -d)
-                if [ -f ".env" ]; then mv .env "$TEMP_BACKUP/"; fi
-
-                echo -e "${BOLD}   - Menghapus semua file panel lama...${NC}"
-                find . -mindepth 1 -delete
-
-                echo -e "${BOLD}   - Mengunduh panel original terbaru...${NC}"
-                curl -fSL https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz | tar -xzf - -C /var/www/pterodactyl
-
-                echo -e "${BOLD}   - Mengembalikan file .env...${NC}"
-                if [ -f "$TEMP_BACKUP/.env" ]; then mv "$TEMP_BACKUP"/.env .; fi
-                rm -rf "$TEMP_BACKUP"
-
-                echo -e "${BOLD}   - Install ulang dependensi (Composer)...${NC}"
-                install_panel_runtime_dependencies
-
-                chmod -R 755 storage/* bootstrap/cache/
-                install_composer_dependencies
-
-                echo -e "${BOLD}   - Menjalankan migrasi...${NC}"
-                php artisan migrate --seed --force
-
-                clear_artisan_cache
-                rm -f /usr/local/bin/blueprint
-
-                if systemctl list-unit-files | grep -q "agent.service"; then
-                        echo -e "${BOLD}   - Membersihkan Reviactyl Agent & Mengembalikan Wings...${NC}"
-                        run_optional systemctl stop agent
-                        run_optional systemctl disable agent
-                        rm -f /etc/systemd/system/agent.service
-                        rm -f /usr/local/bin/agent
-                        rm -rf /etc/reviactyl
-                        systemctl daemon-reload
-                fi
-
-                if systemctl list-unit-files | grep -q "wings.service"; then
-                        run_optional systemctl enable --now wings
-                fi
-
-                set_panel_permissions
-
-                echo -e "${BOLD}   - Restart layanan webserver & worker...${NC}"
-                if ! systemctl restart nginx && ! systemctl restart apache2; then
-                        print_warning "Restart NGINX dan Apache gagal. Periksa status webserver secara manual."
-                fi
-
-                PHP_SERVICES=$(systemctl list-unit-files | grep -oE "php[0-9\.]+-fpm\.service" | tr "\n" " ")
-                if [ -n "$PHP_SERVICES" ]; then
-                        run_optional systemctl restart $PHP_SERVICES
-                fi
-                
-                systemctl restart pteroq
-                php artisan up
-
-                break
-                ;;
-            [Nn]*)
-                echo -e "\n${BOLD}❌ Operasi dibatalkan oleh pengguna.${NC}"
-                return
-                ;;
-            *)
-                echo -e "\n${BOLD}Pilihan tidak valid! Silahkan pilih (y) atau (n).${NC}"
-                ;;
-        esac
-    done
-
+    require_disk_space
+    create_temp_dir
+    print_info "Mengunduh panel original terbaru sebelum menyentuh panel aktif..."
+    wget --timeout=30 --tries=3 -q -O "$TEMP_DIR/panel-original.tar.gz" "https://github.com/pterodactyl/panel/releases/latest/download/panel.tar.gz"
+    tar -tzf "$TEMP_DIR/panel-original.tar.gz" >/dev/null
+    if tar -tzf "$TEMP_DIR/panel-original.tar.gz" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+        print_error "Arsip panel original mengandung path traversal. Reset dibatalkan."
+        return 1
+    fi
+    install_panel_runtime_dependencies
+    if ! panel_transaction_run reset-panel uninstall_theme_apply; then
+        print_error "Reset tema gagal. Source panel dan database dipulihkan bila snapshot tersedia."
+        return 1
+    fi
     print_banner "TEMA PANEL BERHASIL DI-RESET" "$GREEN"
     sleep 3
-    return 0
 }
 
 uninstall_panel() {
     print_banner "UNINSTALL PANEL" "$CYAN"
-    echo -n -e "${BOLD}Apakah Anda yakin ingin melanjutkan? (y/n): ${NC}"
+    print_warning "Uninstall Panel menghapus database, file panel, service, konfigurasi, dan container Docker. Operasi ini tidak memiliki rollback otomatis."
+    echo -n -e "${BOLD}Apakah Anda memahami bahwa penghapusan ini tidak dapat di-rollback dan ingin melanjutkan? (y/n): ${NC}"
     read confirmation
     if [[ "$confirmation" != [yY] ]]; then echo -e "${BOLD}Uninstall dibatalkan.${NC}"; return; fi
+
+    if [[ -e "$PANEL_TRANSACTION_STATE_FILE" || -L "$PANEL_TRANSACTION_STATE_FILE" ]]; then
+        print_error "Masih ada transaksi panel yang belum dipulihkan. Uninstall total diblokir demi melindungi snapshot."
+        return 1
+    fi
+    if [[ -e "$NEOBRUTALISM_STATE_FILE" || -L "$NEOBRUTALISM_STATE_FILE" || -e "$NEOBRUTALISM_PANEL_MARKER" || -L "$NEOBRUTALISM_PANEL_MARKER" ]]; then
+        if ! neobrutalism_read_backup_state >/dev/null; then
+            print_error "Snapshot NEOBRUTALISM aktif tidak dapat diverifikasi. Uninstall total dibatalkan sebelum database atau file dihapus."
+            return 1
+        fi
+    fi
 
     print_info "Memulai proses uninstall..."
 
@@ -2180,87 +2608,71 @@ EOF
     fi
 }
 
-install_blueprint() {
-    unset NVM_DIR
-    unset NVM_CD_FLAGS
-    unset NVM_BIN
-    unset NVM_INC
-    export PATH=$(echo $PATH | tr ":" "\n" | grep -v "nvm" | tr "\n" ":")
-
-    print_banner "INSTALL BLUEPRINT" "$CYAN"
-    echo -n -e "${BOLD}Apakah anda yakin ingin melanjutkannya? (y/n): ${NC}"
-    read confirmation
-    if [[ "$confirmation" != [yY] ]]; then
-        echo -e "${BOLD}Instalasi dibatalkan.${NC}"
-        return
-    fi
-
-    print_info "Menginstal dependensi dasar..."
-    install_archive_dependencies
-
-    print_info "Mengunduh dan mengekstrak Blueprint Framework..."
-    DOWNLOAD_URL=$(curl -fsSL https://api.github.com/repos/BlueprintFramework/framework/releases/latest | grep 'browser_download_url' | grep 'release.zip' | cut -d '"' -f 4)
-    if [ -z "$DOWNLOAD_URL" ]; then
-        print_error "Gagal mendapatkan link download Blueprint!"
-        return 1
-    fi
-    wget "$DOWNLOAD_URL" -O /tmp/blueprint.zip
-    unzip -oq /tmp/blueprint.zip -d /var/www/pterodactyl
-    rm /tmp/blueprint.zip
-
-    setup_nodejs
-
-    print_info "Mengaktifkan Corepack untuk kompatibilitas Yarn..."
-    print_info "Mengatur toleransi jaringan Yarn..."
-    configure_yarn
-
-    print_info "Menginstal dependensi Pterodactyl..."
-    cd /var/www/pterodactyl
+install_blueprint_apply() {
+    cd "$PANEL_DIR"
+    unzip -oq "$TEMP_DIR/blueprint.zip" -d "$PANEL_DIR" -x '.env' './.env' 'storage' 'storage/*' './storage/*'
     install_yarn_dependencies cross-env react-feather
-
-    print_info "Menjalankan blueprint.sh..."
-    sed -i -E -e "s|WEBUSER=\"www-data\" #;|WEBUSER=\"www-data\" #;|g" \
-            -e "s|USERSHELL=\"/bin/bash\" #;|USERSHELL=\"/bin/bash\" #;|g" \
-            -e "s|OWNERSHIP=\"www-data:www-data\" #;|OWNERSHIP=\"www-data:www-data\" #;|g" blueprint.sh
+    [[ -f blueprint.sh ]] || { print_error "blueprint.sh tidak ditemukan setelah ekstraksi."; return 1; }
+    sed -i -E -e 's|WEBUSER="www-data" #;|WEBUSER="www-data" #;|g' \
+        -e 's|USERSHELL="/bin/bash" #;|USERSHELL="/bin/bash" #;|g' \
+        -e 's|OWNERSHIP="www-data:www-data" #;|OWNERSHIP="www-data:www-data" #;|g' blueprint.sh
     chmod +x blueprint.sh
-
-    if ! command -v blueprint &> /dev/null; then
+    if ! command -v blueprint >/dev/null 2>&1; then
         yes | bash blueprint.sh
     else
-        print_warning "Blueprint sudah terpasang, melewati tahap instalasi awal."
+        print_warning "CLI Blueprint sudah tersedia; instalasi awal dilewati."
     fi
-
-    print_banner "INSTALASI BLUEPRINT SELESAI" "$GREEN"
-    sleep 3
-    return 0
+    command -v blueprint >/dev/null 2>&1 || [[ -x /usr/local/bin/blueprint ]] || {
+        print_error "Instalasi Blueprint selesai tanpa menghasilkan CLI yang dapat dipanggil."
+        return 1
+    }
+    set_panel_permissions
 }
 
-install_auto_suspend() {
-    print_banner "INSTALL FITUR AUTO SUSPEND" "$CYAN"
-    echo -e "${BOLD}Fitur ini akan menambahkan fungsionalitas auto-suspend server.${NC}"
-    echo -n -e "${BOLD}Lanjutkan instalasi? (y/n): ${NC}"
-    read confirmation
-    if [[ "$confirmation" != [yY] ]]; then
-        echo -e "${BOLD}Instalasi dibatalkan.${NC}"
-        return
-    fi
-
-    setup_nodejs
+install_blueprint() {
+    local confirmation DOWNLOAD_URL
+    panel_transaction_check_idle || return 1
+    unset NVM_DIR NVM_CD_FLAGS NVM_BIN NVM_INC
+    export PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -v 'nvm' | paste -sd ':' -)"
+    print_banner "INSTALL BLUEPRINT" "$CYAN"
+    echo -n -e "${BOLD}Apakah anda yakin ingin melanjutkannya? (y/n): ${NC}"
+    read -r confirmation
+    [[ "$confirmation" == [yY] ]] || { print_info "Instalasi dibatalkan."; return 0; }
 
     create_temp_dir
-    cd "$TEMP_DIR"
+    install_archive_dependencies
+    DOWNLOAD_URL=$(curl -fsSL --retry 3 --connect-timeout 15 https://api.github.com/repos/BlueprintFramework/framework/releases/latest |
+        grep 'browser_download_url' | grep 'release.zip' | cut -d '"' -f 4 | head -n 1)
+    [[ -n "$DOWNLOAD_URL" ]] || { print_error "Gagal mendapatkan link download Blueprint."; return 1; }
+    wget --timeout=30 --tries=3 -q -O "$TEMP_DIR/blueprint.zip" "$DOWNLOAD_URL"
+    unzip -tq "$TEMP_DIR/blueprint.zip" >/dev/null
+    if unzip -Z1 "$TEMP_DIR/blueprint.zip" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+        print_error "Arsip Blueprint mengandung path traversal. Instalasi dibatalkan."
+        return 1
+    fi
+    setup_nodejs
+    configure_yarn
+    if ! panel_transaction_run install-blueprint install_blueprint_apply; then
+        print_error "Instalasi Blueprint gagal; source panel/database dan CLI sebelumnya dipulihkan bila snapshot tersedia."
+        return 1
+    fi
+    print_banner "INSTALASI BLUEPRINT SELESAI" "$GREEN"
+    sleep 3
+}
 
-    print_info "Mengunduh file autosuspend.zip..."
-    wget https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/autosuspend.zip
-
-    print_info "Mengekstrak file..."
-    unzip -oq autosuspend.zip
-
-    print_info "Menyalin file migrasi database..."
-    cp -rf pterodactyl/* /var/www/pterodactyl/
+install_auto_suspend_apply() {
+    local root="$TEMP_DIR/autosuspend-source/pterodactyl" source_entry
+    [[ -d "$root" && ! -L "$root" && ! -e "$root/.env" && ! -L "$root/.env" ]] || {
+        print_error "Struktur paket Auto Suspend tidak valid atau mencoba membawa .env."
+        return 1
+    }
+    print_info "Menyalin file migrasi dan source Auto Suspend..."
+    while IFS= read -r -d '' source_entry; do
+        cp -a -- "$source_entry" "$PANEL_DIR/"
+    done < <(find "$root" -mindepth 1 -maxdepth 1 ! -name .env ! -name storage -print0)
 
     print_info "Menerapkan modifikasi sistem..."
-    cd /var/www/pterodactyl
+    cd "$PANEL_DIR"
 
     sed -i "/use Ramsey\\\\Uuid\\\\Uuid;/a use Pterodactyl\\\\Models\\\\Server;" app/Console/Kernel.php
     if ! grep -q "Server::where('exp_date'" app/Console/Kernel.php; then
@@ -2323,10 +2735,6 @@ install_auto_suspend() {
     print_info "Menjalankan migrasi database..."
     php artisan migrate --force
 
-    print_info "Mengaktifkan Corepack untuk kompatibilitas Yarn..."
-    print_info "Mengatur toleransi jaringan Yarn..."
-    configure_yarn
-
     print_info "Menginstal dependensi build..."
     install_yarn_dependencies cross-env
 
@@ -2337,9 +2745,37 @@ install_auto_suspend() {
     clear_artisan_cache
     set_panel_permissions
 
+}
+
+install_auto_suspend() {
+    local confirmation
+    panel_transaction_check_idle || return 1
+    print_banner "INSTALL FITUR AUTO SUSPEND" "$CYAN"
+    echo -e "${BOLD}Fitur ini akan menambahkan fungsionalitas auto-suspend server.${NC}"
+    echo -n -e "${BOLD}Lanjutkan instalasi? (y/n): ${NC}"
+    read -r confirmation
+    [[ "$confirmation" == [yY] ]] || { print_info "Instalasi dibatalkan."; return 0; }
+
+    create_temp_dir
+    setup_nodejs
+    configure_yarn
+    cd "$TEMP_DIR"
+    print_info "Mengunduh paket Auto Suspend..."
+    wget --timeout=30 --tries=3 -q -O autosuspend.zip "https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/autosuspend.zip"
+    unzip -tq autosuspend.zip >/dev/null
+    if unzip -Z1 autosuspend.zip | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+        print_error "Arsip Auto Suspend mengandung path traversal. Instalasi dibatalkan."
+        return 1
+    fi
+    mkdir -p "$TEMP_DIR/autosuspend-source"
+    unzip -oq autosuspend.zip -d "$TEMP_DIR/autosuspend-source"
+    [[ -d "$TEMP_DIR/autosuspend-source/pterodactyl" ]] || { print_error "Direktori pterodactyl tidak ditemukan pada paket Auto Suspend."; return 1; }
+    if ! panel_transaction_run install-auto-suspend install_auto_suspend_apply; then
+        print_error "Instalasi Auto Suspend gagal; source panel/database dipulihkan bila snapshot tersedia."
+        return 1
+    fi
     print_banner "FITUR AUTO SUSPEND BERHASIL DIPASANG" "$GREEN"
     sleep 3
-    return 0
 }
 
 print_logo() {
@@ -2421,6 +2857,13 @@ MAIN_MENU=(
 
 # Main script execution
 initialize_logging
+if ! acquire_installer_lock; then
+    exit 1
+fi
+if ! panel_transaction_recover_pending; then
+    print_error "Ada transaksi panel yang belum dapat dipulihkan. Installer dihentikan untuk mencegah perubahan lanjutan."
+    exit 1
+fi
 neobrutalism_prune_retired_snapshots
 validate_panel_installation
 start_script
