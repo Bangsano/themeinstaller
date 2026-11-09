@@ -322,6 +322,8 @@ print_error() {
 }
 
 PANEL_DIR="/var/www/pterodactyl"
+PANEL_VERSION=""
+PANEL_VERSION_SUPPORTED=no
 MIN_FREE_SPACE_KIB=$((2 * 1024 * 1024))
 TEMP_DIR=""
 LOG_FILE=""
@@ -418,7 +420,6 @@ create_temp_dir() {
 validate_panel_installation() {
     local config_file="$PANEL_DIR/config/app.php"
     local version_line
-    local panel_version
 
     if [[ ! -d "$PANEL_DIR" ]]; then
         print_error "Direktori Pterodactyl tidak ditemukan di $PANEL_DIR. Panel belum terpasang atau lokasinya berbeda."
@@ -431,19 +432,22 @@ validate_panel_installation() {
     fi
 
     version_line=$(grep -m1 -E "^[[:space:]]*'version'[[:space:]]*=>" "$config_file" || true)
-    panel_version=$(sed -nE "s/.*=>[[:space:]]*['\"]([^'\"]+)['\"].*/\1/p" <<< "$version_line")
+    PANEL_VERSION=$(sed -nE "s/.*=>[[:space:]]*['\"]([^'\"]+)['\"].*/\1/p" <<< "$version_line")
 
-    if [[ "$panel_version" =~ ^v?2\. ]]; then
-        print_error "Panel Pterodactyl v$panel_version terdeteksi. Skrip ini hanya kompatibel dengan Pterodactyl v1.x."
-        exit 1
+    if [[ "$PANEL_VERSION" =~ ^v?1\.[0-9]+\.[0-9]+([.-][[:alnum:].+-]+)?$ ]]; then
+        PANEL_VERSION_SUPPORTED=yes
+        print_success "Pterodactyl v$PANEL_VERSION terdeteksi. Kompatibilitas fitur instalasi: v1.x."
+    else
+        PANEL_VERSION_SUPPORTED=no
+        print_warning "Versi panel '${PANEL_VERSION:-tidak diketahui}' tidak dapat diverifikasi sebagai Pterodactyl v1.x. Menu Reset Panel tetap tersedia, tetapi pemasangan tema, Blueprint, dan Auto Suspend dinonaktifkan demi kompatibilitas."
     fi
+}
 
-    if [[ ! "$panel_version" =~ ^v?1\.[0-9]+\.[0-9]+([.-][[:alnum:].+-]+)?$ ]]; then
-        print_error "Versi panel tidak dapat dipastikan dari $config_file (terdeteksi: '${panel_version:-tidak diketahui}'). Skrip dihentikan untuk mencegah perubahan pada panel yang tidak didukung."
-        exit 1
+require_supported_panel_version() {
+    if [[ "$PANEL_VERSION_SUPPORTED" != yes ]]; then
+        print_error "Fitur ini hanya diaktifkan untuk versi Pterodactyl v1.x yang telah dikenali. Versi terdeteksi: '${PANEL_VERSION:-tidak diketahui}'. Reset Panel tetap dapat digunakan untuk mengembalikan source panel original."
+        return 1
     fi
-
-    print_success "Pterodactyl v$panel_version terdeteksi. Kompatibilitas versi dasar: v1.x."
 }
 
 require_disk_space() {
@@ -2255,6 +2259,7 @@ install_theme_apply() {
     set_panel_permissions
 }
 install_theme() {
+    if ! require_supported_panel_version; then return 0; fi
     panel_transaction_check_idle || return 1
     require_disk_space
     local THEME_FOLDER="https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/theme"
@@ -2744,6 +2749,7 @@ start_wings() {
 }
 
 create_node() {
+    if ! require_supported_panel_version; then return 0; fi
     print_banner "MENJALANKAN SCRIPT CREATE NODE" "$CYAN"
     create_temp_dir
     curl -fSL https://cdn.jsdelivr.net/gh/Bangsano/themeinstaller@main/createnode.sh -o "$TEMP_DIR/createnode.sh"
@@ -2759,6 +2765,7 @@ create_node() {
 }
 
 hackback_panel() {
+    if ! require_supported_panel_version; then return 0; fi
     print_banner "HACK BACK PANEL" "$CYAN"
     read -p "Masukkan Username Panel Baru: " user
     read -sp "Masukkan Password Baru (password tidak akan ditampilkan): " pwhb
@@ -2878,6 +2885,7 @@ install_blueprint_apply() {
 
 install_blueprint() {
     local confirmation DOWNLOAD_URL
+    if ! require_supported_panel_version; then return 0; fi
     panel_transaction_check_idle || return 1
     unset NVM_DIR NVM_CD_FLAGS NVM_BIN NVM_INC
     export PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -v 'nvm' | paste -sd ':' -)"
@@ -2996,6 +3004,7 @@ install_auto_suspend_apply() {
 
 install_auto_suspend() {
     local confirmation
+    if ! require_supported_panel_version; then return 0; fi
     panel_transaction_check_idle || return 1
     print_banner "INSTALL FITUR AUTO SUSPEND" "$CYAN"
     echo -e "${BOLD}Fitur ini akan menambahkan fungsionalitas auto-suspend server.${NC}"
