@@ -1174,15 +1174,38 @@ panel_transaction_ensure_maintenance() {
     local down_file="$PANEL_DIR/storage/framework/down"
     local maintenance_file="$PANEL_DIR/storage/framework/maintenance.php"
 
+    PANEL_MAINTENANCE_METHOD="none"
+    PANEL_MAINTENANCE_FILE=""
     [[ ! -L "$PANEL_DIR/storage" && ! -L "$PANEL_DIR/storage/framework" && ! -L "$down_file" && ! -L "$maintenance_file" ]] || return 1
     if (cd "$PANEL_DIR" && php artisan down); then
+        PANEL_MAINTENANCE_METHOD="artisan"
         return 0
     fi
-    [[ -e "$down_file" || -e "$maintenance_file" ]] && return 0
+    if [[ -e "$down_file" || -e "$maintenance_file" ]]; then
+        if [[ -f "$down_file" && ! -L "$down_file" ]]; then
+            PANEL_MAINTENANCE_METHOD="file"
+            PANEL_MAINTENANCE_FILE="$down_file"
+            return 0
+        fi
+        if [[ -f "$maintenance_file" && ! -L "$maintenance_file" ]]; then
+            PANEL_MAINTENANCE_METHOD="file"
+            PANEL_MAINTENANCE_FILE="$maintenance_file"
+            return 0
+        fi
+        print_error "Maintenance marker dibuat dalam bentuk yang tidak valid; transaksi tidak dilanjutkan."
+        return 1
+    fi
+
     mkdir -p -- "$(dirname "$down_file")" || return 1
-    : > "$down_file" || return 1
-    chown www-data:www-data "$down_file" && chmod 0640 "$down_file" || return 1
-    [[ -f "$down_file" && ! -L "$down_file" ]]
+    if ! (umask 027; : > "$down_file") || ! chown www-data:www-data "$down_file" || ! chmod 0640 "$down_file"; then
+        rm -f -- "$down_file"
+        print_error "php artisan down gagal dan maintenance marker fallback tidak dapat dibuat."
+        return 1
+    fi
+    [[ -f "$down_file" && ! -L "$down_file" ]] || return 1
+    PANEL_MAINTENANCE_METHOD="file"
+    PANEL_MAINTENANCE_FILE="$down_file"
+    print_warning "php artisan down gagal saat bootstrap panel; maintenance mode diaktifkan melalui marker file agar proses reset dapat memulihkan source panel."
 }
 
 panel_transaction_restore_services() {
@@ -1191,6 +1214,10 @@ panel_transaction_restore_services() {
     [[ -f "$file" && ! -L "$file" ]] || return 1
     while IFS=$'\t' read -r service active enabled; do
         case "$service" in pteroq|wings|agent) ;; *) return 1 ;; esac
+        if [[ "$enabled" == not-found ]]; then
+            print_info "Service $service tidak terpasang pada snapshot; pemulihan status dilewati."
+            continue
+        fi
         case "$enabled" in
             enabled|enabled-runtime) systemctl enable "$service" || return 1 ;;
             disabled) systemctl disable "$service" || return 1 ;;
@@ -1301,8 +1328,20 @@ panel_transaction_rollback() {
 }
 
 panel_transaction_release_unmodified() {
-    local backup_dir="$1"
-    if [[ -d "$PANEL_DIR" && -f "$PANEL_DIR/artisan" ]]; then
+    local backup_dir="$1" fallback_file fallback_path fallback_marker="$1/maintenance_file_fallback"
+    if [[ -e "$fallback_marker" || -L "$fallback_marker" ]]; then
+        [[ -f "$fallback_marker" && ! -L "$fallback_marker" && "$(stat -c '%u:%a' "$fallback_marker" 2>/dev/null)" == "0:600" ]] || return 1
+        IFS= read -r fallback_file < "$fallback_marker" || return 1
+        case "$fallback_file" in
+            down) fallback_path="$PANEL_DIR/storage/framework/down" ;;
+            maintenance.php) fallback_path="$PANEL_DIR/storage/framework/maintenance.php" ;;
+            *) print_error "Metadata maintenance fallback tidak valid; snapshot dipertahankan."; return 1 ;;
+        esac
+        if [[ -e "$fallback_path" || -L "$fallback_path" ]]; then
+            [[ -f "$fallback_path" && ! -L "$fallback_path" ]] || return 1
+            rm -f -- "$fallback_path" || return 1
+        fi
+    elif [[ -d "$PANEL_DIR" && -f "$PANEL_DIR/artisan" ]]; then
         (cd "$PANEL_DIR" && php artisan up) || return 1
     fi
     panel_transaction_restore_services "$backup_dir" || return 1
@@ -1311,7 +1350,7 @@ panel_transaction_release_unmodified() {
 }
 
 panel_transaction_begin() {
-    local operation="$1" backup_dir stamp available_kib panel_size_kib required_kib path
+    local operation="$1" backup_dir stamp available_kib panel_size_kib required_kib path maintenance_file_name
     local -a system_paths=()
 
     if [[ -e "$PANEL_TRANSACTION_STATE_FILE" || -L "$PANEL_TRANSACTION_STATE_FILE" ||
@@ -1388,7 +1427,24 @@ panel_transaction_begin() {
         print_error "Tidak dapat mencatat transaksi aktif. Operasi dibatalkan."
         return 1
     fi
-    if ! (cd "$PANEL_DIR" && php artisan down); then
+    if [[ "$operation" == "reset-panel" ]]; then
+        if ! panel_transaction_ensure_maintenance; then
+            print_error "Tidak dapat mengaktifkan maintenance mode. Source panel belum disentuh; state/snapshot dipertahankan untuk recovery: $backup_dir"
+            return 1
+        fi
+        if [[ "$PANEL_MAINTENANCE_METHOD" == file ]]; then
+            case "$PANEL_MAINTENANCE_FILE" in
+                "$PANEL_DIR/storage/framework/down") maintenance_file_name=down ;;
+                "$PANEL_DIR/storage/framework/maintenance.php") maintenance_file_name=maintenance.php ;;
+                *) print_error "Lokasi maintenance fallback tidak dikenal; transaksi dihentikan."; return 1 ;;
+            esac
+            if ! (umask 077; printf '%s\n' "$maintenance_file_name" > "$backup_dir/maintenance_file_fallback") ||
+               ! chown root:root "$backup_dir/maintenance_file_fallback" || ! chmod 0600 "$backup_dir/maintenance_file_fallback"; then
+                print_error "Tidak dapat mencatat marker maintenance fallback. Snapshot dipertahankan: $backup_dir"
+                return 1
+            fi
+        fi
+    elif ! (cd "$PANEL_DIR" && php artisan down); then
         if (cd "$PANEL_DIR" && php artisan up); then
             rm -f -- "$PANEL_TRANSACTION_STATE_FILE"
             rm -rf -- "$backup_dir"
