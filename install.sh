@@ -1179,6 +1179,11 @@ panel_transaction_ensure_maintenance() {
     [[ ! -L "$PANEL_DIR/storage" && ! -L "$PANEL_DIR/storage/framework" && ! -L "$down_file" && ! -L "$maintenance_file" ]] || return 1
     if (cd "$PANEL_DIR" && php artisan down); then
         PANEL_MAINTENANCE_METHOD="artisan"
+        if [[ -f "$down_file" && ! -L "$down_file" ]]; then
+            PANEL_MAINTENANCE_FILE="$down_file"
+        elif [[ -f "$maintenance_file" && ! -L "$maintenance_file" ]]; then
+            PANEL_MAINTENANCE_FILE="$maintenance_file"
+        fi
         return 0
     fi
     if [[ -e "$down_file" || -e "$maintenance_file" ]]; then
@@ -1328,29 +1333,54 @@ panel_transaction_rollback() {
 }
 
 panel_transaction_release_unmodified() {
-    local backup_dir="$1" fallback_file fallback_path fallback_marker="$1/maintenance_file_fallback"
+    local backup_dir="$1" known_marker="${2:-}" fallback_file fallback_path=""
+    local fallback_marker="$1/maintenance_file_fallback"
+    panel_transaction_restore_services "$backup_dir" || return 1
+
     if [[ -e "$fallback_marker" || -L "$fallback_marker" ]]; then
         [[ -f "$fallback_marker" && ! -L "$fallback_marker" && "$(stat -c '%u:%a' "$fallback_marker" 2>/dev/null)" == "0:600" ]] || return 1
         IFS= read -r fallback_file < "$fallback_marker" || return 1
-        case "$fallback_file" in
-            down) fallback_path="$PANEL_DIR/storage/framework/down" ;;
-            maintenance.php) fallback_path="$PANEL_DIR/storage/framework/maintenance.php" ;;
-            *) print_error "Metadata maintenance fallback tidak valid; snapshot dipertahankan."; return 1 ;;
-        esac
-        if [[ -e "$fallback_path" || -L "$fallback_path" ]]; then
-            [[ -f "$fallback_path" && ! -L "$fallback_path" ]] || return 1
-            rm -f -- "$fallback_path" || return 1
-        fi
-    elif [[ -d "$PANEL_DIR" && -f "$PANEL_DIR/artisan" ]]; then
-        (cd "$PANEL_DIR" && php artisan up) || return 1
+    else
+        fallback_file="$known_marker"
     fi
-    panel_transaction_restore_services "$backup_dir" || return 1
+
+    case "$fallback_file" in
+        down) fallback_path="$PANEL_DIR/storage/framework/down" ;;
+        maintenance.php) fallback_path="$PANEL_DIR/storage/framework/maintenance.php" ;;
+        none) fallback_path="" ;;
+        "")
+            if [[ -d "$PANEL_DIR" && -f "$PANEL_DIR/artisan" ]]; then
+                local down_file="$PANEL_DIR/storage/framework/down"
+                local maintenance_file="$PANEL_DIR/storage/framework/maintenance.php"
+                local artisan_up_status=0
+                (cd "$PANEL_DIR" && php artisan up) || artisan_up_status=$?
+                if [[ -e "$down_file" || -L "$down_file" ]] && [[ -e "$maintenance_file" || -L "$maintenance_file" ]]; then
+                    print_error "Dua maintenance marker ditemukan setelah Artisan up; pembersihan otomatis dibatalkan."
+                    return 1
+                elif [[ -e "$down_file" || -L "$down_file" ]]; then
+                    [[ -f "$down_file" && ! -L "$down_file" ]] || return 1
+                    rm -f -- "$down_file" || return 1
+                elif [[ -e "$maintenance_file" || -L "$maintenance_file" ]]; then
+                    [[ -f "$maintenance_file" && ! -L "$maintenance_file" ]] || return 1
+                    rm -f -- "$maintenance_file" || return 1
+                elif (( artisan_up_status != 0 )); then
+                    return 1
+                fi
+            fi
+            ;;
+        *) print_error "Metadata maintenance fallback tidak valid; snapshot dipertahankan."; return 1 ;;
+    esac
+
+    if [[ -n "$fallback_path" && ( -e "$fallback_path" || -L "$fallback_path" ) ]]; then
+        [[ -f "$fallback_path" && ! -L "$fallback_path" ]] || return 1
+        rm -f -- "$fallback_path" || return 1
+    fi
     rm -f -- "$PANEL_TRANSACTION_STATE_FILE" || return 1
     rm -rf -- "$backup_dir"
 }
 
 panel_transaction_begin() {
-    local operation="$1" backup_dir stamp available_kib panel_size_kib required_kib path maintenance_file_name
+    local operation="$1" backup_dir stamp available_kib panel_size_kib required_kib path maintenance_file_name maintenance_metadata_tmp
     local -a system_paths=()
 
     if [[ -e "$PANEL_TRANSACTION_STATE_FILE" || -L "$PANEL_TRANSACTION_STATE_FILE" ||
@@ -1429,27 +1459,35 @@ panel_transaction_begin() {
     fi
     if [[ "$operation" == "reset-panel" ]]; then
         if ! panel_transaction_ensure_maintenance; then
-            print_error "Tidak dapat mengaktifkan maintenance mode. Source panel belum disentuh; state/snapshot dipertahankan untuk recovery: $backup_dir"
+            maintenance_file_name="${PANEL_MAINTENANCE_FILE##*/}"
+            panel_transaction_release_unmodified "$backup_dir" "${maintenance_file_name:-none}" ||
+                print_error "Maintenance gagal diaktifkan dan cleanup awal juga gagal. State/snapshot dipertahankan: $backup_dir"
+            print_error "Tidak dapat mengaktifkan maintenance mode. Source panel belum disentuh."
             return 1
         fi
-        if [[ "$PANEL_MAINTENANCE_METHOD" == file ]]; then
+        if [[ -n "$PANEL_MAINTENANCE_FILE" ]]; then
             case "$PANEL_MAINTENANCE_FILE" in
                 "$PANEL_DIR/storage/framework/down") maintenance_file_name=down ;;
                 "$PANEL_DIR/storage/framework/maintenance.php") maintenance_file_name=maintenance.php ;;
-                *) print_error "Lokasi maintenance fallback tidak dikenal; transaksi dihentikan."; return 1 ;;
+                *)
+                    print_error "Lokasi maintenance marker tidak dikenal; transaksi dihentikan. State/snapshot dipertahankan: $backup_dir"
+                    return 1
+                    ;;
             esac
-            if ! (umask 077; printf '%s\n' "$maintenance_file_name" > "$backup_dir/maintenance_file_fallback") ||
-               ! chown root:root "$backup_dir/maintenance_file_fallback" || ! chmod 0600 "$backup_dir/maintenance_file_fallback"; then
-                print_error "Tidak dapat mencatat marker maintenance fallback. Snapshot dipertahankan: $backup_dir"
+            maintenance_metadata_tmp="$backup_dir/.maintenance_file_fallback.tmp.$$"
+            if ! (umask 077; printf '%s\n' "$maintenance_file_name" > "$maintenance_metadata_tmp") ||
+               ! chown root:root "$maintenance_metadata_tmp" || ! chmod 0600 "$maintenance_metadata_tmp" ||
+               ! mv -f -- "$maintenance_metadata_tmp" "$backup_dir/maintenance_file_fallback"; then
+                rm -f -- "$maintenance_metadata_tmp"
+                print_error "Tidak dapat mencatat maintenance marker. Mencoba mengembalikan panel ke mode normal..."
+                panel_transaction_release_unmodified "$backup_dir" "$maintenance_file_name" ||
+                    print_error "Cleanup maintenance gagal. State/snapshot dipertahankan: $backup_dir"
                 return 1
             fi
         fi
     elif ! (cd "$PANEL_DIR" && php artisan down); then
-        if (cd "$PANEL_DIR" && php artisan up); then
-            rm -f -- "$PANEL_TRANSACTION_STATE_FILE"
-            rm -rf -- "$backup_dir"
-        else
-            print_error "Aktivasi maintenance gagal dan panel juga tidak dapat dikembalikan live. State/snapshot dipertahankan untuk recovery: $backup_dir"
+        if ! panel_transaction_release_unmodified "$backup_dir"; then
+            print_error "Aktivasi maintenance gagal dan cleanup awal juga gagal. State/snapshot dipertahankan untuk recovery: $backup_dir"
         fi
         print_error "Tidak dapat mengaktifkan maintenance mode. Source panel belum disentuh."
         return 1
@@ -1649,25 +1687,55 @@ neobrutalism_restart_php_fpm() {
     done
 }
 
-neobrutalism_validate_php_runtime() {
-    local cli_version major minor patch service version bin first_line
-    local -a fpm_services
+neobrutalism_php_package_backport_supported() {
+    local package="$1" changelog status package_version distro_id="" distro_version="" fixed_version=""
+    command -v dpkg-query >/dev/null 2>&1 || return 1
+    status=$(dpkg-query -W -f='${db:Status-Status}' "$package" 2>/dev/null) || return 1
+    [[ "$status" == installed ]] || return 1
+    package_version=$(dpkg-query -W -f='${Version}' "$package" 2>/dev/null) || return 1
 
-    cli_version=$(php -r 'printf("%d.%d.%d", PHP_MAJOR_VERSION, PHP_MINOR_VERSION, PHP_RELEASE_VERSION);') || return 1
-    if ! neobrutalism_php_version_supported "$cli_version"; then
-        print_error "PHP CLI $cli_version belum termasuk versi yang telah diperbaiki untuk PHP2Shell. Diperlukan PHP 8.2.35+, 8.3.36+, 8.4.27+, atau 8.5.12+."
-        return 1
+    if [[ -r /etc/os-release ]]; then
+        distro_id=$(sed -nE 's/^ID="?([^" ]+)"?$/\1/p' /etc/os-release | head -n1)
+        distro_version=$(sed -nE 's/^VERSION_ID="?([^" ]+)"?$/\1/p' /etc/os-release | head -n1)
+    fi
+    if [[ "$distro_id" == ubuntu ]]; then
+        case "$distro_version:$package" in
+            24.04:php8.3-fpm) fixed_version='8.3.6-0ubuntu0.24.04.13' ;;
+            26.04:php8.5-fpm) fixed_version='8.5.4-0ubuntu1.5' ;;
+            26.10:php8.5-fpm) fixed_version='8.5.9-0ubuntu2.1' ;;
+        esac
+        if [[ -n "$fixed_version" ]] && command -v dpkg >/dev/null 2>&1 &&
+           dpkg --compare-versions "$package_version" ge "$fixed_version"; then
+            return 0
+        fi
     fi
 
+    while IFS= read -r changelog; do
+        [[ -f "$changelog" && ! -L "$changelog" && "$(stat -c '%u' "$changelog" 2>/dev/null)" == 0 ]] || continue
+        if zgrep -Fq 'CVE-2026-109618' "$changelog" 2>/dev/null &&
+           zgrep -Fq 'CVE-2026-109619' "$changelog" 2>/dev/null; then
+            return 0
+        fi
+    done < <(dpkg-query -L "$package" 2>/dev/null | grep -E '/changelog(\.Debian)?(\.gz)?$' || true)
+    return 1
+}
+
+neobrutalism_validate_php_runtime() {
+    local service version bin first_line package
+    local -a fpm_services
+
+    print_info "Pemeriksaan PHP2Shell difokuskan pada PHP-FPM yang melayani HTTP; versi PHP CLI tidak dijadikan penentu kerentanan web."
     mapfile -t fpm_services < <(systemctl list-units --type=service --state=running --no-legend | awk '$1 ~ /^php[0-9]+\.[0-9]+-fpm\.service$/ {print $1}')
     if (( ${#fpm_services[@]} == 0 )); then
-        print_error "Tidak ada PHP-FPM aktif. Versi runtime web tidak dapat diverifikasi; instalasi NEOBRUTALISM dibatalkan."
+        print_error "Tidak ada PHP-FPM aktif yang dapat diverifikasi. Runtime web tidak dapat dipastikan; instalasi NEOBRUTALISM dibatalkan demi keamanan."
         return 1
     fi
 
     for service in "${fpm_services[@]}"; do
         version=${service#php}
         version=${version%-fpm.service}
+        package="$service"
+        package=${package%.service}
         bin=$(command -v "php-fpm$version" || true)
         [[ -x "$bin" ]] || bin="/usr/sbin/php-fpm$version"
         if [[ ! -x "$bin" ]]; then
@@ -1676,8 +1744,12 @@ neobrutalism_validate_php_runtime() {
         fi
         first_line=$("$bin" -v 2>/dev/null | sed -n '1p')
         version=$(sed -nE 's/^PHP ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' <<< "$first_line")
-        if ! neobrutalism_php_version_supported "$version"; then
-            print_error "$service menggunakan PHP ${version:-tidak diketahui}, belum lolos pemeriksaan PHP2Shell."
+        if neobrutalism_php_version_supported "$version"; then
+            print_success "$service menggunakan PHP $version yang sudah mencakup perbaikan PHP2Shell."
+        elif neobrutalism_php_package_backport_supported "$package"; then
+            print_success "$service menggunakan paket vendor yang changelog terpasangnya mencatat perbaikan CVE-2026-109618 dan CVE-2026-109619 (versi upstream: ${version:-tidak diketahui})."
+        else
+            print_error "$service menggunakan PHP ${version:-tidak diketahui} dan tidak ditemukan bukti backport kedua perbaikan PHP2Shell. Diperlukan PHP 8.2.35+, 8.3.36+, 8.4.27+, atau 8.5.12+, atau paket vendor yang mencatat kedua CVE tersebut."
             return 1
         fi
     done
